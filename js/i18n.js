@@ -8,6 +8,7 @@
 
 const DICT = {
   zh: {
+    'cam.gesture': '手势识别', 'cam.unavailable': '正在等待视频信号', 'dbg.drop': '模拟断线', 'dbg.resume': '返回实时', 'ctl.pad': '全向平移摇杆',
     'app.subtitle': '多模态移动健康机器人 · 控制台',
 
     'link.disconnected': '未连接',
@@ -18,10 +19,10 @@ const DICT = {
     'top.latency': '延迟',
     'top.link':    '链路',
 
-    'cam.title':      '摄像头',
+    'cam.title':      '实时视野',
     'cam.source':     '画面源',
     'cam.src.canvas': '合成画面',
-    'cam.src.mjpeg':  'MJPEG /stream',
+    'cam.src.mjpeg':  '摄像头视频',
     'cam.src.file':   '本地视频…',
     'cam.stale':      '视觉数据过期',
     'cam.streamfail': '/stream 无法加载，已回退到合成画面',
@@ -114,6 +115,7 @@ const DICT = {
   },
 
   en: {
+    'cam.gesture': 'GESTURE', 'cam.unavailable': 'Waiting for video signal', 'dbg.drop': 'Disconnect once', 'dbg.resume': 'Return to live', 'ctl.pad': 'Omnidirectional joystick',
     'app.subtitle': 'Multi-modal Mobile Health Robot · Console',
 
     'link.disconnected': 'DISCONNECTED',
@@ -124,10 +126,10 @@ const DICT = {
     'top.latency': 'Latency',
     'top.link':    'Link',
 
-    'cam.title':      'Camera',
+    'cam.title':      'Live view',
     'cam.source':     'Source',
     'cam.src.canvas': 'Synthetic',
-    'cam.src.mjpeg':  'MJPEG /stream',
+    'cam.src.mjpeg':  'Camera stream',
     'cam.src.file':   'Local video…',
     'cam.stale':      'VISION STALE',
     'cam.streamfail': '/stream unavailable — fell back to synthetic scene',

@@ -54,6 +54,7 @@ export class WebSocketTransport extends Transport {
     this._retry = 0;
     this._timer = null;
     this._manualClose = false;
+    this._handshake = null;
   }
 
   get name() { return 'websocket'; }
@@ -77,17 +78,22 @@ export class WebSocketTransport extends Transport {
       return;
     }
     this.ws = ws;
+    this._handshake = setTimeout(() => { if (this.ws === ws && ws.readyState === WebSocket.CONNECTING) ws.close(); }, 5000);
 
     ws.onopen = () => {
+      if (this.ws !== ws) return;
+      clearTimeout(this._handshake);
       this._retry = 0;
       this._setState(LINK.CONNECTED);
     };
-    ws.onmessage = ev => this._emitMessage(ev.data);
+    ws.onmessage = ev => { if (this.ws === ws) this._emitMessage(ev.data); };
     ws.onerror = () => {
       // onerror 之后浏览器一定会再触发 onclose，重连逻辑统一放在 onclose
       if (this._state === LINK.CONNECTING) this._setState(LINK.ERROR);
     };
     ws.onclose = () => {
+      if (this.ws !== ws) return;
+      clearTimeout(this._handshake);
       this.ws = null;
       if (this._manualClose) { this._setState(LINK.DISCONNECTED); return; }
       this._setState(LINK.RECONNECTING);
@@ -97,13 +103,15 @@ export class WebSocketTransport extends Transport {
 
   disconnect() {
     this._manualClose = true;
+    clearTimeout(this._handshake);
     this._clearTimer();
-    if (this.ws) { try { this.ws.close(); } catch { /* 已经关了 */ } this.ws = null; }
+    if (this.ws) { const ws = this.ws; this.ws = null; try { ws.close(); } catch { /* 已经关了 */ } }
     this._setState(LINK.DISCONNECTED);
   }
 
   send(message) {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return false;
+    if (this.ws.bufferedAmount > 65536) { this.ws.close(); return false; }
     try {
       this.ws.send(JSON.stringify(message));
       return true;

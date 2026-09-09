@@ -9,6 +9,7 @@
  * 本文件不含任何 DOM 或网络代码，是纯粹的数值仿真，因此也可被自测页直接调用。
  */
 import { CONFIG } from './config.js';
+import { validateOutgoing } from './protocol.js';
 
 const GESTURE_CYCLE = ['NONE', 'PALM', 'FIST', 'THUMB_UP', 'VICTORY', 'POINT_LEFT', 'POINT_RIGHT', 'NONE'];
 
@@ -55,6 +56,9 @@ export class RobotSim {
    */
   handleCommand(msg) {
     const ts = Date.now();
+    const invalid = validateOutgoing(msg);
+    if (invalid) return [{ type: 'error', ts, code: 'INVALID_COMMAND', message: invalid }];
+    const ack = ok => ({ type: 'ack', ts, request_type: msg.type, request_id: msg.request_id, ok });
     switch (msg.type) {
       case 'cmd_vel': {
         const nonZero = Math.abs(msg.vx) > 1e-6 || Math.abs(msg.vy) > 1e-6 || Math.abs(msg.wz) > 1e-6;
@@ -70,31 +74,33 @@ export class RobotSim {
                     message: `Motion command ignored in ${this.mode}` }];
         }
         this.cmd = { vx: msg.vx, vy: msg.vy, wz: msg.wz };
+        if (!nonZero) this.vel = { vx: 0, vy: 0, wz: 0 };
         this.lastCmdAt = this.t;
         return []; // cmd_vel 走高频通道，不逐包 ACK，靠 telemetry 回显确认
       }
 
       case 'set_mode': {
         if (this.estop) {
-          return [{ type: 'ack', ts, request_type: 'set_mode', ok: false },
+          return [ack(false),
                   { type: 'error', ts, code: 'ESTOP_ACTIVE',
                     message: 'Clear ESTOP before changing mode' }];
         }
         this.mode = msg.mode;
         this.cmd = { vx: 0, vy: 0, wz: 0 };   // 换模式一律先停
-        return [{ type: 'ack', ts, request_type: 'set_mode', ok: true }];
+        this.vel = { vx: 0, vy: 0, wz: 0 };
+        return [ack(true)];
       }
 
       case 'estop':
         this.estop = true;
         this.cmd = { vx: 0, vy: 0, wz: 0 };
         this.vel = { vx: 0, vy: 0, wz: 0 };   // 急停是硬停，不做减速过渡
-        return [{ type: 'ack', ts, request_type: 'estop', ok: true }];
+        return [ack(true)];
 
       case 'clear_estop':
         this.estop = false;
         this.mode = 'IDLE';                   // 解除后回到待机，不自动恢复运动
-        return [{ type: 'ack', ts, request_type: 'clear_estop', ok: true }];
+        return [ack(true)];
 
       case 'ping':
         return [{ type: 'pong', ts, id: msg.id }];
@@ -116,6 +122,7 @@ export class RobotSim {
         // 与协议约定一致：超过 DEADMAN_TIMEOUT_MS 没收到有效指令就自动停车。
         // 这条兜底逻辑在真机上必须由主 ESP32-S3 实现，这里如实模拟。
         const ageMs = (this.t - this.lastCmdAt) * 1000;
+        if (ageMs > CONFIG.DEADMAN_TIMEOUT_MS) this.vel = { vx: 0, vy: 0, wz: 0 };
         target = ageMs > CONFIG.DEADMAN_TIMEOUT_MS ? { vx: 0, vy: 0, wz: 0 } : { ...this.cmd };
       } else if (this.mode === 'PERSON_FOLLOW' && this.personFound) {
         // 简单比例控制：人偏离画面中心 → 转向；框太小 → 前进
@@ -233,7 +240,7 @@ export class RobotSim {
     return {
       type: 'telemetry',
       ts: Date.now(),
-      connection: { camera: true, main_mcu: true },
+      connection: { camera: true, main_mcu: true, simulated: true },
       robot: {
         mode: this.estop ? 'ESTOP' : this.mode,
         state: this._stateName(),

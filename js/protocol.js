@@ -53,11 +53,12 @@ function obj(v) {
 export function cmdVel(vx, vy, wz) {
   return { type: 'cmd_vel', ts: now(), vx: r3(clampVel(vx)), vy: r3(clampVel(vy)), wz: r3(clampVel(wz)) };
 }
+let requestSequence = 0;
 export function setMode(mode) {
-  return { type: 'set_mode', ts: now(), mode };
+  return { type: 'set_mode', ts: now(), mode, request_id: ++requestSequence };
 }
 export function estop()      { return { type: 'estop',       ts: now() }; }
-export function clearEstop() { return { type: 'clear_estop', ts: now() }; }
+export function clearEstop() { return { type: 'clear_estop', ts: now(), request_id: ++requestSequence }; }
 export function ping(id)     { return { type: 'ping',        ts: now(), id }; }
 
 /** 保留三位小数：网络包更小，且避免 0.30000000000000004 这类噪声。 */
@@ -71,6 +72,7 @@ const r3 = v => Math.round(v * 1000) / 1000;
  */
 export function decode(raw) {
   if (typeof raw !== 'string') return { ok: false, error: 'non-text frame' };
+  if (raw.length > 65536) return { ok: false, error: 'frame too large' };
 
   let data;
   try {
@@ -88,12 +90,12 @@ export function decode(raw) {
 
   switch (o.type) {
     case 'telemetry': return { ok: true, msg: { ...normalizeTelemetry(o), ts } };
-    case 'ppg':       return { ok: true, msg: { type: 'ppg', ts, value: num(o.value, 0) } };
+    case 'ppg':       return num(o.value) === undefined ? { ok: false, error: 'invalid PPG sample' } : { ok: true, msg: { type: 'ppg', ts, value: o.value } };
     case 'ppg_batch': return { ok: true, msg: normalizePpgBatch(o, ts) };
     case 'ack':       return { ok: true, msg: {
                           type: 'ack', ts,
                           request_type: enumOf(o.request_type, OUT_TYPES, 'unknown'),
-                          ok: bool(o.ok, true)
+                          ok: bool(o.ok, false), request_id: num(o.request_id)
                         } };
     case 'error':     return { ok: true, msg: {
                           type: 'error', ts,
@@ -113,7 +115,7 @@ export function normalizeTelemetry(o) {
   const out = { type: 'telemetry' };
 
   const c = obj(o.connection);
-  if (c) out.connection = { camera: bool(c.camera), main_mcu: bool(c.main_mcu) };
+  if (c) out.connection = { camera: bool(c.camera), main_mcu: bool(c.main_mcu), simulated: bool(c.simulated) };
 
   const r = obj(o.robot);
   if (r) out.robot = {
@@ -132,8 +134,8 @@ export function normalizeTelemetry(o) {
   const v = obj(o.vision);
   if (v) {
     out.vision = {
-      image_width:  num(v.image_width),
-      image_height: num(v.image_height),
+      image_width:  num(v.image_width) > 0 ? Math.min(v.image_width, 8192) : undefined,
+      image_height: num(v.image_height) > 0 ? Math.min(v.image_height, 8192) : undefined,
       ai_fps:       num(v.ai_fps)
     };
     const p = obj(v.person);
@@ -174,7 +176,7 @@ function normalizePpgBatch(o, ts) {
   const src = Array.isArray(o.samples) ? o.samples : [];
   const samples = [];
   // 单包上限 512，防止恶意/异常大包一次性撑爆缓冲
-  for (let k = 0; k < src.length && samples.length < 512; k++) {
+  for (let k = 0; k < Math.min(src.length, 512); k++) {
     const s = num(src[k]);
     if (s !== undefined) samples.push(s);
   }
@@ -190,6 +192,7 @@ function normalizePpgBatch(o, ts) {
 export function validateOutgoing(msg) {
   const o = obj(msg);
   if (!o || !OUT_TYPES.includes(o.type)) return 'unknown outgoing type';
+  if (num(o.ts) === undefined) return 'outgoing ts must be finite';
   if (o.type === 'cmd_vel') {
     for (const k of ['vx', 'vy', 'wz']) {
       const n = num(o[k]);

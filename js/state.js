@@ -43,6 +43,8 @@ const state = {
     main_mcu: undefined,       // CAM ↔ 主控（由机器人上报）
     latencyMs: undefined,      // ping/pong 往返
     lastTelemetryTs: 0,
+    lastRobotTs: 0,
+    lastHealthTs: 0,
     lastPongTs: 0
   },
   robot: {
@@ -75,7 +77,8 @@ const state = {
     joystick: { vx: 0, vy: 0 },
     rotate: 0,                 // 旋转按钮/键盘产生的 wz（未乘速度上限）
     txCount: 0, rxCount: 0,
-    replaying: false
+    replaying: false,
+    estopLatch: false
   }
 };
 
@@ -119,7 +122,10 @@ export function applyTelemetry(msg) {
   state.connection.lastTelemetryTs = t;
 
   if (msg.connection) mergeDefined(state.connection, msg.connection);
-  if (msg.robot) mergeDefined(state.robot, msg.robot);
+  if (msg.robot) {
+    mergeDefined(state.robot, msg.robot);
+    if (msg.robot.mode !== undefined && msg.robot.estop !== undefined) state.connection.lastRobotTs = t;
+  }
   if (msg.imu) mergeDefined(state.imu, msg.imu);
 
   if (msg.vision) {
@@ -132,7 +138,7 @@ export function applyTelemetry(msg) {
     if (v.gesture) { state.vision.gesture = v.gesture; state.vision.lastGestureTs = t; }
   }
 
-  if (msg.health) mergeDefined(state.health, msg.health);
+  if (msg.health) { mergeDefined(state.health, msg.health); state.connection.lastHealthTs = t; }
 
   // 机器人确认了模式 → 清除 pending
   if (state.ui.requestedMode && state.robot.mode === state.ui.requestedMode) {
@@ -166,6 +172,7 @@ export function setConnectionState(link) {
     // 链路断开时，机器人侧链路状态变为"未知"而不是"正常"
     state.connection.camera = undefined;
     state.connection.main_mcu = undefined;
+    state.connection.simulated = undefined;
   }
   emit('connection', link);
 }
@@ -184,8 +191,7 @@ export function countRx()              { state.ui.rxCount++; }
 
 /** 本地强制标记急停（用于收到 error: ESTOP_ACTIVE 时立刻锁 UI，不等下一包遥测）。 */
 export function markEstopLocal(active) {
-  if (state.robot.estop === active) return;
-  state.robot.estop = active;
+  state.ui.estopLatch = active;
   emit('telemetry', { type: 'local_estop' });
 }
 
@@ -212,12 +218,20 @@ export function isGestureStale(nowMs = Date.now()) {
  */
 export function isManualEnabled() {
   return state.connection.link === LINK.CONNECTED &&
-         !state.robot.estop &&
+         !state.robot.estop && !state.ui.estopLatch && !state.ui.replaying &&
+         !state.ui.requestedMode && state.robot.state !== 'FAULT' &&
+         state.connection.camera === true && state.connection.main_mcu === true &&
+         Date.now() - state.connection.lastRobotTs <= CONFIG.TELEMETRY_STALE_MS &&
          state.robot.mode === 'MANUAL' &&
          !isTelemetryStale();
 }
 
 export function resetForDisconnect() {
+  state.connection.lastRobotTs = 0;
+  state.connection.lastTelemetryTs = 0;
+  state.vision.lastPersonTs = 0;
+  state.vision.lastGestureTs = 0;
+  state.ppg.ring.clear();
   state.robot.vx = 0; state.robot.vy = 0; state.robot.wz = 0;
   state.ui.joystick.vx = 0; state.ui.joystick.vy = 0;
   state.ui.rotate = 0;
