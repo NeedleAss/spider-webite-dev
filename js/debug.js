@@ -55,7 +55,9 @@ export class DebugPanel {
     $('dbgBadge').textContent = `tx ${state.ui.txCount} · rx ${state.ui.rxCount}`;
     $('dbgResume').hidden = !state.ui.replaying;
     if (!$('debugPanel').open) return;
-    $('dbgStats').textContent = `${state.ui.transportName.toUpperCase()}  ·  ${fps} FPS  ·  ${state.ppg.ring.size}/${CONFIG.PPG_RING_CAPACITY} PPG  ·  ${state.connection.lastTelemetryTs ? Date.now() - state.connection.lastTelemetryTs : '—'} ms`;
+    const heap = performance.memory?.usedJSHeapSize;
+    const memory = heap ? `  ·  ${(heap / 1048576).toFixed(1)} MiB JS` : '';
+    $('dbgStats').textContent = `${state.ui.transportName.toUpperCase()}  ·  ${fps} FPS  ·  ${state.ppg.ring.size}/${CONFIG.PPG_RING_CAPACITY} PPG  ·  ${state.connection.lastTelemetryTs ? Date.now() - state.connection.lastTelemetryTs : '—'} ms${memory}`;
     if (!this.dirty) return; this.dirty = false;
     const fragment = document.createDocumentFragment();
     for (const row of this.rows) {

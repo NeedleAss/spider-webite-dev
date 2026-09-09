@@ -8,6 +8,7 @@
 
 const DICT = {
   zh: {
+    'cam.file.open': '打开文件',
     'cam.gesture': '手势识别', 'cam.unavailable': '正在等待视频信号', 'dbg.drop': '模拟断线', 'dbg.resume': '返回实时', 'ctl.pad': '全向平移摇杆',
     'app.subtitle': '多模态移动健康机器人 · 控制台',
 
@@ -115,6 +116,7 @@ const DICT = {
   },
 
   en: {
+    'cam.file.open': 'Open file',
     'cam.gesture': 'GESTURE', 'cam.unavailable': 'Waiting for video signal', 'dbg.drop': 'Disconnect once', 'dbg.resume': 'Return to live', 'ctl.pad': 'Omnidirectional joystick',
     'app.subtitle': 'Multi-modal Mobile Health Robot · Console',
 

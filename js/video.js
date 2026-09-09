@@ -2,17 +2,18 @@ import { VideoOverlay, computeContainFit, roundRect } from './video-overlay.js';
 import { defaultStreamUrl } from './transport.js';
 /** Video sources and metadata share a stage, never a transport implementation. */
 export class VideoPanel {
-  constructor({ stage, source, overlay, image, video, select, input, notice }) {
-    Object.assign(this, { stage, source, image, video, select, input, notice });
+  constructor({ stage, source, overlay, image, video, select, input, openFile, notice }) {
+    Object.assign(this, { stage, source, image, video, select, input, openFile, notice });
     this.overlay = new VideoOverlay(overlay, stage); this.ctx = source.getContext('2d');
     this.kind = 'canvas'; this.objectUrl = null; this.ready = false;
     this.abort = new AbortController(); const signal = this.abort.signal;
     select.addEventListener('change', () => {
-      if (select.value === 'file') { input.click(); select.value = this.kind; }
-      else this.setSource(select.value);
+      this.setSource(select.value);
     }, { signal });
+    openFile.addEventListener('click', () => input.click(), { signal });
     input.addEventListener('change', () => {
       const file = input.files[0]; if (!file) return;
+      input.value = '';
       this.setSource('file'); this.objectUrl = URL.createObjectURL(file); video.src = this.objectUrl;
       video.play().catch(() => { this.notice('video.failed'); this.setSource('canvas'); });
     }, { signal });
@@ -27,6 +28,7 @@ export class VideoPanel {
     this.image.removeAttribute('src');
     if (this.objectUrl) { URL.revokeObjectURL(this.objectUrl); this.objectUrl = null; }
     this.kind = kind; this.ready = kind === 'canvas'; this.streamFailed = false; this.select.value = kind;
+    this.openFile.hidden = kind !== 'file';
     this.source.hidden = kind !== 'canvas'; this.image.hidden = kind !== 'mjpeg'; this.video.hidden = kind !== 'file';
     this.stage.dataset.source = kind;
     if (kind === 'mjpeg') this.connection(true);
@@ -40,7 +42,16 @@ export class VideoPanel {
   render(vision, flags) {
     if (this.kind === 'mjpeg' && !this.streamFailed && this.image.naturalWidth > 0) this.ready = true;
     if (this.kind === 'canvas') this.drawScene(vision, flags.personStale);
-    this.overlay.render(vision, { ...flags, personStale: flags.personStale || !this.ready });
+    let mapped = vision;
+    if (this.kind === 'file' && this.video.videoWidth && this.video.videoHeight) {
+      // Local clips may have a different aspect ratio from synthetic metadata.
+      // Preserve normalized positions inside the actual video's contain rectangle.
+      const sx = this.video.videoWidth / vision.image_width, sy = this.video.videoHeight / vision.image_height;
+      const p = vision.person;
+      mapped = { ...vision, image_width: this.video.videoWidth, image_height: this.video.videoHeight,
+        person: p?.found ? { ...p, x: p.x * sx, y: p.y * sy, w: p.w * sx, h: p.h * sy } : p };
+    }
+    this.overlay.render(mapped, { ...flags, personStale: flags.personStale || !this.ready });
   }
   drawScene(vision, stale) {
     const { source: canvas, ctx, stage } = this;

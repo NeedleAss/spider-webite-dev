@@ -222,7 +222,7 @@ async function main() {
       store.setJoystick(v.vx, v.vy); store.setRotate(v.wz);
       if (immediate && !v.vx && !v.vy && !v.wz) { send(protocol.cmdVel(0, 0, 0)); zeroRepeats = CONFIG.CMD_VEL_ZERO_REPEAT; }
     } });
-  video = new VideoPanel({ stage: $('videoStage'), source: $('videoSource'), overlay: $('videoOverlay'), image: $('videoStream'), video: $('videoFile'), select: $('videoSourceSel'), input: $('videoFileInput'), notice: () => toast(tr('视频无法载入，请检查画面源', 'Video unavailable. Check the selected source.'), 'warn') });
+  video = new VideoPanel({ stage: $('videoStage'), source: $('videoSource'), overlay: $('videoOverlay'), image: $('videoStream'), video: $('videoFile'), select: $('videoSourceSel'), input: $('videoFileInput'), openFile: $('videoFileOpen'), notice: () => toast(tr('视频无法载入，请检查画面源', 'Video unavailable. Check the selected source.'), 'warn') });
   chart = new PpgChart($('ppgChart'));
   transport = await createTransport(); state.ui.transportName = transport.name;
   if (transport.name === 'websocket' && new URLSearchParams(location.search).get('video') !== 'canvas') video.setSource('mjpeg');

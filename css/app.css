@@ -218,3 +218,6 @@ input[type='range'] { width: 100%; height: 16px; margin: 0; accent-color: #c1c9d
   .joystick { width: 176px; }
   .ppg { padding-top: 0; }
 }
+.panel--video .panel__head { flex-wrap: wrap; }
+.panel__tools { flex-wrap: wrap; justify-content: flex-end; }
+#videoFileOpen { padding: 5px 8px; font-size: 11px; }
