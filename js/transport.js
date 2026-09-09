@@ -154,7 +154,7 @@ export async function createTransport(search = location.search) {
   if (kind === 'ws' || kind === 'websocket') {
     return new WebSocketTransport(params.get('ws') || defaultWsUrl());
   }
-  // 动态载入：真机部署时 mock 代码不会被下载，省 flash 也省带宽
+  // 动态载入：WebSocket 模式不下载浏览器 Mock 模块。
   const { MockTransport } = await import('./mock-transport.js');
   return new MockTransport();
 }

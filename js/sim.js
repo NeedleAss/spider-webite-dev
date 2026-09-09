@@ -1,12 +1,10 @@
 /**
  * 机器人行为模拟器（浏览器端）。
  *
- * 这是 mock/server.py 里 RobotSim 的 JavaScript 镜像：两者行为、参数、状态机
- * 必须保持一致，任何一边改了都要同步另一边。存在两份的原因很简单——
- * 一份让页面脱离任何服务端独立运行（GitHub Pages 演示 / Phase 2），
- * 一份验证真实的 WebSocket 收发路径（Phase 4 起）。
+ * 与 mock/server.py 共用消息契约和安全状态语义；模拟轨迹与数值不要求一致。
+ * 浏览器版本让页面无需模拟后端即可演示，Python 版本验证实际 WebSocket 收发。
  *
- * 本文件不含任何 DOM 或网络代码，是纯粹的数值仿真，因此也可被自测页直接调用。
+ * 本文件不含 DOM 或网络代码，数值仿真与安全行为由 tests/core.test.js 检查。
  */
 import { CONFIG } from './config.js';
 import { validateOutgoing } from './protocol.js';

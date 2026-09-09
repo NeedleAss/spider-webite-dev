@@ -8,7 +8,7 @@
  *     映射时必须把这段偏移算进去，否则框会整体漂移。
  *  3. Canvas 必须按 devicePixelRatio 放大位图尺寸，否则在 Retina 上是糊的。
  *
- * computeContainFit 是纯函数，被自测页 tests.html 直接覆盖。
+ * computeContainFit 是纯函数，由 tests/core.test.js 覆盖。
  */
 import { CONFIG } from './config.js';
 
