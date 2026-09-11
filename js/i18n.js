@@ -69,6 +69,8 @@ const DICT = {
     'state.ESTOP': '急停锁定', 'state.FAULT': '故障',
 
     'gesture.none': '无手势',
+    'g.ONE': '数字一', 'g.TWO': '数字二', 'g.THREE': '数字三', 'g.FOUR': '数字四', 'g.FIVE': '张开五指',
+    'g.OK': 'OK', 'g.CALL': '打电话', 'g.LIKE': '点赞', 'g.DISLIKE': '点踩',
     'g.NONE': '无', 'g.PALM': '手掌', 'g.FIST': '握拳', 'g.THUMB_UP': '点赞',
     'g.VICTORY': '胜利手势', 'g.POINT_LEFT': '指向左', 'g.POINT_RIGHT': '指向右', 'g.UNKNOWN': '未识别',
 
@@ -177,6 +179,8 @@ const DICT = {
     'state.ESTOP': 'ESTOP', 'state.FAULT': 'FAULT',
 
     'gesture.none': 'No gesture',
+    'g.ONE': 'One', 'g.TWO': 'Two', 'g.THREE': 'Three', 'g.FOUR': 'Four', 'g.FIVE': 'Five',
+    'g.OK': 'OK', 'g.CALL': 'Call', 'g.LIKE': 'Like', 'g.DISLIKE': 'Dislike',
     'g.NONE': 'None', 'g.PALM': 'Palm', 'g.FIST': 'Fist', 'g.THUMB_UP': 'Thumb up',
     'g.VICTORY': 'Victory', 'g.POINT_LEFT': 'Point left', 'g.POINT_RIGHT': 'Point right', 'g.UNKNOWN': 'Unknown',
 

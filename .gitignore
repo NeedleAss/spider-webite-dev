@@ -8,3 +8,13 @@ __pycache__/
 node_modules/
 artifacts/
 *.log
+
+# Original local handoff and private build inputs
+/DELIVERY/
+/CareRover_*.txt
+/build/
+/firmware/main_wireless/wifi_secrets.h
+/firmware/main_wireless/build_version.h
+/config/*.local.json
+/output/
+/.playwright-cli/

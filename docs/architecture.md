@@ -1,3 +1,5 @@
+> 本分支现已提供 `firmware/main_wireless` 的无线实现及测试目标状态机；尚待 Windows 原配置确认与真机验收。以下原架构描述与实现细节以 [无线开发说明](wireless-development.md) 的当前状态为准。
+
 # 架构与硬件对接
 
 ```text
@@ -12,7 +14,7 @@ protocol.js（JSON 校验） ↔ state.js（状态、许可、新鲜度、环形
    │
 Transport
    ├─ MockTransport → RobotSim（浏览器内、纯本地）
-   └─ WebSocketTransport → /ws（Python Mock 或未来 CAM）
+   └─ WebSocketTransport → /ws（Python Mock、USB 开发桥或最终主控）
 
 视频：img → /stream（独立 MJPEG HTTP 连接）
 ```
@@ -35,22 +37,25 @@ PPG 50 Hz 与绘图频率解耦；rAF 绘制上限约 60 FPS，DOM 最多 10 Hz 
 
 运行前端只需要静态服务器，无需 Node。Python 服务只用于本地开发验证，不烧录进 ESP32。GitHub Actions 执行逻辑及网络集成测试；浏览器视觉与真实硬件接入分别验收。
 
-## Future Hardware Integration Contract
+## 最终无线硬件集成契约
 
-CAM ESP32-S3 至少提供：
+主 ESP32-S3 作为唯一网页网关，建立 CareRover 本地 Wi-Fi 热点并至少提供：
 
 ```text
 GET /
-GET /stream     MJPEG，视频不经过主 ESP32-S3
 WS  /ws         双向 JSON
 ```
 
-Browser → CAM：`cmd_vel`, `set_mode`, `estop`, `clear_estop`, `ping`。
+浏览器或手机连接该热点后访问 `http://192.168.4.1/`。页面和 `/ws` 同源，因此整机运行不依赖 USB、电脑串口桥、互联网或 GitHub。
 
-CAM → Browser：`telemetry`, `ppg_batch`, `ack`, `error`, `pong`。
+Browser → Main：`cmd_vel`, `set_mode`, `estop`, `clear_estop`, `ping`。
 
-CAM → Main ESP32-S3（未来 UART）：web movement command、mode command、estop、vision result。
+Main → Browser：`telemetry`, `ppg_batch`, `ack`, `error`, `pong`。
 
-Main → CAM（未来 UART）：actual robot mode/state、imu、action status、heart rate、SpO₂、SQI、PPG、battery、faults。
+CAM → Main：沿用当前 115200 baud UART JSON 手势结果。Main 同时采集 MAX30102、未来六轴传感器并控制舵机/全向轮，在本机聚合最新状态后发布到网页。
 
-CAM 汇总主控遥测给浏览器；主控执行运动、安全裁决和传感器采样。主控独立处理 >250 ms 超时停车和急停。网页只发归一化速度目标，前端无需知道 UART 的存在。
+主控执行运动、安全裁决和传感器采样，必须独立处理 >250 ms 超时停车、急停锁定和多客户端控制权。网页只发归一化速度目标，不知道 UART、轮子逆运动学或 PWM。
+
+后续如需要真实相机画面，CAM 可加入同一 CareRover Wi-Fi，单独提供 MJPEG `GET /stream`；手势和控制数据仍以 Main 的 `/ws` 为准。视频链路缺失不得影响急停、运动 watchdog 或健康数据。
+
+`hardware/serial_bridge.py` 只用于 USB 开发诊断，不属于最终部署链路。

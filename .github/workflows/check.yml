@@ -16,3 +16,23 @@ jobs:
       - run: node --test tests/*.test.js
       - run: python -m pip install -r mock/requirements.txt
       - run: python -m unittest discover -s tests -p 'test_*.py' -v
+
+      - run: c++ -std=c++17 -Wall -Wextra -Werror -Ifirmware/main_wireless tests/firmware/safety_test.cpp -o /tmp/carerover-safety-test
+      - run: /tmp/carerover-safety-test
+  firmware:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        stage: [3, 5]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: arduino/setup-arduino-cli@v2
+        with:
+          version: '1.5.1'
+      - run: arduino-cli core update-index --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+      - run: arduino-cli core install esp32:esp32@3.3.10 --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+      - run: python -m pip install -r tools/requirements.txt
+      - run: python tools/carerover.py build --profile config/development.json --stage ${{ matrix.stage }}

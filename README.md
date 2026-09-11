@@ -1,3 +1,5 @@
+> 无线开发分支：请先阅读 [无线开发与 Windows 联调](docs/wireless-development.md) 和 [阶段验收记录](docs/wireless-acceptance.md)。本分支已加入主控无线实现，尚待 Windows 基线确认与真机验收；运动仅为测试目标，未接执行器。
+
 # CareRover Console
 
 双 ESP32-S3 全向移动健康机器人的网页控制台。无需硬件即可演示视频叠框、手势、心率 / 血氧 / PPG、全向摇杆、模式切换及急停。
@@ -95,18 +97,21 @@ python -m unittest discover -s tests -p 'test_*.py' -v
 
 第二条命令在已安装 Mock 依赖的虚拟环境执行。GitHub Actions 会运行这两套检查。
 
-## 接入真实 ESP32-S3 CAM
+## 最终接入：主 ESP32-S3 无线网关（不使用 USB）
 
-把 `index.html`、`css/`、`js/`、`assets/` 放入 CAM 提供的静态文件系统。浏览器访问 `http://<camera-ip>/?transport=ws`。
+把 `index.html`、`css/`、`js/`、`assets/` 放入主 ESP32-S3 的 FFat 静态文件系统。主控建立 CareRover Wi-Fi 热点，浏览器或手机连入后访问 `http://192.168.4.1/?transport=ws`。
 
-- CAM 提供 `GET /`、`GET /stream`（MJPEG）、`WS /ws`。
+- 主控提供 `GET /` 与同源 `WS /ws`，聚合 CAM 手势、MAX30102、未来 IMU、运动和电池数据。
 - WS 帧遵循 [通信协议](docs/protocol.md)，UI 不读取 UART，也不计算轮子运动学。
-- 可用 `?transport=ws&ws=ws%3A%2F%2F192.168.4.1%2Fws&stream=http%3A%2F%2F192.168.4.1%2Fstream` 显式配置地址。优先同源，HTTPS 页面不能混用不安全的 ws/http。
+- CAM 继续通过当前 115200 baud UART 与主控通信。后续需要实景视频时，CAM 可接入同一热点并单独提供 MJPEG `/stream`。
+- 可用 `?transport=ws&ws=ws%3A%2F%2F192.168.4.1%2Fws` 显式配置地址；正常部署优先直接使用同源地址。
 - 真机模式不加载浏览器模拟器。模拟器和 Python 后端均不需要烧录运行。
 - 主控必须独立执行超时停车、故障优先级、急停锁定和多客户端控制仲裁。前端不能替代固件安全逻辑。
+
+`hardware/serial_bridge.py` 是已验证的 USB 开发桥，便于在无线固件完成前用 COM 口核对真实传感器数据；它不是比赛最终运行方式。
 
 ## Git 与发布
 
 仓库：<https://github.com/NeedleAss/spider-webite-dev>。原有代码已经单独保存为基线提交。改动按功能提交，推送前运行测试、检查差异，不使用 force push。
 
-`.gitignore` 排除了 `.venv`、`.env`、日志、缓存和 `.DS_Store`。GitHub 上只应包含源码和项目文档；本地录制文件不应随手加入版本控制。GitHub Pages 可以托管浏览器内 Mock，但无法运行 Python 后端；本项目没有自动启用 Pages 或其他云服务。
+`.gitignore` 排除了 `.venv`、`.env`、日志、缓存和 `.DS_Store`。GitHub 上只应包含源码和项目文档；本地录制文件不应随手加入版本控制。GitHub Pages 可以托管静态页面和浏览器内 Mock，但不能直接读取开发板数据，也不是最终实时链路。比赛运行时网页由主控本地托管，GitHub 仅用于源码同步、版本管理和协作；本项目没有自动启用 Pages 或其他云服务。

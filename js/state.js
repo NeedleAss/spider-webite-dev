@@ -51,6 +51,7 @@ const state = {
     mode: undefined, state: undefined, estop: false,
     battery_pct: undefined, vx: 0, vy: 0, wz: 0
   },
+  device: {},
   imu: { yaw_deg: undefined, pitch_deg: undefined, roll_deg: undefined },
   vision: {
     image_width: CONFIG.DEFAULT_IMAGE_WIDTH,
@@ -126,6 +127,7 @@ export function applyTelemetry(msg) {
     mergeDefined(state.robot, msg.robot);
     if (msg.robot.mode !== undefined && msg.robot.estop !== undefined) state.connection.lastRobotTs = t;
   }
+  if (msg.device) mergeDefined(state.device, msg.device);
   if (msg.imu) mergeDefined(state.imu, msg.imu);
 
   if (msg.vision) {
@@ -219,6 +221,7 @@ export function isGestureStale(nowMs = Date.now()) {
 export function isManualEnabled() {
   return state.connection.link === LINK.CONNECTED &&
          !state.robot.estop && !state.ui.estopLatch && !state.ui.replaying &&
+         state.robot.control_allowed !== false &&
          !state.ui.requestedMode && state.robot.state !== 'FAULT' &&
          state.connection.camera === true && state.connection.main_mcu === true &&
          Date.now() - state.connection.lastRobotTs <= CONFIG.TELEMETRY_STALE_MS &&
@@ -227,6 +230,11 @@ export function isManualEnabled() {
 }
 
 export function resetForDisconnect() {
+  state.device = {};
+  state.robot.control_allowed = undefined;
+  state.robot.motion_output_installed = undefined;
+  state.connection.lastHealthTs = 0;
+  state.health.hr_bpm = undefined; state.health.spo2_pct = undefined;
   state.connection.lastRobotTs = 0;
   state.connection.lastTelemetryTs = 0;
   state.vision.lastPersonTs = 0;

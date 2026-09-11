@@ -5,6 +5,7 @@
 export const CONFIG = {
   /* ── 时序 / 新鲜度 ─────────────────────────────────────────────────── */
   TELEMETRY_STALE_MS: 1000,   // 超过此时间没收到 telemetry → 判定遥测中断
+  HEALTH_STALE_MS: 2500,     // 健康结果约 1 Hz，单独维护新鲜度
   VISION_STALE_MS: 500,       // 超过此时间没收到新 bbox → 视觉结果标记过期并隐藏框
   PING_INTERVAL_MS: 2000,     // ping 周期（用于测 RTT）
   PING_TIMEOUT_MS: 4000,      // 超过此时间没有 pong → 延迟显示为 --
@@ -25,7 +26,7 @@ export const CONFIG = {
   /* ── PPG ───────────────────────────────────────────────────────────── */
   PPG_WINDOW_SECONDS: 8,      // 波形窗口长度
   PPG_RING_CAPACITY: 4096,    // 环形缓冲容量（固定分配，杜绝无限增长）
-  PPG_EXPECTED_RATE_HZ: 50,   // 期望采样率，仅用于 UI 显示与缺省推算
+  PPG_EXPECTED_RATE_HZ: 25,   // 期望采样率，仅用于 UI 显示与缺省推算
 
   /* ── 连接 ──────────────────────────────────────────────────────────── */
   WS_RECONNECT_BASE_MS: 500,  // 指数退避起点：0.5s → 1s → 2s → 4s → 封顶
@@ -52,7 +53,10 @@ export const MODES = ['IDLE', 'MANUAL', 'PERSON_FOLLOW', 'GESTURE_CONTROL', 'HEA
 export const SYSTEM_MODES = ['ESTOP', 'FAULT'];
 
 /** 手势枚举，必须与 CAM 端 ESP-DL 输出保持一致。 */
-export const GESTURES = ['NONE', 'PALM', 'FIST', 'THUMB_UP', 'VICTORY', 'POINT_LEFT', 'POINT_RIGHT', 'UNKNOWN'];
+export const GESTURES = [
+  'NONE', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'OK', 'CALL', 'LIKE', 'DISLIKE',
+  'PALM', 'FIST', 'THUMB_UP', 'VICTORY', 'POINT_LEFT', 'POINT_RIGHT', 'UNKNOWN'
+];
 
 /** 健康测量状态机。 */
 export const HEALTH_STATES = ['NO_FINGER', 'ACQUIRING', 'MEASURING', 'VALID', 'LOW_QUALITY', 'ERROR'];

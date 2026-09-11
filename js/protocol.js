@@ -100,7 +100,8 @@ export function decode(raw) {
     case 'error':     return { ok: true, msg: {
                           type: 'error', ts,
                           code: typeof o.code === 'string' ? o.code.slice(0, 64) : 'UNKNOWN',
-                          message: typeof o.message === 'string' ? o.message.slice(0, 240) : ''
+                          message: typeof o.message === 'string' ? o.message.slice(0, 240) : '',
+                          request_type: enumOf(o.request_type, OUT_TYPES), request_id: num(o.request_id)
                         } };
     case 'pong':      return { ok: true, msg: { type: 'pong', ts, id: num(o.id, undefined) } };
     default:          return { ok: false, error: 'unreachable' };
@@ -122,10 +123,19 @@ export function normalizeTelemetry(o) {
     mode:        enumOf(r.mode, ALL_MODES),
     state:       typeof r.state === 'string' ? r.state.slice(0, 32) : undefined,
     estop:       bool(r.estop),
+    control_allowed: bool(r.control_allowed),
+    motion_output_installed: bool(r.motion_output_installed),
     battery_pct: num(r.battery_pct) !== undefined ? clamp(num(r.battery_pct), 0, 100) : undefined,
     vx: num(r.vx) !== undefined ? clampVel(r.vx) : undefined,
     vy: num(r.vy) !== undefined ? clampVel(r.vy) : undefined,
     wz: num(r.wz) !== undefined ? clampVel(r.wz) : undefined
+  };
+
+  const d = obj(o.device);
+  if (d) out.device = {
+    firmware: typeof d.firmware === 'string' ? d.firmware.slice(0, 96) : undefined,
+    backend: typeof d.backend === 'string' ? d.backend.slice(0, 32) : undefined,
+    stage: num(d.stage)
   };
 
   const i = obj(o.imu);
@@ -136,7 +146,7 @@ export function normalizeTelemetry(o) {
     out.vision = {
       image_width:  num(v.image_width) > 0 ? Math.min(v.image_width, 8192) : undefined,
       image_height: num(v.image_height) > 0 ? Math.min(v.image_height, 8192) : undefined,
-      ai_fps:       num(v.ai_fps)
+      ai_fps:       v.ai_fps === null ? null : num(v.ai_fps)
     };
     const p = obj(v.person);
     if (p) {
@@ -160,8 +170,8 @@ export function normalizeTelemetry(o) {
 
   const h = obj(o.health);
   if (h) out.health = {
-    hr_bpm:   num(h.hr_bpm),
-    spo2_pct: num(h.spo2_pct),
+    hr_bpm:   h.hr_bpm === null ? null : num(h.hr_bpm),
+    spo2_pct: h.spo2_pct === null ? null : num(h.spo2_pct),
     sqi:      num(h.sqi) !== undefined ? clamp(num(h.sqi), 0, 1) : undefined,
     finger_detected: bool(h.finger_detected),
     state:    enumOf(h.state, HEALTH_STATES)

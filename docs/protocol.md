@@ -1,6 +1,6 @@
 # CareRover JSON 协议 v1
 
-浏览器只连接 CAM 的 `/ws`。所有消息是 JSON 文本，含 `type` 和 `ts`（Unix 毫秒）。视频不进入 WebSocket。
+最终整机中，浏览器只连接主 ESP32-S3 的 `/ws`。所有消息是 JSON 文本，含 `type` 和 `ts`（Unix 毫秒）。视频不进入 WebSocket。USB 串口桥仅用于开发诊断。
 
 ## Browser → Robot
 
@@ -48,16 +48,16 @@ Mock 额外上报 `connection.simulated: true`，用于将 WebSocket 模拟设�
 - 请求模式：`IDLE`, `MANUAL`, `PERSON_FOLLOW`, `GESTURE_CONTROL`, `HEALTH_CHECK`。
 - 系统模式：`ESTOP`, `FAULT`，不可通过 set_mode 请求。
 - 状态：`IDLE`, `READY`, `DRIVING`, `TRACKING`, `SEARCHING`, `MEASURING`, `ESTOP`, `FAULT`。
-- 手势：`NONE`, `PALM`, `FIST`, `THUMB_UP`, `VICTORY`, `POINT_LEFT`, `POINT_RIGHT`, `UNKNOWN`。显示置信度和更新时间；stable 且 confidence ≥ 0.75 显示“已稳定”，网页不会据此自行发运动命令。
+- 手势：`NONE`, `PALM`, `FIST`, `THUMB_UP`, `VICTORY`, `POINT_LEFT`, `POINT_RIGHT`, `ONE`, `TWO`, `THREE`, `FOUR`, `FIVE`, `OK`, `CALL`, `LIKE`, `DISLIKE`, `UNKNOWN`。显示置信度和更新时间；stable 且 confidence ≥ 0.75 显示“已稳定”，网页不会据此自行发运动命令。
 - 健康状态：`NO_FINGER`, `ACQUIRING`, `MEASURING`, `VALID`, `LOW_QUALITY`, `ERROR`。无手指、无效、低质量或过期时不显示为有效 HR / SpO₂。
 - person 500 ms 未更新隐藏；gesture 2 秒未更新失效。两个时间戳各自维护。
 
 ## PPG
 
-50 samples/s，推荐每 100 ms 一批 5 个样本：
+当前真机 25 samples/s，推荐每 200 ms 一批 5 个样本：
 
 ```json
-{"type":"ppg_batch","ts":1788940000000,"sample_rate_hz":50,"samples":[18342,18480,18900,20110,19420]}
+{"type":"ppg_batch","ts":1788940000000,"sample_rate_hz":25,"samples":[18342,18480,18900,20110,19420]}
 ```
 
 ts 表示本批**最后一个样本**时间；其余按采样率反推。前端绘图将批末锚定本地接收时间，避免未同步的设备时钟让波形跑出视野；原始 ts 保留在录制文件中。断开的时间段不补线。
@@ -91,3 +91,22 @@ set_mode 等待一致 telemetry 才选中模式；1.5 秒未确认提示失败�
 8. 回放完全隔离命令发送，恢复实时仍等待新的机器人状态。
 
 本协议不定义 ESP-DL 推理、UART 帧、轮子运动学或 PWM 校准。
+
+
+## 主控无线测试后端扩展
+
+完整部署说明见 `wireless-development.md`。新增可选字段均兼容原网页协议：
+
+- `robot.motion_output_installed:false`：速度回显仅为测试目标，无实际执行器输出。
+- `robot.control_allowed`：当前会话是否可申请/持有控制；false 时网页只读，仍允许 estop。
+- `device`：firmware、backend=`test_targets`、stage、uptime_ms、last_cmd_ms、stopped_at_ms、stop_sequence、stop_reason、max_safety_gap_ms、publish_drops、free_heap；均为设备诊断信息，不是传感器测量。
+- error 追加可选 `request_type` / `request_id`，供网页立即结束对应失败请求。
+- `CLOCK_NOT_READY`、`STALE_COMMAND`、`READ_ONLY`、`UNSUPPORTED_MODE`、`CAMERA_OFFLINE`、`FAULT_ACTIVE` 为新增错误码。
+
+主控首次 ping 建立每个会话的 Unix 时间估计，之前不发布传感器遥测；未校时的错误/急停 ACK 使用 ts=0 表示未建立时间基准。浏览器连接立即 ping。所有安全时限和来源新鲜度使用设备单调时钟。
+
+本轮只实现 IDLE/MANUAL/HEALTH_CHECK；自主模式拒绝。MANUAL 在 CAM 超时、所有者断开、网络断开或有效非零命令过期时清零并回 IDLE，需重新申请模式。实际过期阈值 240 ms，周期任务 5 ms，为 250 ms 上限保留余量。未安装输出在所有 stage 中均不可开启。
+
+健康结果中的 null 明确清除对应旧值；省略字段仍保留旧值。健康网页新鲜度为 2500 ms；机器人许可仍为 1000 ms。固件健康有效性另外要求采样仍在推进。传感器块只在新结果或失效变化时发送，不用 10 Hz 重发旧块延长有效期。
+
+固件最多 4 个 WS 会话；整条入站消息不超过 64 KiB，仅接受未分片文本帧，JSON 深度上限 8，顶层不超过 8 个键且不允许重复键。模式/运动/恢复的请求时间相对会话时间基准落后超过 200 ms 或超前超过 100 ms 时拒绝；急停、零释放不受这个窗口限制。请求 id 若提供必须是非负安全整数。ping 的 ts 需为 2000–2100 年范围的 Unix 毫秒，id 为非负安全整数。

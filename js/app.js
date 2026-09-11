@@ -11,6 +11,7 @@ import { DebugPanel } from './debug.js';
 const $ = id => document.getElementById(id);
 const state = store.getState();
 const lifecycle = new AbortController();
+const sourceKind = new URLSearchParams(location.search).get('source');
 let transport, controls, debug, video, chart;
 let pendingMode = null, pendingClear = null, pong = null, replay = null;
 let raf, lastPaint = 0, frames = 0, fps = 0, frameEpoch = performance.now(), lastUi = 0;
@@ -100,9 +101,14 @@ function receive(raw, isReplay = false) {
       }
       debug.log('rx', JSON.stringify(msg)); break;
     case 'error':
+      if (pendingMode && msg.request_type === 'set_mode' && msg.request_id === pendingMode.command.request_id) { pendingMode = null; store.setRequestedMode(null); }
+      if (pendingClear && msg.request_type === 'clear_estop' && msg.request_id === pendingClear.command.request_id) pendingClear = null;
       if (msg.code === 'ESTOP_ACTIVE') { store.markEstopLocal(true); stop(); }
       toast(msg.message || msg.code, 'warn'); debug.log('err', `${msg.code}: ${msg.message}`); break;
   }
+}
+function pingServer() {
+  if (!pong) { const id = Date.now(); pong = { id, at: performance.now() }; send(protocol.ping(id)); }
 }
 function linkChanged(link) {
   store.setConnectionState(link);
@@ -112,6 +118,7 @@ function linkChanged(link) {
     $('confirmDlg').close();
     if (previousLink === LINK.CONNECTED && !state.ui.replaying) toast(t('t.link.lost'), 'warn');
   } else {
+    pingServer(); // Establish device time immediately, before releases or mode requests.
     // New sessions never inherit input held before a disconnect.
     stop(); if (state.ui.estopLatch) send(protocol.estop());
     if (previousLink === LINK.RECONNECTING) toast(t('t.link.back'), 'ok');
@@ -137,10 +144,10 @@ function render() {
   $('linkStat').dataset.state = state.ui.replaying ? 'reconnecting' : state.connection.link;
   text('linkStatLabel', state.ui.replaying ? tr('回放中', 'REPLAY') : t(`link.${state.connection.link}`));
   text('mLatency', Date.now() - state.connection.lastPongTs < CONFIG.PING_TIMEOUT_MS ? value(state.connection.latencyMs, 0, ' ms') : '—');
-  text('mTransport', state.ui.replaying ? 'REPLAY' : state.ui.transportName === 'mock' ? tr('模拟', 'DEMO') : 'Wi-Fi');
+  text('mTransport', state.ui.replaying ? 'REPLAY' : state.ui.transportName === 'mock' ? tr('模拟', 'DEMO') : sourceKind === 'usb' ? tr('USB桥接', 'USB BRIDGE') : 'Wi-Fi');
   text('langToggle', getLang() === 'zh' ? 'EN' : '中');
   text('sessionTitle', locked ? tr('急停已锁定', 'Emergency stop engaged') : stale ? tr('等待机器人连接', 'Waiting for your robot') : tr('一切，尽在掌控。', 'Everything. Under control.'));
-  text('sessionDescription', locked ? tr('控制已锁定。确认环境安全后，可解除急停并回到待机。', 'Controls are locked. Clear the stop to return to idle.') : state.ui.replaying ? tr('正在查看录制数据，运动控制已关闭。', 'Recorded session. Motion controls are disabled.') : state.ui.transportName === 'mock' || state.connection.simulated ? tr('模拟环境已准备就绪。选一个模式，开始探索。', 'Your simulated environment is ready. Choose a mode to begin.') : tr('实时连接设备。所有运动由机器人确认执行。', 'Connected to your device. Motion is confirmed by the robot.'));
+  text('sessionDescription', locked ? tr('控制已锁定。确认环境安全后，可解除急停并回到待机。', 'Controls are locked. Clear the stop to return to idle.') : state.ui.replaying ? tr('正在查看录制数据，运动控制已关闭。', 'Recorded session. Motion controls are disabled.') : state.ui.transportName === 'mock' || state.connection.simulated ? tr('模拟环境已准备就绪。选一个模式，开始探索。', 'Your simulated environment is ready. Choose a mode to begin.') : state.robot.motion_output_installed === false ? tr('运动输出未接入 · 速度仅为测试目标值，手势和健康数据来自真机。', 'Motion output not installed · Velocities are test targets; gesture and health data are live.') : tr('实时连接设备。所有运动由机器人确认执行。', 'Connected to your device. Motion is confirmed by the robot.'));
   const visionStale = store.isPersonStale() || (stale && !state.ui.replaying);
   $('visionStale').hidden = !visionStale;
   $('telemStale').hidden = !stale;
@@ -169,8 +176,8 @@ function render() {
     $(id).dataset.on = String(connected);
     text(id, connected === undefined ? '—' : connected ? tr('在线', 'Online') : tr('离线', 'Offline'));
   }
-  const healthFresh = confirmed && Date.now() - state.connection.lastHealthTs < CONFIG.TELEMETRY_STALE_MS;
-  const healthy = healthFresh && state.health.finger_detected && ['VALID', 'MEASURING'].includes(state.health.state);
+  const healthFresh = confirmed && Date.now() - state.connection.lastHealthTs < CONFIG.HEALTH_STALE_MS;
+  const healthy = healthFresh && state.health.finger_detected && state.health.state === 'VALID';
   text('mHr', healthy ? value(state.health.hr_bpm) : '—'); text('mSpo2', healthy ? value(state.health.spo2_pct) : '—');
   text('mSqi', healthFresh && state.health.finger_detected ? value(state.health.sqi * 100, 0, '%') : '—');
   text('healthState', healthFresh ? t(`hs.${state.health.state}`) : tr('等待信号', 'Waiting for signal'));
@@ -188,13 +195,18 @@ function render() {
   for (const b of $('modeBar').querySelectorAll('[data-mode]')) {
     b.setAttribute('aria-pressed', String(!stale && !locked && state.robot.mode === b.dataset.mode));
     b.dataset.pending = String(state.ui.requestedMode === b.dataset.mode);
-    b.disabled = stale || locked || !!pendingMode || state.ui.replaying;
+    const unsupported = state.device.backend === 'test_targets' && (!['IDLE', 'MANUAL', 'HEALTH_CHECK'].includes(b.dataset.mode) || state.device.stage < 4);
+    b.disabled = stale || locked || !!pendingMode || state.ui.replaying || unsupported || state.robot.control_allowed === false;
   }
-  $('clearEstopBtn').hidden = !locked; $('clearEstopBtn').disabled = !transport?.isOpen || !!pendingClear;
+  $('clearEstopBtn').hidden = !locked; $('clearEstopBtn').disabled = !transport?.isOpen || !!pendingClear || state.robot.control_allowed === false || (state.device.stage !== undefined && state.device.stage < 4);
   $('estopBtn').disabled = state.ui.replaying;
   text('estopLabel', locked ? tr('急停已锁定', 'E-STOP ENGAGED') : t('safety.estop'));
   $('dbgDrop').disabled = !transport?.isOpen || state.ui.replaying;
   text('footNote', state.ui.transportName === 'mock' ? tr('演示模式 · 数据由本地模拟生成', 'Demo mode · Locally simulated data') : state.connection.simulated ? tr('模拟设备 · WebSocket 与 MJPEG 通信', 'Simulated device · WebSocket & MJPEG') : tr('设备模式 · 数据来自 WebSocket', 'Device mode · Data received over WebSocket'));
+  if (state.device.firmware) {
+    const webVersion = document.querySelector('meta[name=carerover-web-version]')?.content || 'development';
+    text('footNote', `${tr('固件', 'Firmware')} ${state.device.firmware} · Web ${webVersion} · ${state.robot.control_allowed === false ? tr('只读客户端', 'Read-only client') : tr('运动输出未接入', 'Motion output not installed')}`);
+  }
   debug.render(state, fps); previousEnabled = enabled;
 }
 function tick(now) {
@@ -247,7 +259,7 @@ async function main() {
   timers.push(setInterval(() => {
     if (transport.isOpen && !state.ui.replaying) {
       if (pong && performance.now() - pong.at > CONFIG.PING_TIMEOUT_MS) { stop(); transport.simulateDrop(); return; }
-      if (!pong) { const id = Date.now(); pong = { id, at: performance.now() }; send(protocol.ping(id)); }
+      pingServer();
     }
   }, CONFIG.PING_INTERVAL_MS));
   window.addEventListener('pagehide', e => { stop(); if (!e.persisted) destroy(); else transport.disconnect(); }, { signal: lifecycle.signal });
