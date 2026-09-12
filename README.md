@@ -1,3 +1,5 @@
+> Windows 接手：见 [资源、命令和可复制提示词](docs/WINDOWS_ULTRASONIC_HANDOFF.md)。
+
 > 新增 HC-SR04 前方保护与固定向右单障碍演示绕行：见 [接线、标定门禁与模拟演示](docs/ultrasonic-development.md)。实物引脚和机械参数尚未标定，默认未接入；真实保护与绕行分别验证后启用。
 
 > 人脸跟随集成：参阅 [构建、校准与 Windows 联调](docs/tracking-development.md)。源码新增 CAM 人脸/手势/MJPEG、主控 IMU/舵机/跟随与安全仲裁。真机验收仍为 NOT RUN。参阅 [本机结果与实物验收表](docs/tracking-acceptance.md)。
