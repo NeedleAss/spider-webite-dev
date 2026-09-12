@@ -34,7 +34,8 @@ class ImuFilter {
       state_.roll=alpha*(state_.roll+(gx-state_.biasX)*dt)+(1-alpha)*roll;
       state_.pitch=alpha*(state_.pitch+(gy-state_.biasY)*dt)+(1-alpha)*pitch;
       state_.yaw+=(gz-state_.biasZ)*dt;
-      if(state_.yaw>180) state_.yaw-=360; if(state_.yaw<-180) state_.yaw+=360;
+      if(state_.yaw>180) state_.yaw-=360;
+      if(state_.yaw<-180) state_.yaw+=360;
     }
     state_.valid=true;state_.sampleMs=now;
     // Check raw gravity tilt too: the complementary filter must not delay a stop.
