@@ -1,4 +1,8 @@
-> 无线开发分支：请先阅读 [无线开发与 Windows 联调](docs/wireless-development.md) 和 [阶段验收记录](docs/wireless-acceptance.md)。本分支已加入主控无线实现，尚待 Windows 基线确认与真机验收；运动仅为测试目标，未接执行器。
+> 新增 HC-SR04 前方保护与固定向右单障碍演示绕行：见 [接线、标定门禁与模拟演示](docs/ultrasonic-development.md)。实物引脚和机械参数尚未标定，默认未接入；真实保护与绕行分别验证后启用。
+
+> 人脸跟随集成：参阅 [构建、校准与 Windows 联调](docs/tracking-development.md)。源码新增 CAM 人脸/手势/MJPEG、主控 IMU/舵机/跟随与安全仲裁。真机验收仍为 NOT RUN。参阅 [本机结果与实物验收表](docs/tracking-acceptance.md)。
+
+> 原无线基线：`integration=legacy` 仍使用无执行器的测试目标。旧阶段记录见 [无线开发](docs/wireless-development.md) 和 [历史验收](docs/wireless-acceptance.md)；人物跟随与真实 PWM 使用上方的新集成说明。
 
 # CareRover Console
 

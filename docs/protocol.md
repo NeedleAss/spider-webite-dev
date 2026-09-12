@@ -110,3 +110,55 @@ set_mode 等待一致 telemetry 才选中模式；1.5 秒未确认提示失败�
 健康结果中的 null 明确清除对应旧值；省略字段仍保留旧值。健康网页新鲜度为 2500 ms；机器人许可仍为 1000 ms。固件健康有效性另外要求采样仍在推进。传感器块只在新结果或失效变化时发送，不用 10 Hz 重发旧块延长有效期。
 
 固件最多 4 个 WS 会话；整条入站消息不超过 64 KiB，仅接受未分片文本帧，JSON 深度上限 8，顶层不超过 8 个键且不允许重复键。模式/运动/恢复的请求时间相对会话时间基准落后超过 200 ms 或超前超过 100 ms 时拒绝；急停、零释放不受这个窗口限制。请求 id 若提供必须是非负安全整数。ping 的 ts 需为 2000–2100 年范围的 Unix 毫秒，id 为非负安全整数。
+
+## 人脸跟随集成扩展（2026-09-12）
+
+CAM 与主控 UART 115200 8N1，G/P 共用递增 uint32 seq：
+
+```text
+@G,seq,cam_ms,hand,label,score_milli,x0,y0,x1,y1,infer_ms*CRC8\r\n
+@P,seq,cam_ms,found,score_milli,x0,y0,x1,y1,infer_ms*CRC8\r\n
+```
+
+CRC8 多项式 0x07、初值 0，覆盖 `G,...` 或 `P,...`，不含 @、* 和换行。score 为 0..1000，found 为 0/1，框在 320×240 内且必须有正面积；无目标时 score/四坐标全为零。测试黄金向量在 `tests/fixtures/vision_uart.txt`。CRC/字段/范围错误、重复和乱序帧不更新来源时钟；超过来源超时后重同步，先停止跟随。
+
+原有 WebSocket 命令字段不变。新增或扩展的 telemetry 字段：
+
+| 字段 | 语义 |
+|---|---|
+| `vision.person.seq` / `age_ms` | 人物来源序号、主控单调时钟计算的结果年龄；重复聚合不是新检测 |
+| `video.stream_url` | 优先 `http://192.168.4.2/stream`；允许相对 URL 和 HTTP(S)，禁止凭据 URL |
+| `video.source_width/height` / `protocol` | 320×240 / mjpeg |
+| `imu.valid/calibrated/tilt_fault` / `age_ms` | 有效性、开机校准、倾角故障和来源年龄 |
+| `imu.yaw_deg/pitch_deg/roll_deg` | 度；失效为 null。yaw 为相对航向 |
+| `device.supported_modes` / `integration` | 当前固件能力和 observe/manual/follow 配置 |
+| `robot.calibration_ready` / `motion_output_installed` | 校准已由操作者验证、实际 PWM 输出已安装 |
+
+网页视频优先级：合法 `?stream=` → 合法遥测地址 → 同源 `/stream`。视频发生错误后 1–5 秒退避重试，切换画面源或 WS 断开取消重试。人物框独立过期，重复 seq 不刷新页面来源期限。
+
+跟随只接受控制者的现有 `ping` 格式作保活，推荐每 100 ms；有效会话中只有递增 id 且 ts 新鲜的 ping 才续期。手动速度、控制者保活、控制计算输出分别 240 ms 内部过期；CAM/人物来源 490 ms 过期，预留调度余量。ping 不续手动速度；旁观者 ping 不续跟随。非零 cmd_vel 在跟随模式被拒绝，零值停止并退出跟随。手动/跟随切换、来源失效及故障恢复后均需显式重新进入模式。
+
+跟随目标为人脸框，进入后用三个匹配新框的面积中位数记录近似距离；不提供身份识别、米制距离、实测轮速或自动搜索。来源无效、低置信度或目标匹配失败立即停止。全部运动经主控安全仲裁；网页不是物理 watchdog。
+
+## HC-SR04 前方保护增量
+
+主控新增可选 `front` 遥测块；旧设备缺块时网页显示未接入并禁用演示开关。`distance_cm` 是探头至前方回波物体的距离，不是目标人物距离。无效为 null，220 ms 及以上的采样年龄视为未知；网页还累加本地等待时间，不保留失效读数。
+
+```json
+{"front":{"enabled":true,"ready":true,"valid":true,"distance_cm":82,"age_ms":30,"status":"CLEAR","phase":"NONE","demo_ready":true,"demo_enabled":false,"release_required":false,"stop_reason":"mode_changed"}}
+```
+
+- status：DISABLED / UNCONFIGURED / UNKNOWN / CLEAR / WARN / SLOW / BLOCKED / STOPPED / BYPASS。
+- phase：NONE / HALT / RIGHT / MARGIN / PASS / REACQUIRE。
+- ready 是已验证保护配置；demo_ready 还要求已验证绕障参数和支持 follow。仅 UI Mock 使用合成配置。
+- release_required 表示手动近障停车后须先发零速度。运动命令格式不变，网页不指定 GPIO、阈值、舵机 PWM 或绕行时间。
+
+新增命令（默认关闭，一次演示完成后自动关闭）：
+
+```json
+{"type":"set_demo_bypass","ts":1700000000000,"request_id":42,"enabled":true}
+```
+
+仅当前 PERSON_FOLLOW 控制者可执行，保留时间戳有效期、只读阶段、所有者和急停约束；必须是 boolean。使用已有 ACK/error 及 request_id 关联。途中禁用会停止并回 IDLE。错误可能为 NOT_IN_FOLLOW / BYPASS_CALIBRATION_REQUIRED / FRONT_CALIBRATION_REQUIRED / FRONT_UNKNOWN / FRONT_RELEASE_REQUIRED，以及既有 CONTROL_BUSY / ESTOP_ACTIVE / READ_ONLY / STALE_COMMAND。
+
+绕障临时覆盖跟随输出，但不续租目标、IMU、控制者或计算输出。动作失败、断链、急停均退出 IDLE，不自动重试。所有停止使用原校准中值；网页速度仍为控制输出，非实测轮速。详细标定和失败语义见 [超声波开发指南](ultrasonic-development.md)。

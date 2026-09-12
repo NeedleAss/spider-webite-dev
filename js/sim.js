@@ -6,6 +6,7 @@
  *
  * 本文件不含 DOM 或网络代码，数值仿真与安全行为由 tests/core.test.js 检查。
  */
+import { FrontSim } from './front-sim.js';
 import { CONFIG } from './config.js';
 import { validateOutgoing } from './protocol.js';
 
@@ -19,6 +20,7 @@ export class RobotSim {
     this.imageWidth = opts.imageWidth ?? CONFIG.DEFAULT_IMAGE_WIDTH;
     this.imageHeight = opts.imageHeight ?? CONFIG.DEFAULT_IMAGE_HEIGHT;
 
+    this.front = new FrontSim();
     this.t = 0;                 // 仿真时间(s)
     this.mode = 'IDLE';
     this.estop = false;
@@ -58,6 +60,10 @@ export class RobotSim {
     if (invalid) return [{ type: 'error', ts, code: 'INVALID_COMMAND', message: invalid }];
     const ack = ok => ({ type: 'ack', ts, request_type: msg.type, request_id: msg.request_id, ok });
     switch (msg.type) {
+      case 'set_demo_bypass':
+        if(this.estop||this.mode!=='PERSON_FOLLOW')return [ack(false),{type:'error',ts,code:'NOT_IN_FOLLOW',message:'Follow mode required'}];
+        if(!msg.enabled&&this.front.phase!=='NONE'){this.mode='IDLE';this.vel={vx:0,vy:0,wz:0};}
+        this.front.setDemo(msg.enabled,this.t);return [ack(true)];
       case 'cmd_vel': {
         const nonZero = Math.abs(msg.vx) > 1e-6 || Math.abs(msg.vy) > 1e-6 || Math.abs(msg.wz) > 1e-6;
         // 安全裁决在机器人侧：急停期间一律拒绝非零速度
@@ -71,8 +77,10 @@ export class RobotSim {
           return [{ type: 'error', ts, code: 'NOT_IN_MANUAL',
                     message: `Motion command ignored in ${this.mode}` }];
         }
+        if(!nonZero)this.front.release();
+        if(nonZero&&this.front.held)return [{type:'error',ts,code:'FRONT_RELEASE_REQUIRED',message:'Release joystick first'}];
         this.cmd = { vx: msg.vx, vy: msg.vy, wz: msg.wz };
-        if (!nonZero) this.vel = { vx: 0, vy: 0, wz: 0 };
+        if (!nonZero) { this.vel = { vx: 0, vy: 0, wz: 0 }; if(this.mode === 'PERSON_FOLLOW') this.mode='IDLE'; }
         this.lastCmdAt = this.t;
         return []; // cmd_vel 走高频通道，不逐包 ACK，靠 telemetry 回显确认
       }
@@ -83,13 +91,17 @@ export class RobotSim {
                   { type: 'error', ts, code: 'ESTOP_ACTIVE',
                     message: 'Clear ESTOP before changing mode' }];
         }
+        if(['MANUAL','PERSON_FOLLOW'].includes(msg.mode)&&this.front.held)return [{type:'error',ts,code:'FRONT_RELEASE_REQUIRED',message:'Release joystick first'}];
+        this.front.cancel('mode_changed');
         this.mode = msg.mode;
+        if(msg.mode === 'PERSON_FOLLOW') { const r=this._personRect(); this.referenceArea=r.w*r.h;this.lastFollowPing=this.t;this.turning=false; }
         this.cmd = { vx: 0, vy: 0, wz: 0 };   // 换模式一律先停
         this.vel = { vx: 0, vy: 0, wz: 0 };
         return [ack(true)];
       }
 
       case 'estop':
+        this.front.cancel('estop');
         this.estop = true;
         this.cmd = { vx: 0, vy: 0, wz: 0 };
         this.vel = { vx: 0, vy: 0, wz: 0 };   // 急停是硬停，不做减速过渡
@@ -101,6 +113,7 @@ export class RobotSim {
         return [ack(true)];
 
       case 'ping':
+        this.lastFollowPing=this.t;
         return [{ type: 'pong', ts, id: msg.id }];
 
       default:
@@ -122,12 +135,16 @@ export class RobotSim {
         const ageMs = (this.t - this.lastCmdAt) * 1000;
         if (ageMs > CONFIG.DEADMAN_TIMEOUT_MS) this.vel = { vx: 0, vy: 0, wz: 0 };
         target = ageMs > CONFIG.DEADMAN_TIMEOUT_MS ? { vx: 0, vy: 0, wz: 0 } : { ...this.cmd };
-      } else if (this.mode === 'PERSON_FOLLOW' && this.personFound) {
-        // 简单比例控制：人偏离画面中心 → 转向；框太小 → 前进
-        const cx = this._personRect().x + this._personRect().w / 2;
-        const err = (cx - this.imageWidth / 2) / (this.imageWidth / 2);
-        target.wz = clamp(err * 0.8, -0.6, 0.6);
-        target.vx = clamp(0.35 - this._personRect().h / this.imageHeight * 0.25, -0.2, 0.4);
+      } else if (this.mode === 'PERSON_FOLLOW') {
+        if(!this.personFound || this.trackingScenario==='low-confidence' || this.trackingScenario==='imu-fault' || (this.t-this.lastFollowPing)*1000>=240) {
+          this.mode='IDLE';this.vel={vx:0,vy:0,wz:0};
+        } else {
+          const r=this._personRect(), ex=(r.x+r.w/2-this.imageWidth/2)/(this.imageWidth/2);
+          const dead=x=>Math.abs(x)<=.1?0:x-Math.sign(x)*.1;
+          if(Math.abs(ex)>=.35)this.turning=true;else if(Math.abs(ex)<=.20)this.turning=false;
+          if(this.turning)target.wz=clamp(.8*ex,-.3,.3);
+          else {target.vy=clamp(.6*dead(ex),-.2,.2);target.vx=clamp(.5*dead(1-Math.sqrt(r.w*r.h/this.referenceArea)),-.25,.25);}
+        }
       } else if (this.mode === 'GESTURE_CONTROL') {
         const g = GESTURE_CYCLE[this.gestureIdx];
         if (g === 'PALM') target = { vx: 0, vy: 0, wz: 0 };
@@ -138,6 +155,13 @@ export class RobotSim {
       }
     }
 
+    if(this.mode!=='PERSON_FOLLOW'&&this.front.enabled)this.front.cancel('mode_exit');
+    const frontResult=this.front.step(this.t,target,this.mode==='PERSON_FOLLOW');
+    if(['MANUAL','PERSON_FOLLOW','GESTURE_CONTROL'].includes(this.mode)) {
+      target=frontResult.target;
+      if(frontResult.abort){this.mode='IDLE';this.cmd={vx:0,vy:0,wz:0};}
+      if(!target.vx&&!target.vy&&!target.wz)this.vel={vx:0,vy:0,wz:0};
+    }
     // 一阶低通，模拟机械惯性
     const k = Math.min(1, dt * 6);
     this.vel.vx += (target.vx - this.vel.vx) * k;
@@ -158,7 +182,7 @@ export class RobotSim {
     this.personPhase += dt * 0.42;
     // 偶尔丢目标几秒，用来验证前端的 stale / 隐藏框逻辑
     const lost = Math.sin(this.personPhase * 0.23) < -0.93;
-    this.personFound = !lost;
+    this.personFound = !lost && this.trackingScenario !== 'person-lost';
     this.aiFps = clamp(5.8 + Math.sin(this.t * 0.9) * 0.7 + rand(-0.25, 0.25), 3.5, 8);
 
     if (this.t - this.gestureAt > rand(2.6, 4.2)) {
@@ -238,22 +262,25 @@ export class RobotSim {
     return {
       type: 'telemetry',
       ts: Date.now(),
+      front:this.front.telemetry(this.t),
       connection: { camera: true, main_mcu: true, simulated: true },
       robot: {
         mode: this.estop ? 'ESTOP' : this.mode,
         state: this._stateName(),
         estop: this.estop,
+        control_allowed: true,
         battery_pct: Math.round(this.battery),
         vx: round3(this.vel.vx), vy: round3(this.vel.vy), wz: round3(this.vel.wz)
       },
-      imu: { yaw_deg: round2(this.yaw), pitch_deg: round2(this.pitch), roll_deg: round2(this.roll) },
+      video: {stream_url:'/stream',source_width:320,source_height:240,protocol:'mjpeg'},
+      imu: { valid: this.trackingScenario!=='imu-fault', calibrated:true, tilt_fault:this.trackingScenario==='imu-fault', yaw_deg: round2(this.yaw), pitch_deg: round2(this.pitch), roll_deg: round2(this.roll) },
       vision: {
         image_width: this.imageWidth,
         image_height: this.imageHeight,
         ai_fps: round2(this.aiFps),
         person: this.personFound
           ? { found: true, x: r.x, y: r.y, w: r.w, h: r.h,
-              confidence: round2(clamp(0.87 + Math.sin(this.t * 1.3) * 0.09, 0.5, 0.99)) }
+              confidence: this.trackingScenario==='low-confidence' ? .4 : round2(clamp(0.87 + Math.sin(this.t * 1.3) * 0.09, 0.5, 0.99)) }
           : { found: false },
         gesture: { label, confidence: round2(this.gestureConf), stable: this.gestureConf > 0.75 }
       },
@@ -272,7 +299,7 @@ export class RobotSim {
     const moving = Math.abs(this.vel.vx) + Math.abs(this.vel.vy) + Math.abs(this.vel.wz) > 0.02;
     switch (this.mode) {
       case 'MANUAL':          return moving ? 'DRIVING' : 'READY';
-      case 'PERSON_FOLLOW':   return this.personFound ? 'TRACKING' : 'SEARCHING';
+      case 'PERSON_FOLLOW':   return this.personFound ? 'TRACKING' : 'IDLE';
       case 'GESTURE_CONTROL': return moving ? 'DRIVING' : 'READY';
       case 'HEALTH_CHECK':    return 'MEASURING';
       default:                return 'IDLE';

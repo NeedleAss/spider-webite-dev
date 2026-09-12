@@ -1,6 +1,9 @@
 #include "wireless_runtime.h"
 #include "safety_controller.h"
 #include "frame_guard.h"
+#include "mpu6050_soft.h"
+#include "motion_calibration.h"
+#include "hcsr04.h"
 #include <Arduino.h>
 #include <WiFi.h>
 #include <FFat.h>
@@ -26,6 +29,10 @@
 #ifndef CAREROVER_STAGE
 #define CAREROVER_STAGE 5
 #endif
+#ifndef CAREROVER_INTEGRATION
+#define CAREROVER_INTEGRATION 0
+#endif
+static_assert(CAREROVER_INTEGRATION>=0 && CAREROVER_INTEGRATION<=3, "Bad integration mode");
 static_assert(CAREROVER_STAGE >= 1 && CAREROVER_STAGE <= 5, "Stage must be 1..5");
 
 namespace {
@@ -34,6 +41,10 @@ constexpr size_t MaxClients = 4, MaxFrame = 65536;
 portMUX_TYPE safetyMux = portMUX_INITIALIZER_UNLOCKED;
 portMUX_TYPE sourceMux = portMUX_INITIALIZER_UNLOCKED;
 SafetyController safety;
+FrontInstallation frontInstallation;
+ContinuousServoDrive drive;
+bool calibrationReady=false;
+std::atomic<bool> driveReady{false};
 httpd_handle_t server = nullptr;
 std::atomic<bool> publishPending{false};
 std::atomic<bool> apOnline{false};
@@ -41,6 +52,12 @@ std::atomic<uint32_t> publishDrops{0};
 std::atomic<uint32_t> maxSafetyGapMs{0};
 struct Sources {
   WirelessHealth health;
+  VisionPacket person;
+  ImuSample imu;
+  bool personSeen=false;
+  uint32_t resultCount=0;
+  uint64_t fpsStart=0;
+  float aiFps=0;
   char label[24] = "NONE";
   float score = 0;
   bool accepted = false;
@@ -54,7 +71,7 @@ struct Session {
   int fd = -1;
   uint32_t id = 0;
   bool clockReady = false;
-  double unixBase = 0;
+  double unixBase = 0, lastPingId=-1;
   uint64_t monoBase = 0;
   uint32_t gestureSeq = UINT32_MAX, healthSeq = UINT32_MAX, ppgSeq = 0;
   bool gestureFresh = false, healthFresh = false;
@@ -145,16 +162,20 @@ void command(Session& c, const cJSON* j) {
     const auto* id=field(j,"id");
     if (!safeInteger(id) || ts->valuedouble < 946684800000.0 || ts->valuedouble > 4102444800000.0) { replyError(c,"INVALID_COMMAND",j); return; }
     if (!c.clockReady) { c.unixBase=ts->valuedouble; c.monoBase=now; c.clockReady=true; }
+    if(id->valuedouble>c.lastPingId && commandAgeAllowed(timestamp(c,now)-ts->valuedouble)) {
+      c.lastPingId=id->valuedouble;
+      portENTER_CRITICAL(&safetyMux); safety.heartbeat(c.id,now); portEXIT_CRITICAL(&safetyMux);
+    }
     auto* response=object("pong",c,now); cJSON_AddNumberToObject(response,"id",id->valuedouble); sendJson(c,response); return;
   }
   if (auto* id=field(j,"request_id"); id && !safeInteger(id)) { replyError(c,"INVALID_COMMAND",j); return; }
   if (!c.clockReady) { replyError(c,"CLOCK_NOT_READY",j); return; }
-  if (strcmp(kind,"cmd_vel")!=0 && strcmp(kind,"set_mode")!=0 && strcmp(kind,"clear_estop")!=0) { replyError(c,"UNKNOWN_TYPE",j); return; }
+  if (strcmp(kind,"cmd_vel")!=0 && strcmp(kind,"set_mode")!=0 && strcmp(kind,"clear_estop")!=0 && strcmp(kind,"set_demo_bypass")!=0) { replyError(c,"UNKNOWN_TYPE",j); return; }
   // Until stage 4, the wireless endpoint is read-only except emergency stop and zero release.
   const auto* x=field(j,"vx"); const auto* y=field(j,"vy"); const auto* z=field(j,"wz");
   const bool velocity = strcmp(kind,"cmd_vel")==0;
   const bool zero = velocity && number(x) && number(y) && number(z) && x->valuedouble==0 && y->valuedouble==0 && z->valuedouble==0;
-  if (CAREROVER_STAGE < 4 && !zero) { replyError(c,"READ_ONLY",j); return; }
+  if ((CAREROVER_STAGE < 4 || CAREROVER_INTEGRATION==1) && !zero) { replyError(c,"READ_ONLY",j); return; }
   // Reject old queued motion/mode/recovery requests. Clock is display-only for
   // watchdogs; this additional per-session age check never refreshes a lease.
   const double age = timestamp(c,now)-ts->valuedouble;
@@ -165,6 +186,10 @@ void command(Session& c, const cJSON* j) {
     portENTER_CRITICAL(&safetyMux);
     error=safety.velocity(c.id,x->valuedouble,y->valuedouble,z->valuedouble,now);
     portEXIT_CRITICAL(&safetyMux);
+  } else if (strcmp(kind,"set_demo_bypass")==0) {
+    const auto* enabled=field(j,"enabled");
+    if(!cJSON_IsBool(enabled)) { replyError(c,"INVALID_COMMAND",j);return; }
+    portENTER_CRITICAL(&safetyMux);error=safety.demo(c.id,cJSON_IsTrue(enabled),now);portEXIT_CRITICAL(&safetyMux);
   } else if (strcmp(kind,"set_mode")==0) {
     const auto* m=field(j,"mode");
     if (!cJSON_IsString(m)) { replyError(c,"INVALID_MODE",j); return; }
@@ -172,6 +197,7 @@ void command(Session& c, const cJSON* j) {
     if (strcmp(m->valuestring,"IDLE")==0) mode=Mode::Idle;
     else if (strcmp(m->valuestring,"MANUAL")==0) mode=Mode::Manual;
     else if (strcmp(m->valuestring,"HEALTH_CHECK")==0) mode=Mode::Health;
+    else if (CAREROVER_INTEGRATION>=3 && !strcmp(m->valuestring,"PERSON_FOLLOW")) mode=Mode::Follow;
     else { replyError(c,strcmp(m->valuestring,"PERSON_FOLLOW")==0 || strcmp(m->valuestring,"GESTURE_CONTROL")==0 ? "UNSUPPORTED_MODE" : "INVALID_MODE",j); return; }
     portENTER_CRITICAL(&safetyMux); error=safety.setMode(c.id,mode,now); portEXIT_CRITICAL(&safetyMux);
   } else {
@@ -227,7 +253,7 @@ const char* mime(const char* path) {
 }
 esp_err_t fileHandler(httpd_req_t* req) {
   if (!strcmp(req->uri,"/")) {
-    httpd_resp_set_status(req,"302 Found"); httpd_resp_set_hdr(req,"Location","/?transport=ws&video=canvas");
+    httpd_resp_set_status(req,"302 Found"); httpd_resp_set_hdr(req,"Location",CAREROVER_INTEGRATION ? "/?transport=ws&video=mjpeg" : "/?transport=ws&video=canvas");
     httpd_resp_set_hdr(req,"Cache-Control","no-store"); return httpd_resp_send(req,nullptr,0);
   }
   char path[160]; const size_t length=strcspn(req->uri,"?");
@@ -263,32 +289,75 @@ void publish(void*) {
     auto* j=object("telemetry",c,now);
     auto* connection=cJSON_AddObjectToObject(j,"connection");
     cJSON_AddBoolToObject(connection,"camera",state.camera); cJSON_AddBoolToObject(connection,"main_mcu",true);
+    auto* front=cJSON_AddObjectToObject(j,"front");
+    cJSON_AddBoolToObject(front,"enabled",state.front.enabled);cJSON_AddBoolToObject(front,"ready",state.front.ready);
+    cJSON_AddBoolToObject(front,"valid",state.front.valid);
+    if(state.front.valid)cJSON_AddNumberToObject(front,"distance_cm",state.front.distanceCm);else cJSON_AddNullToObject(front,"distance_cm");
+    cJSON_AddNumberToObject(front,"age_ms",double(state.front.ageMs));
+    cJSON_AddStringToObject(front,"status",state.front.status);cJSON_AddStringToObject(front,"phase",phaseName(state.front.phase));
+    cJSON_AddBoolToObject(front,"demo_ready",state.front.demoReady&&CAREROVER_INTEGRATION>=3);
+    cJSON_AddBoolToObject(front,"demo_enabled",state.front.demoEnabled);
+    cJSON_AddBoolToObject(front,"release_required",state.front.held);
+    cJSON_AddStringToObject(front,"stop_reason",state.stopReason);
     auto* robot=cJSON_AddObjectToObject(j,"robot");
     const char* mode=state.estop?"ESTOP":state.fault?"FAULT":modeName(state.mode);
     cJSON_AddStringToObject(robot,"mode",mode);
-    cJSON_AddStringToObject(robot,"state",state.estop?"ESTOP":state.fault?"FAULT":state.mode==Mode::Manual?(state.target.vx||state.target.vy||state.target.wz?"DRIVING":"READY"):state.mode==Mode::Health?"MEASURING":"IDLE");
+    cJSON_AddStringToObject(robot,"state",state.estop?"ESTOP":state.fault?"FAULT":state.mode==Mode::Manual?(state.target.vx||state.target.vy||state.target.wz?"DRIVING":"READY"):state.mode==Mode::Health?"MEASURING":state.mode==Mode::Follow?"TRACKING":"IDLE");
     cJSON_AddBoolToObject(robot,"estop",state.estop);
-    cJSON_AddBoolToObject(robot,"motion_output_installed",false);
+    cJSON_AddBoolToObject(robot,"motion_output_installed",driveReady.load());
+    cJSON_AddBoolToObject(robot,"calibration_ready",calibrationReady);
     cJSON_AddBoolToObject(robot,"control_allowed",state.owner==0 || state.owner==c.id);
     cJSON_AddNumberToObject(robot,"vx",state.target.vx); cJSON_AddNumberToObject(robot,"vy",state.target.vy); cJSON_AddNumberToObject(robot,"wz",state.target.wz);
     auto* device=cJSON_AddObjectToObject(j,"device");
     cJSON_AddStringToObject(device,"firmware",CAREROVER_BUILD_VERSION); cJSON_AddNumberToObject(device,"stage",CAREROVER_STAGE);
-    cJSON_AddStringToObject(device,"backend","test_targets"); cJSON_AddNumberToObject(device,"uptime_ms",double(now));
+    cJSON_AddStringToObject(device,"backend",CAREROVER_INTEGRATION?"tracking":"test_targets");
+    cJSON_AddStringToObject(device,"integration",CAREROVER_INTEGRATION==3?"follow":CAREROVER_INTEGRATION==2?"manual":CAREROVER_INTEGRATION==1?"observe":"legacy");
+    auto* modes=cJSON_AddArrayToObject(device,"supported_modes");
+    if(CAREROVER_STAGE>=4 && CAREROVER_INTEGRATION!=1) {
+      cJSON_AddItemToArray(modes,cJSON_CreateString("IDLE"));
+      cJSON_AddItemToArray(modes,cJSON_CreateString("HEALTH_CHECK"));
+      cJSON_AddItemToArray(modes,cJSON_CreateString("MANUAL"));
+      if(CAREROVER_INTEGRATION>=3) cJSON_AddItemToArray(modes,cJSON_CreateString("PERSON_FOLLOW"));
+    }
+    cJSON_AddNumberToObject(device,"uptime_ms",double(now));
     cJSON_AddNumberToObject(device,"last_cmd_ms",double(state.lastCommandMs)); cJSON_AddNumberToObject(device,"stopped_at_ms",double(state.stoppedAtMs));
     cJSON_AddNumberToObject(device,"stop_sequence",state.stopSequence); cJSON_AddStringToObject(device,"stop_reason",state.stopReason);
     cJSON_AddNumberToObject(device,"max_safety_gap_ms",maxSafetyGapMs.load()); cJSON_AddNumberToObject(device,"publish_drops",publishDrops.load());
     cJSON_AddNumberToObject(device,"free_heap",ESP.getFreeHeap());
-    const bool gestureFresh=state.camera && source.gestureSeq && now-source.gestureMs<1000;
+    cJSON_AddNumberToObject(device,"free_psram",ESP.getFreePsram());
+    cJSON_AddNumberToObject(device,"min_free_heap",ESP.getMinFreeHeap());
+    cJSON_AddNumberToObject(device,"min_free_psram",ESP.getMinFreePsram());
+    auto* vision=cJSON_AddObjectToObject(j,"vision");
+    cJSON_AddNumberToObject(vision,"image_width",320);cJSON_AddNumberToObject(vision,"image_height",240);
+    cJSON_AddNumberToObject(vision,"ai_fps",state.camera?source.aiFps:0);
+    const bool gestureFresh=source.gestureSeq && now-source.gestureMs<1000;
     if(c.gestureSeq!=source.gestureSeq || c.gestureFresh!=gestureFresh) {
-      auto* vision=cJSON_AddObjectToObject(j,"vision");
-      cJSON_AddNumberToObject(vision,"image_width",320); cJSON_AddNumberToObject(vision,"image_height",240);
-      if(gestureFresh && source.inferMs) cJSON_AddNumberToObject(vision,"ai_fps",1000.0/source.inferMs);
-      else cJSON_AddNullToObject(vision,"ai_fps");
       auto* gesture=cJSON_AddObjectToObject(vision,"gesture");
       cJSON_AddStringToObject(gesture,"label",gestureFresh&&source.accepted?source.label:"NONE");
       cJSON_AddNumberToObject(gesture,"confidence",gestureFresh?source.score:0);
       cJSON_AddBoolToObject(gesture,"stable",gestureFresh&&source.accepted);
-      c.gestureSeq=source.gestureSeq; c.gestureFresh=gestureFresh;
+      c.gestureSeq=source.gestureSeq;c.gestureFresh=gestureFresh;
+    }
+    if(CAREROVER_INTEGRATION) {
+      const auto& p=source.person;
+      const uint64_t age=source.personSeen?now-p.receivedMs:500;
+      const bool found=source.personSeen&&age<490&&p.found;
+      auto* person=cJSON_AddObjectToObject(vision,"person");
+      cJSON_AddBoolToObject(person,"found",found);
+      cJSON_AddNumberToObject(person,"seq",p.seq);cJSON_AddNumberToObject(person,"age_ms",double(age));
+      cJSON_AddNumberToObject(person,"x",found?p.x0:0);cJSON_AddNumberToObject(person,"y",found?p.y0:0);
+      cJSON_AddNumberToObject(person,"w",found?p.x1-p.x0:0);cJSON_AddNumberToObject(person,"h",found?p.y1-p.y0:0);
+      cJSON_AddNumberToObject(person,"confidence",found?p.score/1000.0:0);
+      auto* video=cJSON_AddObjectToObject(j,"video");
+      cJSON_AddStringToObject(video,"stream_url","http://192.168.4.2/stream");cJSON_AddStringToObject(video,"protocol","mjpeg");
+      cJSON_AddNumberToObject(video,"source_width",320);cJSON_AddNumberToObject(video,"source_height",240);
+      auto* imu=cJSON_AddObjectToObject(j,"imu"); const auto& i=source.imu;
+      const bool fresh=i.valid&&now>=i.sampleMs&&now-i.sampleMs<100;
+      cJSON_AddBoolToObject(imu,"valid",fresh);cJSON_AddBoolToObject(imu,"calibrated",i.calibrated);
+      cJSON_AddBoolToObject(imu,"tilt_fault",i.tiltFault);
+      cJSON_AddNumberToObject(imu,"age_ms",double(now-i.sampleMs));
+      if(fresh) { cJSON_AddNumberToObject(imu,"yaw_deg",i.yaw);cJSON_AddNumberToObject(imu,"pitch_deg",i.pitch);cJSON_AddNumberToObject(imu,"roll_deg",i.roll); }
+      else { cJSON_AddNullToObject(imu,"yaw_deg");cJSON_AddNullToObject(imu,"pitch_deg");cJSON_AddNullToObject(imu,"roll_deg"); }
     }
     const auto& h=source.health;
     const bool fresh=h.sampleMs && now-h.sampleMs<250 && now-h.reportMs<2500;
@@ -327,12 +396,60 @@ void publisherTask(void*) {
     vTaskDelay(pdMS_TO_TICKS(100));
   }
 }
+void imuTask(void*) {
+  Mpu6050Soft imu; bool ready=false; uint64_t retry=0,lastReport=0; TickType_t wake=xTaskGetTickCount();
+  for(;;) {
+    const auto now=wirelessNowMs();
+    if(!ready&&now>=retry) { ready=imu.begin();retry=now+1000; }
+    auto sample=imu.sample(now); if(!sample.valid) ready=false;
+    portENTER_CRITICAL(&sourceMux);sources.imu=sample;portEXIT_CRITICAL(&sourceMux);
+    portENTER_CRITICAL(&safetyMux);safety.imu(sample.valid,sample.calibrated,sample.tiltFault,now);portEXIT_CRITICAL(&safetyMux);
+    if(now-lastReport>=1000) {
+      lastReport=now;
+      Serial.printf("{\"type\":\"imu_status\",\"valid\":%s,\"calibrated\":%s,\"tilt_fault\":%s,\"yaw\":%.3f,\"pitch\":%.3f,\"roll\":%.3f,\"bias_dps\":[%.4f,%.4f,%.4f]}\n",sample.valid?"true":"false",sample.calibrated?"true":"false",sample.tiltFault?"true":"false",sample.yaw,sample.pitch,sample.roll,sample.biasX,sample.biasY,sample.biasZ);
+    }
+    vTaskDelayUntil(&wake,pdMS_TO_TICKS(10));
+  }
+}
+void frontTask(void*) {
+  Hcsr04 sensor;
+  if(!sensor.begin(frontInstallation)) { failSafe(true,"front_pins_invalid");vTaskDelete(nullptr);return; }
+  TickType_t wake=xTaskGetTickCount();uint64_t lastReport=0;
+  for(;;) {
+    double cm=0;bool valid=false;
+    if(sensor.service(micros(),cm,valid)) {
+      const auto now=wirelessNowMs();
+      portENTER_CRITICAL(&safetyMux);safety.frontSample(cm,valid,now);portEXIT_CRITICAL(&safetyMux);
+    }
+    const auto now=wirelessNowMs();
+    if(now-lastReport>=200) {
+      lastReport=now;const auto state=readSafety(now);float yaw;
+      portENTER_CRITICAL(&sourceMux);yaw=sources.imu.yaw;portEXIT_CRITICAL(&sourceMux);
+      Serial.printf("{\"type\":\"front_status\",\"valid\":%s,\"distance_cm\":%.1f,\"age_ms\":%llu,\"phase\":\"%s\",\"status\":\"%s\",\"stop_reason\":\"%s\",\"yaw_deg\":%.2f}\n",
+        state.front.valid?"true":"false",state.front.valid?state.front.distanceCm:-1.0,(unsigned long long)state.front.ageMs,phaseName(state.front.phase),state.front.status,state.stopReason,yaw);
+    }
+    vTaskDelayUntil(&wake,pdMS_TO_TICKS(1));
+  }
+}
+void followTask(void*) {
+  TickType_t wake=xTaskGetTickCount();
+  for(;;) {
+    const auto now=wirelessNowMs();
+    portENTER_CRITICAL(&safetyMux);safety.computeFollow(now);portEXIT_CRITICAL(&safetyMux);
+    vTaskDelayUntil(&wake,pdMS_TO_TICKS(100));
+  }
+}
 void safetyTask(void*) {
   TickType_t wake=xTaskGetTickCount(); uint64_t last=wirelessNowMs();
   for(;;) {
     const auto now=wirelessNowMs(); const auto gap=uint32_t(now-last); last=now;
     if(gap>maxSafetyGapMs.load()) maxSafetyGapMs.store(gap);
-    portENTER_CRITICAL(&safetyMux); safety.tick(now); portEXIT_CRITICAL(&safetyMux);
+    portENTER_CRITICAL(&safetyMux); safety.tick(now); auto state=safety.snapshot(now); portEXIT_CRITICAL(&safetyMux);
+    if(driveReady.load()) {
+      if(state.estop||state.fault||(!state.target.vx&&!state.target.vy&&!state.target.wz)) drive.stopNow();
+      else drive.commandChassis(state.target.vx,state.target.vy,state.target.wz,240);
+      drive.tick();
+    }
     vTaskDelayUntil(&wake,pdMS_TO_TICKS(5));
   }
 }
@@ -372,10 +489,25 @@ void wirelessPpg(uint32_t ir) {
 }
 void wirelessStatus() {
   const auto now=wirelessNowMs(); const auto s=readSafety(now);
-  Serial.printf("{\"type\":\"wireless_status\",\"firmware\":\"%s\",\"stage\":%d,\"ap\":%s,\"backend\":\"test_targets\",\"mode\":\"%s\",\"estop\":%s,\"fault\":%s,\"vx\":%.3f,\"vy\":%.3f,\"wz\":%.3f,\"last_cmd_ms\":%llu,\"stopped_at_ms\":%llu,\"stop_reason\":\"%s\",\"max_safety_gap_ms\":%u}\n",
-    CAREROVER_BUILD_VERSION,CAREROVER_STAGE,apOnline.load()?"true":"false",s.estop?"ESTOP":s.fault?"FAULT":modeName(s.mode),s.estop?"true":"false",s.fault?"true":"false",s.target.vx,s.target.vy,s.target.wz,(unsigned long long)s.lastCommandMs,(unsigned long long)s.stoppedAtMs,s.stopReason,maxSafetyGapMs.load());
+  Serial.printf("{\"type\":\"wireless_status\",\"firmware\":\"%s\",\"stage\":%d,\"ap\":%s,\"backend\":\"%s\",\"mode\":\"%s\",\"estop\":%s,\"fault\":%s,\"vx\":%.3f,\"vy\":%.3f,\"wz\":%.3f,\"last_cmd_ms\":%llu,\"stopped_at_ms\":%llu,\"stop_reason\":\"%s\",\"max_safety_gap_ms\":%u,\"min_heap\":%u,\"min_psram\":%u}\n",
+    CAREROVER_BUILD_VERSION,CAREROVER_STAGE,apOnline.load()?"true":"false",CAREROVER_INTEGRATION?"tracking":"test_targets",s.estop?"ESTOP":s.fault?"FAULT":modeName(s.mode),s.estop?"true":"false",s.fault?"true":"false",s.target.vx,s.target.vy,s.target.wz,(unsigned long long)s.lastCommandMs,(unsigned long long)s.stoppedAtMs,s.stopReason,maxSafetyGapMs.load(),ESP.getMinFreeHeap(),ESP.getMinFreePsram());
 }
 void wirelessBegin() {
+  frontInstallation=installedFront();
+  if(frontInstallation.control.enabled&&!frontPinsReady(frontInstallation))frontInstallation.control.verified=false;
+  safety.configureFront(frontInstallation.control);
+  if(CAREROVER_INTEGRATION) {
+    ServoCalibration calibration{};calibrationReady=loadMotionCalibration(calibration);
+    safety.configureHardware(true,calibrationReady);
+    if(CAREROVER_INTEGRATION>=2 && calibrationReady) {
+      const uint8_t pins[4]={10,11,12,13};driveReady.store(drive.begin(pins,calibration));
+      if(!driveReady.load()) safety.fault(true,wirelessNowMs());
+    }
+    if(xTaskCreate(imuTask,"imu",4096,nullptr,3,nullptr)!=pdPASS) safety.fault(true,wirelessNowMs());
+    if(CAREROVER_INTEGRATION>=3 && xTaskCreate(followTask,"follow",3072,nullptr,3,nullptr)!=pdPASS) safety.fault(true,wirelessNowMs());
+  }
+  if(frontInstallation.control.enabled&&frontPinsReady(frontInstallation)&&
+      xTaskCreate(frontTask,"ultrasonic",3072,nullptr,2,nullptr)!=pdPASS)failSafe(true,"front_task_failed");
   if(xTaskCreate(safetyTask,"safety",3072,nullptr,4,nullptr)!=pdPASS) { failSafe(true,"task_failed"); Serial.println("{\"type\":\"wireless_error\",\"code\":\"SAFETY_TASK_FAILED\"}"); return; }
   WiFi.onEvent([](arduino_event_id_t event,arduino_event_info_t) {
     if(event==ARDUINO_EVENT_WIFI_AP_STOP) {
@@ -387,7 +519,7 @@ void wirelessBegin() {
   if(strlen(password)<8 || strlen(password)>63 || !strcmp(password,"REPLACE_WITH_PRIVATE_PASSWORD")) { failSafe(true,"invalid_password"); Serial.println("{\"type\":\"wireless_error\",\"code\":\"PRIVATE_PASSWORD_REQUIRED\"}"); return; }
   char ssid[24]; snprintf(ssid,sizeof(ssid),"CareRover-%04X",unsigned(ESP.getEfuseMac()&0xffff));
   WiFi.mode(WIFI_AP);
-  if(!WiFi.softAPConfig(IPAddress(192,168,4,1),IPAddress(192,168,4,1),IPAddress(255,255,255,0)) || !WiFi.softAP(ssid,password,1,0,4)) { failSafe(true,"ap_failed"); return; }
+  if(!WiFi.softAPConfig(IPAddress(192,168,4,1),IPAddress(192,168,4,1),IPAddress(255,255,255,0),IPAddress(192,168,4,3)) || !WiFi.softAP(ssid,password,1,0,4)) { failSafe(true,"ap_failed"); return; }
   apOnline.store(true); const auto now=wirelessNowMs();
   portENTER_CRITICAL(&safetyMux); safety.network(true,now); portEXIT_CRITICAL(&safetyMux);
   Serial.printf("{\"type\":\"ap_ready\",\"ssid\":\"%s\",\"ip\":\"192.168.4.1\"}\n",ssid);
@@ -409,3 +541,31 @@ void wirelessBegin() {
   if(CAREROVER_STAGE>=3 && xTaskCreate(publisherTask,"telemetry",3072,nullptr,1,nullptr)!=pdPASS) failSafe(true,"publisher_failed");
   wirelessStatus();
 }
+
+void wirelessVision(const carerover::VisionPacket& p,bool resync) {
+  portENTER_CRITICAL(&safetyMux);
+  if(resync) safety.cameraReset(p.receivedMs);
+  safety.cameraPacket(p.receivedMs);
+  if(p.kind=='P') safety.person(p);
+  portEXIT_CRITICAL(&safetyMux);
+  portENTER_CRITICAL(&sourceMux);
+  if(p.kind=='P') { sources.person=p;sources.personSeen=true; }
+  if(!sources.fpsStart) sources.fpsStart=p.receivedMs;
+  ++sources.resultCount;
+  if(p.receivedMs-sources.fpsStart>=1000) {
+    sources.aiFps=sources.resultCount*1000.0f/float(p.receivedMs-sources.fpsStart);
+    sources.resultCount=0;sources.fpsStart=p.receivedMs;
+  }
+  portEXIT_CRITICAL(&sourceMux);
+}
+
+void wirelessDiagnostics() {
+  static uint64_t reported=0; static uint32_t sequence=UINT32_MAX;
+  const auto now=wirelessNowMs();const auto state=readSafety(now);
+  if(state.stopSequence!=sequence || now-reported>=1000) {
+    sequence=state.stopSequence;reported=now;wirelessStatus();
+  }
+}
+
+carerover::FrontSnapshot wirelessFront() { return readSafety(wirelessNowMs()).front; }
+const char* wirelessStopReason() { return readSafety(wirelessNowMs()).stopReason; }

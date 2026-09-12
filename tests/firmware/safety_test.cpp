@@ -53,7 +53,7 @@ int main() {
     assert(s.snapshot(17).mode == Mode::Idle); assert(!s.snapshot(17).estop); zero(s,17);
   }
   {
-    auto s = ready(); s.setMode(1,Mode::Manual,900); s.velocity(1,1,0,0,900);
+    auto s = ready(520); assert(!s.setMode(1,Mode::Manual,900)); s.velocity(1,1,0,0,900);
     s.tick(1010); zero(s,1010); assert(s.snapshot(1010).mode == Mode::Idle);
     s.cameraPacket(1011); error(s.velocity(1,1,0,0,1012), "NOT_IN_MANUAL");
     s.setMode(1,Mode::Manual,1013); s.velocity(1,1,0,0,1013);
@@ -68,7 +68,7 @@ int main() {
   }
   // 20 independent failures, alternating disconnect, timeout, network loss, CAM loss.
   for (int i=0;i<20;++i) {
-    auto s=ready(); s.setMode(1,Mode::Manual,900); s.velocity(1,.8,.1,0,900);
+    auto s=ready(520); assert(!s.setMode(1,Mode::Manual,900)); s.velocity(1,.8,.1,0,900);
     if(i%4==0) s.disconnect(1,901);
     if(i%4==1) { s.cameraPacket(1100); s.tick(1140); }
     if(i%4==2) s.network(false,901);

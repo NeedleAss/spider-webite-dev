@@ -4,6 +4,9 @@
 #include <Wire.h>
 
 struct OledUiSnapshot {
+  bool frontEnabled=false,frontValid=false;
+  float frontCm=0;
+  const char *frontStatus="",*frontPhase="",*stopReason="";
   bool camConnected;
   bool gestureValid;
   const char *gestureLabel;

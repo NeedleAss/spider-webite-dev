@@ -1,3 +1,5 @@
+> 本文描述原 `integration=legacy` 无线阶段。新人物/运动集成见 [跟随开发说明](tracking-development.md)；软件验证与真机验收分别记录。
+
 # CareRover 无线开发与 Windows 联调
 
 ## 当前交付状态

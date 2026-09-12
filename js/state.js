@@ -47,11 +47,14 @@ const state = {
     lastHealthTs: 0,
     lastPongTs: 0
   },
+  front: null,
   robot: {
     mode: undefined, state: undefined, estop: false,
     battery_pct: undefined, vx: 0, vy: 0, wz: 0
   },
   device: {},
+  video: {},
+  lastImuTs: 0,
   imu: { yaw_deg: undefined, pitch_deg: undefined, roll_deg: undefined },
   vision: {
     image_width: CONFIG.DEFAULT_IMAGE_WIDTH,
@@ -123,12 +126,14 @@ export function applyTelemetry(msg) {
   state.connection.lastTelemetryTs = t;
 
   if (msg.connection) mergeDefined(state.connection, msg.connection);
+  state.front=msg.front ? { ...msg.front, receivedAt:Date.now() } : null;
   if (msg.robot) {
     mergeDefined(state.robot, msg.robot);
     if (msg.robot.mode !== undefined && msg.robot.estop !== undefined) state.connection.lastRobotTs = t;
   }
   if (msg.device) mergeDefined(state.device, msg.device);
-  if (msg.imu) mergeDefined(state.imu, msg.imu);
+  if (msg.imu) { mergeDefined(state.imu, msg.imu); state.lastImuTs = t - Math.max(0, msg.imu.age_ms || 0); }
+  if (msg.video) mergeDefined(state.video, msg.video);
 
   if (msg.vision) {
     const v = msg.vision;
@@ -136,7 +141,12 @@ export function applyTelemetry(msg) {
     if (v.image_height !== undefined) state.vision.image_height = v.image_height;
     if (v.ai_fps !== undefined) state.vision.ai_fps = v.ai_fps;
     // person / gesture 各自独立打时间戳：它们的更新频率不同，过期判定也必须独立
-    if (v.person) { state.vision.person = v.person; state.vision.lastPersonTs = t; }
+    if (v.person) {
+      const same = v.person.seq !== undefined && v.person.seq === state.vision.person?.seq;
+      const sourceTs = t - Math.max(0, v.person.age_ms || 0);
+      state.vision.person = v.person;
+      state.vision.lastPersonTs = same ? Math.min(state.vision.lastPersonTs, sourceTs) : sourceTs;
+    }
     if (v.gesture) { state.vision.gesture = v.gesture; state.vision.lastGestureTs = t; }
   }
 
@@ -231,6 +241,9 @@ export function isManualEnabled() {
 
 export function resetForDisconnect() {
   state.device = {};
+  state.video = {}; state.lastImuTs = 0;
+  state.imu = { valid: false };
+  state.front=null;
   state.robot.control_allowed = undefined;
   state.robot.motion_output_installed = undefined;
   state.connection.lastHealthTs = 0;

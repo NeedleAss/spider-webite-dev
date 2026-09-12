@@ -129,7 +129,15 @@
         <span class="statrow__v statrow__v--hero" id="sState">—</span>
       </div>
       <div class="hairline"></div>
-      <div class="statrow"><span class="statrow__k" data-i18n="robot.yaw">航向角 Yaw</span><span class="statrow__v num" id="sYaw">—</span></div>
+      <div class="front-panel">
+        <div class="statrow"><span id="frontTitle">前方障碍距离</span><strong id="frontDistance" class="num">—</strong></div>
+        <p id="frontStatus" role="status" aria-live="polite">未接入</p>
+        <p id="frontPhase">绕障阶段：未执行</p><p id="frontReason"></p>
+        <label class="front-toggle"><input id="demoBypass" type="checkbox" disabled><span id="demoBypassLabel">演示绕障 · 固定向右</span></label>
+        <p id="frontHint" class="front-hint">仅跟随模式；预留右侧及绕行后通道。单探头不探测侧后方。</p>
+      </div>
+      <div class="statrow"><span class="statrow__k">IMU</span><span class="statrow__v" id="sImuStatus">—</span></div>
+      <div class="statrow"><span class="statrow__k" data-i18n="robot.yaw">相对航向 Yaw</span><span class="statrow__v num" id="sYaw">—</span></div>
       <div class="statrow"><span class="statrow__k" data-i18n="robot.pitchroll">俯仰 / 横滚</span><span class="statrow__v num" id="sPitchRoll">—</span></div>
       <div class="statrow"><span class="statrow__k" data-i18n="robot.aifps">视觉帧率</span><span class="statrow__v num" id="sAiFps">—</span></div>
       <div class="hairline"></div>

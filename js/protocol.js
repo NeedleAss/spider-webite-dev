@@ -14,7 +14,7 @@ export const ALL_MODES = [...MODES, ...SYSTEM_MODES];
 /** 入站消息类型白名单。 */
 export const IN_TYPES = ['telemetry', 'ppg', 'ppg_batch', 'ack', 'error', 'pong'];
 /** 出站消息类型白名单。 */
-export const OUT_TYPES = ['cmd_vel', 'set_mode', 'estop', 'clear_estop', 'ping'];
+export const OUT_TYPES = ['cmd_vel', 'set_mode', 'estop', 'clear_estop', 'ping', 'set_demo_bypass'];
 
 export const now = () => Date.now();
 
@@ -63,6 +63,21 @@ export function ping(id)     { return { type: 'ping',        ts: now(), id }; }
 
 /** 保留三位小数：网络包更小，且避免 0.30000000000000004 这类噪声。 */
 const r3 = v => Math.round(v * 1000) / 1000;
+
+export function demoBypass(enabled) {
+  return { type: 'set_demo_bypass', ts: now(), enabled, request_id: ++requestSequence };
+}
+
+/** One URL policy for query parameters and telemetry. */
+export function safeStreamUrl(value) {
+  if (typeof value !== 'string' || !value || value.length > 512) return undefined;
+  try { const u = new URL(value, typeof location !== 'undefined' ? location.href : 'http://localhost/');
+    return ['http:', 'https:'].includes(u.protocol) && !u.username && !u.password ? value : undefined;
+  } catch { return undefined; }
+}
+export function streamUrl(query, telemetry, fallback) {
+  return safeStreamUrl(query) || safeStreamUrl(telemetry) || safeStreamUrl(fallback);
+}
 
 /* ── 入站解析 ─────────────────────────────────────────────────────────── */
 
@@ -118,6 +133,17 @@ export function normalizeTelemetry(o) {
   const c = obj(o.connection);
   if (c) out.connection = { camera: bool(c.camera), main_mcu: bool(c.main_mcu), simulated: bool(c.simulated) };
 
+  const f = obj(o.front);
+  if(f) {
+    const cm=num(f.distance_cm), age=num(f.age_ms);
+    const valid=f.valid===true && cm!==undefined && cm>=2 && cm<=400 && age!==undefined && age>=0 && age<220;
+    out.front={ enabled:f.enabled===true, ready:f.ready===true, valid,
+      distance_cm:valid?cm:null, age_ms:age!==undefined&&age>=0?age:220,
+      demo_ready:f.demo_ready===true, demo_enabled:f.demo_enabled===true, release_required:f.release_required===true,
+      status:enumOf(f.status,['DISABLED','UNCONFIGURED','UNKNOWN','CLEAR','WARN','SLOW','BLOCKED','STOPPED','BYPASS'])??'UNKNOWN',
+      phase:enumOf(f.phase,['NONE','HALT','RIGHT','MARGIN','PASS','REACQUIRE'])??'NONE',
+      stop_reason:typeof f.stop_reason==='string'?f.stop_reason.slice(0,48):'' };
+  }
   const r = obj(o.robot);
   if (r) out.robot = {
     mode:        enumOf(r.mode, ALL_MODES),
@@ -125,6 +151,7 @@ export function normalizeTelemetry(o) {
     estop:       bool(r.estop),
     control_allowed: bool(r.control_allowed),
     motion_output_installed: bool(r.motion_output_installed),
+    calibration_ready: bool(r.calibration_ready),
     battery_pct: num(r.battery_pct) !== undefined ? clamp(num(r.battery_pct), 0, 100) : undefined,
     vx: num(r.vx) !== undefined ? clampVel(r.vx) : undefined,
     vy: num(r.vy) !== undefined ? clampVel(r.vy) : undefined,
@@ -135,11 +162,22 @@ export function normalizeTelemetry(o) {
   if (d) out.device = {
     firmware: typeof d.firmware === 'string' ? d.firmware.slice(0, 96) : undefined,
     backend: typeof d.backend === 'string' ? d.backend.slice(0, 32) : undefined,
+    supported_modes: Array.isArray(d.supported_modes) ? d.supported_modes.filter(m => MODES.includes(m)) : undefined,
+    integration: typeof d.integration === 'string' ? d.integration.slice(0, 16) : undefined,
     stage: num(d.stage)
   };
 
   const i = obj(o.imu);
-  if (i) out.imu = { yaw_deg: num(i.yaw_deg), pitch_deg: num(i.pitch_deg), roll_deg: num(i.roll_deg) };
+  if (i) out.imu = {
+    yaw_deg: i.yaw_deg === null ? null : num(i.yaw_deg), pitch_deg: i.pitch_deg === null ? null : num(i.pitch_deg), roll_deg: i.roll_deg === null ? null : num(i.roll_deg),
+    valid: bool(i.valid), calibrated: bool(i.calibrated), tilt_fault: bool(i.tilt_fault), age_ms: num(i.age_ms)
+  };
+  const video = obj(o.video);
+  if (video) out.video = { stream_url: safeStreamUrl(video.stream_url),
+    source_width: num(video.source_width) > 0 ? Math.min(video.source_width, 8192) : undefined,
+    source_height: num(video.source_height) > 0 ? Math.min(video.source_height, 8192) : undefined,
+    protocol: video.protocol === 'mjpeg' ? 'mjpeg' : undefined };
+
 
   const v = obj(o.vision);
   if (v) {
@@ -156,9 +194,11 @@ export function normalizeTelemetry(o) {
             found: true,
             x: num(p.x, 0), y: num(p.y, 0),
             w: Math.max(0, num(p.w, 0)), h: Math.max(0, num(p.h, 0)),
-            confidence: clamp(num(p.confidence, 0), 0, 1)
+            confidence: clamp(num(p.confidence, 0), 0, 1),
+            seq: Number.isInteger(p.seq) && p.seq >= 0 ? p.seq : undefined,
+            age_ms: num(p.age_ms) >= 0 ? p.age_ms : undefined
           }
-        : { found: false };
+        : { found: false, seq: Number.isInteger(p.seq) && p.seq >= 0 ? p.seq : undefined, age_ms: num(p.age_ms) >= 0 ? p.age_ms : undefined };
     }
     const g = obj(v.gesture);
     if (g) out.vision.gesture = {
@@ -210,6 +250,7 @@ export function validateOutgoing(msg) {
       if (n < -1 || n > 1) return `cmd_vel.${k} out of range [-1,1]`;
     }
   }
+  if (o.type === 'set_demo_bypass' && typeof o.enabled !== 'boolean') return 'set_demo_bypass.enabled must be boolean';
   if (o.type === 'set_mode' && !MODES.includes(o.mode)) return 'set_mode.mode not requestable';
   return null; // 合法
 }

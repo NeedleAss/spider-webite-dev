@@ -6,6 +6,7 @@ import { initLang, getLang, setLang, t } from './i18n.js';
 import { MotionInput } from './joystick.js';
 import { PpgChart } from './telemetry.js';
 import { VideoPanel } from './video.js';
+import { createFrontPanel } from './front-panel.js';
 import { DebugPanel } from './debug.js';
 
 const $ = id => document.getElementById(id);
@@ -23,6 +24,7 @@ const timers = [];
 const text = (id, value) => { const el = $(id); const str = String(value); if (el.textContent !== str) el.textContent = str; };
 const tr = (zh, en) => getLang() === 'zh' ? zh : en;
 const activeEstop = () => state.ui.estopLatch || state.robot.estop || state.robot.mode === 'ESTOP';
+const renderFront = createFrontPanel({state,send:message=>send(message),tr,stale:()=>store.isTelemetryStale(),signal:lifecycle.signal});
 const manual = () => store.isManualEnabled() && !$('confirmDlg').open && !document.hidden;
 const value = (v, decimals = 0, suffix = '') => Number.isFinite(v) ? v.toFixed(decimals) + suffix : '—';
 const signed = v => `${v >= 0 ? '+' : ''}${v.toFixed(2)}`;
@@ -53,7 +55,7 @@ function emergency() {
 }
 function changeMode(mode) {
   if (activeEstop() || state.ui.replaying || store.isTelemetryStale() || pendingMode) return;
-  stop(); const command = protocol.setMode(mode);
+  stop(); zeroRepeats = 0; previousEnabled = false; const command = protocol.setMode(mode);
   store.setRequestedMode(mode);
   pendingMode = { command, expires: Date.now() + CONFIG.MODE_ACK_TIMEOUT_MS };
   if (!send(command)) { pendingMode = null; store.setRequestedMode(null); }
@@ -78,6 +80,7 @@ function receive(raw, isReplay = false) {
   switch (msg.type) {
     case 'telemetry':
       store.applyTelemetry(msg);
+      if (msg.video?.stream_url) video?.setStreamUrl(msg.video.stream_url);
       if (pendingMode && msg.robot?.mode === pendingMode.command.mode && msg.robot.estop === false) {
         toast(t('t.mode.ok', { mode: t(`mode.${msg.robot.mode}`) })); pendingMode = null;
       }
@@ -107,13 +110,15 @@ function receive(raw, isReplay = false) {
       toast(msg.message || msg.code, 'warn'); debug.log('err', `${msg.code}: ${msg.message}`); break;
   }
 }
+let lastPingAt = -Infinity;
 function pingServer() {
-  if (!pong) { const id = Date.now(); pong = { id, at: performance.now() }; send(protocol.ping(id)); }
+  if (!pong) { lastPingAt = performance.now(); const id = Date.now(); pong = { id, at: performance.now() }; send(protocol.ping(id)); }
 }
 function linkChanged(link) {
   store.setConnectionState(link);
   video?.connection(link === LINK.CONNECTED);
   if (link !== LINK.CONNECTED) {
+    if (video) video.streamUrl = null;
     stop(); store.resetForDisconnect(); pendingMode = null; pendingClear = null; pong = null;
     $('confirmDlg').close();
     if (previousLink === LINK.CONNECTED && !state.ui.replaying) toast(t('t.link.lost'), 'warn');
@@ -161,11 +166,14 @@ function render() {
   text('sceneLabel', video?.kind === 'canvas' ? tr('模拟视野', 'SIMULATED VIEW') : video?.kind === 'file' ? tr('本地视频 · 识别数据独立', 'LOCAL VIDEO · SEPARATE METADATA') : state.connection.simulated ? tr('模拟摄像头', 'SIMULATED CAMERA') : tr('摄像头视频', 'CAMERA STREAM'));
   $('videoError').hidden = video?.kind === 'canvas' || video?.ready;
   const confirmed = !stale || state.ui.replaying;
+  renderFront();
   text('sMode', locked ? t('mode.ESTOP') : confirmed ? t(`mode.${state.robot.mode}`) : '—');
   text('sState', confirmed ? t(`state.${state.robot.state}`) : '—');
   $('sMode').dataset.tone = locked ? 'bad' : 'idle';
-  text('sYaw', confirmed ? value(state.imu.yaw_deg, 1, '°') : '—');
-  text('sPitchRoll', confirmed ? `${value(state.imu.pitch_deg, 1)}° / ${value(state.imu.roll_deg, 1)}°` : '—');
+  const imuFresh = confirmed && state.imu.valid !== false && Date.now() - state.lastImuTs < 500;
+  text('sImuStatus', state.imu.tilt_fault ? tr('倾角故障', 'Tilt fault') : !imuFresh ? tr('不可用', 'Unavailable') : state.imu.calibrated === false ? tr('静置校准中', 'Calibrating') : tr('可用 · 相对航向', 'Ready · relative heading'));
+  text('sYaw', imuFresh ? value(state.imu.yaw_deg, 1, '°') : '—');
+  text('sPitchRoll', imuFresh ? `${value(state.imu.pitch_deg, 1)}° / ${value(state.imu.roll_deg, 1)}°` : '—');
   text('sAiFps', confirmed ? value(state.vision.ai_fps, 1, ' FPS') : '—');
   text('sVel', confirmed ? [state.robot.vx, state.robot.vy, state.robot.wz].map(signed).join(' / ') : '—');
   text('sBattPct', confirmed ? value(state.robot.battery_pct, 0, '%') : '—');
@@ -195,7 +203,7 @@ function render() {
   for (const b of $('modeBar').querySelectorAll('[data-mode]')) {
     b.setAttribute('aria-pressed', String(!stale && !locked && state.robot.mode === b.dataset.mode));
     b.dataset.pending = String(state.ui.requestedMode === b.dataset.mode);
-    const unsupported = state.device.backend === 'test_targets' && (!['IDLE', 'MANUAL', 'HEALTH_CHECK'].includes(b.dataset.mode) || state.device.stage < 4);
+    const unsupported = state.device.supported_modes ? !state.device.supported_modes.includes(b.dataset.mode) : state.device.backend === 'test_targets' && (!['IDLE', 'MANUAL', 'HEALTH_CHECK'].includes(b.dataset.mode) || state.device.stage < 4);
     b.disabled = stale || locked || !!pendingMode || state.ui.replaying || unsupported || state.robot.control_allowed === false;
   }
   $('clearEstopBtn').hidden = !locked; $('clearEstopBtn').disabled = !transport?.isOpen || !!pendingClear || state.robot.control_allowed === false || (state.device.stage !== undefined && state.device.stage < 4);
@@ -205,7 +213,7 @@ function render() {
   text('footNote', state.ui.transportName === 'mock' ? tr('演示模式 · 数据由本地模拟生成', 'Demo mode · Locally simulated data') : state.connection.simulated ? tr('模拟设备 · WebSocket 与 MJPEG 通信', 'Simulated device · WebSocket & MJPEG') : tr('设备模式 · 数据来自 WebSocket', 'Device mode · Data received over WebSocket'));
   if (state.device.firmware) {
     const webVersion = document.querySelector('meta[name=carerover-web-version]')?.content || 'development';
-    text('footNote', `${tr('固件', 'Firmware')} ${state.device.firmware} · Web ${webVersion} · ${state.robot.control_allowed === false ? tr('只读客户端', 'Read-only client') : tr('运动输出未接入', 'Motion output not installed')}`);
+    text('footNote', `${tr('固件', 'Firmware')} ${state.device.firmware} · Web ${webVersion} · ${state.robot.control_allowed === false ? tr('只读客户端', 'Read-only client') : state.robot.motion_output_installed ? tr('舵机输出已接入', 'Servo output installed') : tr('运动输出未接入', 'Motion output not installed')}`);
   }
   debug.render(state, fps); previousEnabled = enabled;
 }
@@ -259,9 +267,11 @@ async function main() {
   timers.push(setInterval(() => {
     if (transport.isOpen && !state.ui.replaying) {
       if (pong && performance.now() - pong.at > CONFIG.PING_TIMEOUT_MS) { stop(); transport.simulateDrop(); return; }
-      pingServer();
+      const following = state.robot.mode === 'PERSON_FOLLOW' && state.robot.control_allowed === true && !activeEstop() && !document.hidden && !store.isTelemetryStale();
+      if (following || performance.now() - lastPingAt >= CONFIG.PING_INTERVAL_MS) pingServer();
     }
-  }, CONFIG.PING_INTERVAL_MS));
+  }, 100));
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { stop(); send(protocol.cmdVel(0, 0, 0)); } }, { signal: lifecycle.signal });
   window.addEventListener('pagehide', e => { stop(); if (!e.persisted) destroy(); else transport.disconnect(); }, { signal: lifecycle.signal });
   window.addEventListener('pageshow', e => { if (e.persisted && !state.ui.replaying) transport.connect(); }, { signal: lifecycle.signal });
   function destroy() {

@@ -1,0 +1,211 @@
+#!/usr/bin/env python3
+"""CAM dependencies/build/flash, read-only serial evidence, and source handoff."""
+from __future__ import annotations
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import time
+import zipfile
+
+try:
+    from .carerover import source_info
+except ImportError:
+    from carerover import source_info
+
+ROOT=Path(__file__).resolve().parents[1]
+BUILD=ROOT/'build'
+LOCK=ROOT/'config/cam-toolchain.lock.json'
+def run(args,**kw):
+    return subprocess.run([str(a) for a in args],cwd=ROOT,check=True,**kw)
+def digest(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+def write_json(p,value):
+    p.parent.mkdir(parents=True,exist_ok=True);p.write_text(json.dumps(value,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+def checkout(key,destination,recursive=False):
+    spec=json.loads(LOCK.read_text())[key]
+    if not destination.exists():
+        args=['git','clone','--depth','1','--branch',spec['tag']]
+        if recursive:args+=['--recursive','--shallow-submodules']
+        run(args+[spec['url'],destination])
+    actual=run(['git','-C',destination,'rev-parse','HEAD'],capture_output=True,text=True).stdout.strip()
+    if actual!=spec['commit']:raise ValueError(f'{destination}: expected {spec["commit"]}, found {actual}; existing checkout left intact')
+    if run(['git','-C',destination,'status','--porcelain'],capture_output=True,text=True).stdout.strip():raise ValueError(f'Dependency has local edits: {destination}')
+def prepare(args):
+    checkout('esp_dl',BUILD/'dependencies/esp-dl')
+    if args.idf:checkout('esp_idf',BUILD/'toolchains/esp-idf-5.3.4',True)
+    print('Pinned source dependencies ready. Use ESP-IDF 5.3.4 install/export scripts for your OS.')
+def cam_profile(path):
+    p=json.loads(Path(path).read_text(encoding='utf-8'))
+    if p.get('verification') not in {'compile_only','windows_baseline_confirmed'}:raise ValueError('Unverified CAM profile')
+    if (p.get('chip'),p.get('flash_size'),p.get('psram'))!=('esp32s3','8MB','opi'):raise ValueError('CAM requires esp32s3 / 8MB flash / OPI PSRAM; do not use main-controller profile')
+    if not isinstance(p.get('ssid'),str) or not 1<=len(p['ssid'].encode())<=32:raise ValueError('Invalid SSID')
+    if not isinstance(p.get('password'),str) or not 8<=len(p['password'])<=63:raise ValueError('Invalid WPA2 password')
+    if p['verification']!='compile_only' and (p['ssid']=='CareRover-XXXX' or p['password']=='COMPILE_CHECK_ONLY'):raise ValueError('Device build needs actual private AP credentials')
+    return p
+
+def cam_build(args):
+    profile=cam_profile(args.profile)
+    checkout('esp_dl',BUILD/'dependencies/esp-dl')
+    idf=Path(os.environ.get('IDF_PATH',''))/'tools/idf.py'
+    if not idf.is_file():raise ValueError('Activate ESP-IDF 5.3.4 first (export.sh / export.bat).')
+    version=run([sys.executable,idf,'--version'],capture_output=True,text=True).stdout
+    if 'v5.3.4' not in version:raise ValueError('Expected ESP-IDF v5.3.4: '+version)
+    out=BUILD/f'cam-{args.variant}-{profile["verification"]}';out.mkdir(parents=True,exist_ok=True)
+    defaults=out/'variant.defaults'
+    defaults.write_text('\n'.join([
+        'CONFIG_CAREROVER_FACE='+('n' if args.variant=='gesture' else 'y'),
+        'CONFIG_CAREROVER_VIDEO='+('y' if args.variant in {'stream','pico'} else 'n'),
+        'CONFIG_CAREROVER_PICO_FACE='+('y' if args.variant=='pico' else 'n'),
+        'CONFIG_FLASH_ESPDET_PICO_224_224_FACE='+('y' if args.variant=='pico' else 'n'),
+        'CONFIG_FLASH_HUMAN_FACE_DETECT_MSRMNP_S8_V1='+('n' if args.variant=='pico' else 'y'),
+        'CONFIG_CAREROVER_WIFI_SSID='+json.dumps(profile['ssid']),
+        'CONFIG_CAREROVER_WIFI_PASSWORD='+json.dumps(profile['password'])])+'\n',encoding='utf-8')
+    # Generated SDK config is an output, never a user-maintained input.
+    sdk=out/'sdkconfig'
+    if sdk.exists():sdk.unlink()
+    frozen=ROOT/'config/cam-dependencies.lock'
+    if frozen.exists(): (ROOT/'firmware/cam_tracking/dependencies.lock').write_text(frozen.read_text().replace('${PROJECT_ROOT}',ROOT.as_posix()))
+    command=[sys.executable,idf,'-C',ROOT/'firmware/cam_tracking','-B',out,
+      '-DIDF_TARGET=esp32s3',f'-DSDKCONFIG={sdk}',f'-DSDKCONFIG_DEFAULTS={ROOT/"firmware/cam_tracking/sdkconfig.defaults"};{defaults}','build']
+    with (out/'compile.log').open('w',encoding='utf-8') as log:
+        try:run(command,stdout=log,stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError:
+            print((out/'compile.log').read_text(encoding='utf-8')[-9000:]);raise
+    flash=json.loads((out/'flasher_args.json').read_text())['flash_files']
+    expected={0x0:0x8000,0x8000:0x1000,0x10000:0x700000}
+    if set(map(lambda x:int(x,0),flash))!=set(expected):raise ValueError('Unexpected CAM partition addresses')
+    files={}
+    for address,name in flash.items():
+        p=out/name
+        if p.stat().st_size>expected[int(address,0)]:raise ValueError('CAM binary exceeds partition')
+        files[name]={'address':int(address,0),'sha256':digest(p),'bytes':p.stat().st_size}
+    write_json(out/'manifest.json',{'target':'cam','variant':args.variant,'verification':profile['verification'],
+      'flash_size':'8MB','idf':'5.3.4','dependencies':json.loads(LOCK.read_text()),'files':files,
+      'hardware_status':'NOT RUN',
+      **source_info(),
+      'source_files':{str(p.relative_to(ROOT)):digest(p) for p in [*sorted((ROOT/'firmware/cam_tracking/main').glob('*')),ROOT/'firmware/cam_tracking/CMakeLists.txt',ROOT/'firmware/cam_tracking/partitions.csv',ROOT/'firmware/cam_tracking/sdkconfig.defaults',ROOT/'firmware/main_wireless/vision_protocol.h'] if p.is_file()},
+      'sdkconfig_sha256':digest(sdk)})
+    print((out/'compile.log').read_text(encoding='utf-8')[-1700:]);print('CAM package:',out,'\nNO DEVICE WAS FLASHED.')
+
+def calibration_build(args):
+    # Reuse the single maintained PWM/kinematics sources in a staged Arduino sketch.
+    from carerover import cli, validate_profile
+    profile=json.loads(Path(args.profile).read_text());validate_profile(profile)
+    cores=json.loads(run([cli(),'core','list','--json'],capture_output=True,text=True).stdout)
+    installed=next((c.get('installed_version') for c in cores.get('platforms',[]) if c.get('id')=='esp32:esp32'),None)
+    if installed!=profile['core_version']:raise ValueError('Installed Arduino core differs from calibration profile')
+    out=BUILD/'calibration';sketch=out/'motion_calibration';sketch.mkdir(parents=True,exist_ok=True)
+    shutil.copyfile(ROOT/'firmware/motion_calibration/motion_calibration.ino',sketch/'motion_calibration.ino')
+    for name in ['continuous_servo_drive.h','continuous_servo_drive.cpp','omni_kinematics.h','partitions.csv']:
+        shutil.copyfile(ROOT/'firmware/main_wireless'/name,sketch/name)
+    with (out/'compile.log').open('w',encoding='utf-8') as log:
+        try:run([cli(),'compile','--fqbn',profile['fqbn'],'--output-dir',out/'binaries',sketch],stdout=log,stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError:print((out/'compile.log').read_text()[-6000:]);raise
+    print('Calibration compiled:',out,'; upload only after board verification and backup.')
+
+def cam_flash(args):
+    out=Path(args.package).resolve();m=json.loads((out/'manifest.json').read_text())
+    if m.get('target')!='cam' or m.get('verification')!='windows_baseline_confirmed' or m.get('flash_size')!='8MB':raise ValueError('Only a verified 8MB CAM device package can be flashed')
+    expected={0:0x8000,0x8000:0x1000,0x10000:0x700000}
+    if len(m['files'])!=3 or {v['address'] for v in m['files'].values()}!=set(expected):raise ValueError('Unexpected CAM addresses')
+    pairs=[]
+    for name,value in sorted(m['files'].items(),key=lambda x:x[1]['address']):
+        p=(out/name).resolve()
+        if not p.is_relative_to(out) or digest(p)!=value['sha256'] or p.stat().st_size>expected[value['address']]:raise ValueError('CAM file/size/checksum mismatch')
+        pairs += [hex(value['address']),p]
+    command=[sys.executable,'-m','esptool','--chip','esp32s3','--port',args.port]
+    identity=run(command+['flash-id'],capture_output=True,text=True).stdout;print(identity)
+    if '8MB' not in identity:raise ValueError('Connected board is not the configured 8MB CAM')
+    backup=BUILD/'backups'/f'cam-{time.strftime("%Y%m%d-%H%M%S")}.bin';backup.parent.mkdir(parents=True,exist_ok=True)
+    run(command+['read-flash','0','0x800000',backup]);write_json(backup.with_suffix('.json'),{'sha256':digest(backup),'bytes':backup.stat().st_size})
+    if backup.stat().st_size!=0x800000:raise ValueError('Incomplete backup')
+    run(command+['write-flash','--flash-mode','dio','--flash-freq','80m','--flash-size','8MB']+pairs)
+
+def crc8(body):
+    crc=0
+    for b in body.encode('ascii'):
+        crc^=b
+        for _ in range(8):crc=((crc<<1)^7)&255 if crc&128 else (crc<<1)&255
+    return crc
+
+def analyze(path):
+    result={'status':'CAPTURED','lines':0,'uart_valid':0,'uart_bad_crc':0,'person_found':0,'person_missing':0,'metrics':[],'max_person_gap_ms':0}
+    previous=None
+    for line in Path(path).read_text(encoding='utf-8',errors='replace').splitlines():
+        result['lines']+=1
+        try:record=json.loads(line);text=record.get('text',line);at=record.get('elapsed_ms')
+        except (ValueError,AttributeError):text=line;at=None
+        if text.startswith(('@P,','@G,')):
+            try:
+                body,checksum=text[1:].rsplit('*',1)
+                if len(checksum)!=2 or crc8(body)!=int(checksum,16):raise ValueError('crc')
+                result['uart_valid']+=1
+                if text.startswith('@P,'):
+                    fields=body.split(',');result['person_found' if fields[3]=='1' else 'person_missing']+=1
+                    if at is not None and previous is not None:result['max_person_gap_ms']=max(result['max_person_gap_ms'],at-previous)
+                    previous=at
+            except (ValueError,IndexError,UnicodeError):result['uart_bad_crc']+=1
+        try:
+            obj=json.loads(text)
+            if obj.get('type') in {'cam_metrics','wireless_status','imu_status','motion_status','vision_link','front_status'}:result['metrics'].append(obj)
+        except (ValueError,AttributeError):pass
+    result['uart_validation']='CRC only; field/range/sequence acceptance is verified by firmware tests'
+    result['hardware_acceptance']='NOT EVALUATED: capture alone does not prove physical motion or latency'
+    return result
+
+def capture(args):
+    import serial
+    out=Path(args.output);out.parent.mkdir(parents=True,exist_ok=True)
+    # Configure before open to avoid deliberate reset pulses; this tool never sends commands.
+    port=serial.Serial(port=None,baudrate=115200,timeout=.1);port.dtr=False;port.rts=False;port.port=args.port
+    with port,out.open('w',encoding='utf-8') as log:
+        began=time.monotonic()
+        while time.monotonic()-began<args.seconds:
+            raw=port.readline(4096)
+            if raw:log.write(json.dumps({'elapsed_ms':round((time.monotonic()-began)*1000),'text':raw.decode('utf-8',errors='replace').strip()},ensure_ascii=False)+'\n')
+    write_json(out.with_suffix('.summary.json'),analyze(out))
+
+def release(args):
+    out=Path(args.output).resolve();out.parent.mkdir(parents=True,exist_ok=True)
+    allowed=['firmware','js','css','assets','config','docs','tests','tools','mock','hardware','.github']
+    files=[ROOT/'index.html',ROOT/'README.md',ROOT/'package.json']
+    for name in ['WINDOWS_START_HERE.md','AGENTS.md']:
+        if (ROOT/name).exists():files.append(ROOT/name)
+    if getattr(args,'include_reference',False):
+        files += [p for p in (ROOT/'CareRover_Tracking_Motion_Handoff_2026-09-11').rglob('*') if p.is_file()]
+    for directory in allowed:
+        for p in (ROOT/directory).rglob('*'):
+            if not p.is_file():continue
+            if any(x in p.parts for x in ['managed_components','__pycache__','build','.venv']):continue
+            if p.name in {'wifi_secrets.h','front_config.local.h','sdkconfig','sdkconfig.old','build_version.h'} or p.name.endswith('.local.json') or p.suffix in {'.log','.pyc'}:continue
+            files.append(p)
+    files=sorted(set(files))
+    evidence=sorted(p for p in (ROOT/'output/evidence').rglob('*') if p.is_file())
+    manifest={str(p.relative_to(ROOT)):digest(p) for p in files}
+    evidence_manifest={str(Path('evidence')/p.relative_to(ROOT/'output/evidence')):digest(p) for p in evidence}
+    with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED) as z:
+        for p in files:z.write(p,str(p.relative_to(ROOT)))
+        for p in evidence:z.write(p,str(Path('evidence')/p.relative_to(ROOT/'output/evidence')))
+        z.writestr('EXPORT_INFO.json',json.dumps(source_info(),indent=2)+'\n')
+        z.writestr('SOURCE_MANIFEST.json',json.dumps(manifest,indent=2)+'\n')
+        z.writestr('EVIDENCE_MANIFEST.json',json.dumps(evidence_manifest,indent=2)+'\n')
+    out.with_suffix(out.suffix+'.sha256').write_text(digest(out)+'  '+out.name+'\n');print(out)
+
+def main():
+    p=argparse.ArgumentParser(description=__doc__);sub=p.add_subparsers(dest='action',required=True)
+    s=sub.add_parser('prepare');s.add_argument('--idf',action='store_true')
+    s=sub.add_parser('cam-build');s.add_argument('--variant',choices=['gesture','vision','stream','pico'],default='stream');s.add_argument('--profile',default='config/cam-board.example.json')
+    s=sub.add_parser('cam-flash');s.add_argument('package');s.add_argument('--port',required=True)
+    s=sub.add_parser('calibration-build');s.add_argument('--profile',default='config/tracking-development.json')
+    s=sub.add_parser('capture');s.add_argument('--port',required=True);s.add_argument('--seconds',type=float,default=120);s.add_argument('--output',required=True)
+    s=sub.add_parser('analyze');s.add_argument('log')
+    s=sub.add_parser('release');s.add_argument('--output',default='output/CareRover_Tracking_Software.zip');s.add_argument('--include-reference',action='store_true')
+    args=p.parse_args()
+    {'prepare':prepare,'cam-build':cam_build,'cam-flash':cam_flash,'calibration-build':calibration_build,'capture':capture,'analyze':lambda a:print(json.dumps(analyze(a.log),ensure_ascii=False,indent=2)),'release':release}[args.action](args)
+if __name__=='__main__':
+    try:main()
+    except (ValueError,OSError,subprocess.CalledProcessError) as e:print('ERROR:',e,file=sys.stderr);sys.exit(1)

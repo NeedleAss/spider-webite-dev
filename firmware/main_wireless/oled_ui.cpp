@@ -189,6 +189,19 @@ void OledUi::renderData(const OledUiSnapshot &snapshot) {
   drawText(18, 34, value, 2);
   drawText(58, 40, "%");
 
+  if(snapshot.frontEnabled) {
+    // Alternate compact health data with a full readable ranging/status page.
+    if((millis()/2000)%2==0) {
+      clear();char range[24];
+      if(snapshot.frontValid)snprintf(range,sizeof(range),"FRONT %.0f CM",snapshot.frontCm);
+      else strcpy(range,"FRONT UNKNOWN");
+      drawText(0,0,range);drawText(0,14,snapshot.frontStatus);
+      drawText(0,28,snapshot.frontPhase);
+      char reason[22];snprintf(reason,sizeof(reason),"%.21s",snapshot.stopReason);drawText(0,42,reason);
+      if(strlen(snapshot.stopReason)>21)drawText(0,54,snapshot.stopReason+21);
+      flush();return;
+    }
+  }
   drawHorizontalLine(54);
   if (!snapshot.camConnected) drawText(0, 56, "CAM OFF");
   if (!snapshot.heartRateValid && !snapshot.spo2Valid) drawText(72, 56, "HEALTH --");
@@ -219,7 +232,7 @@ void OledUi::service(uint32_t nowMs, const OledUiSnapshot &snapshot) {
     return;
   }
 
-  const bool hasResult = snapshot.gestureValid || snapshot.heartRateValid || snapshot.spo2Valid;
+  const bool hasResult = snapshot.frontEnabled || snapshot.gestureValid || snapshot.heartRateValid || snapshot.spo2Valid;
   if (hasResult) {
     noResultSinceMs_ = 0;
     idleActive_ = false;

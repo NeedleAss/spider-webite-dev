@@ -22,7 +22,7 @@ static constexpr uint32_t PC_BAUD = 115200;
 static constexpr uint32_t CAM_BAUD = 115200;
 static constexpr uint32_t SENSOR_I2C_HZ = 400000;
 static constexpr uint32_t OLED_I2C_HZ = 400000;
-static constexpr uint32_t LINK_TIMEOUT_MS = 1000;
+static constexpr uint32_t LINK_TIMEOUT_MS = 490;
 static constexpr uint32_t HEALTH_REPORT_MS = 1000;
 static constexpr uint32_t SENSOR_RETRY_MS = 3000;
 
@@ -141,56 +141,17 @@ void printProtocolError(const char *reason, const char *line) {
                 reason, static_cast<unsigned long>(badPackets), line);
 }
 
-void processCamPacket(char *line) {
-  if (line[0] != '@') {
-    printProtocolError("missing_start", line);
+void processCamPacket(const carerover::VisionPacket& p, bool resync) {
+  wirelessVision(p, resync);
+  if (p.kind == 'P') {
+    ++validPackets; lastValidPacketMs=millis(); timeoutReported=false;
+    Serial.printf("{\"type\":\"person\",\"seq\":%lu,\"found\":%s,\"confidence\":%.3f,\"infer_ms\":%lu}\n",
+      (unsigned long)p.seq,p.found?"true":"false",p.score/1000.0f,(unsigned long)p.inferMs);
     return;
   }
-
-  char *asterisk = strrchr(line, '*');
-  if (asterisk == nullptr) {
-    printProtocolError("missing_crc", line);
-    return;
-  }
-
-  uint8_t receivedCrc = 0;
-  if (!parseHexByte(asterisk + 1, receivedCrc)) {
-    printProtocolError("bad_crc_text", line);
-    return;
-  }
-
-  const uint8_t calculatedCrc = crc8(line + 1, static_cast<size_t>(asterisk - (line + 1)));
-  if (calculatedCrc != receivedCrc) {
-    printProtocolError("crc_mismatch", line);
-    return;
-  }
-  *asterisk = '\0';
-
-  char *fields[11] = {};
-  size_t fieldCount = 0;
-  char *save = nullptr;
-  for (char *token = strtok_r(line + 1, ",", &save);
-       token != nullptr && fieldCount < 11;
-       token = strtok_r(nullptr, ",", &save)) {
-    fields[fieldCount++] = token;
-  }
-
-  if (fieldCount != 11 || strcmp(fields[0], "G") != 0) {
-    printProtocolError("field_count_or_type", line);
-    return;
-  }
-
-  const uint32_t seq = strtoul(fields[1], nullptr, 10);
-  const uint32_t camMs = strtoul(fields[2], nullptr, 10);
-  const int handDetected = atoi(fields[3]);
-  const char *label = fields[4];
-  const int scoreMilli = atoi(fields[5]);
-  const int x0 = atoi(fields[6]);
-  const int y0 = atoi(fields[7]);
-  const int x1 = atoi(fields[8]);
-  const int y1 = atoi(fields[9]);
-  const uint32_t inferMs = strtoul(fields[10], nullptr, 10);
-
+  const auto seq=p.seq, camMs=p.camMs, inferMs=p.inferMs;
+  const int handDetected=p.found, scoreMilli=p.score, x0=p.x0,y0=p.y0,x1=p.x1,y1=p.y1;
+  const char* label=p.label;
   ++validPackets;
   lastValidPacketMs = millis();
   timeoutReported = false;
@@ -214,26 +175,18 @@ void processCamPacket(char *line) {
       static_cast<unsigned long>(inferMs), static_cast<unsigned long>(validPackets));
 }
 
+carerover::CamVisionAdapter camAdapter;
 void readCamLink() {
-  while (CamLink.available() > 0) {
-    const char c = static_cast<char>(CamLink.read());
-    if (c == '\r') continue;
-    if (c == '\n') {
-      if (camRxLength > 0) {
-        camRxLine[camRxLength] = '\0';
-        processCamPacket(camRxLine);
-        camRxLength = 0;
-      }
-      continue;
-    }
-    if (camRxLength + 1 < RX_LINE_CAPACITY) {
-      camRxLine[camRxLength++] = c;
-    } else {
-      camRxLength = 0;
-      ++badPackets;
-      Serial.printf("{\"type\":\"protocol_error\",\"reason\":\"line_overflow\",\"bad_packets\":%lu}\r\n",
-                    static_cast<unsigned long>(badPackets));
-    }
+  // Bound each loop so a noisy serial source cannot starve health sampling.
+  for (int budget=0; budget<512 && CamLink.available()>0; ++budget) {
+    carerover::VisionPacket packet;
+    if(camAdapter.feed(char(CamLink.read()),wirelessNowMs(),packet)) processCamPacket(packet,camAdapter.resynchronized);
+  }
+  badPackets=camAdapter.bad+camAdapter.stale;
+  static uint32_t reportMs=0;
+  if(millis()-reportMs>=1000) {
+    reportMs=millis();
+    Serial.printf("{\"type\":\"vision_link\",\"valid\":%lu,\"bad\":%lu,\"stale\":%lu,\"resync\":%lu}\n",(unsigned long)camAdapter.valid,(unsigned long)camAdapter.bad,(unsigned long)camAdapter.stale,(unsigned long)camAdapter.resets);
   }
 }
 
@@ -662,6 +615,9 @@ void serviceOled(uint32_t nowMs) {
   snapshot.heartRateBpm = heartRateFilter.output();
   snapshot.spo2Valid = spo2Valid;
   snapshot.spo2Percent = spo2Filter.output();
+  const auto front=wirelessFront();snapshot.frontEnabled=front.enabled;snapshot.frontValid=front.valid;
+  snapshot.frontCm=front.distanceCm;snapshot.frontStatus=front.status;snapshot.frontPhase=carerover::phaseName(front.phase);
+  snapshot.stopReason=wirelessStopReason();
   oledUi.service(nowMs, snapshot);
 }
 
@@ -707,5 +663,6 @@ void loop() {
   health.reportMs = wirelessReportMs;
   strlcpy(health.state, healthState, sizeof(health.state));
   wirelessHealth(health);
+  wirelessDiagnostics();
   delay(1);
 }

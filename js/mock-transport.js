@@ -58,6 +58,7 @@ export class MockTransport extends Transport {
     this.sim.cmd = { vx: 0, vy: 0, wz: 0 };
     this.sim.vel = { vx: 0, vy: 0, wz: 0 };
     this.sim.mode = 'IDLE';
+    this.sim.front.cancel('network_down');
   }
   deliver(msg) { if (this.isOpen) this._emitMessage(JSON.stringify(msg)); }
 }

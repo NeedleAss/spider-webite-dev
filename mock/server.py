@@ -11,6 +11,10 @@ import time
 from pathlib import Path
 from aiohttp import web, WSMsgType
 from PIL import Image, ImageDraw
+try:
+    from .front_sim import FrontSim
+except ImportError:
+    from front_sim import FrontSim
 
 ROOT = Path(__file__).resolve().parent.parent
 MODES = ('IDLE', 'MANUAL', 'PERSON_FOLLOW', 'GESTURE_CONTROL', 'HEALTH_CHECK')
@@ -24,6 +28,8 @@ def finite(v):
 
 class RobotSim:
     def __init__(self):
+        self.front=FrontSim()
+        self.last_ping=-math.inf
         self.mode = 'IDLE'
         self.estop = False
         self.velocity = [0., 0., 0.]
@@ -38,10 +44,11 @@ class RobotSim:
         self.finger = True
         self.health_state = 'VALID'
 
-    def stop(self, idle=False):
+    def stop(self, idle=False, reason="mode_exit"):
         self.velocity = [0., 0., 0.]
         self.target = [0., 0., 0.]
         if idle:
+            self.front.cancel(reason)
             self.mode = 'IDLE'
 
     def command(self, msg, now=None):
@@ -54,6 +61,12 @@ class RobotSim:
         ack = {'type': 'ack', 'ts': stamp(), 'request_type': kind, 'ok': True}
         if finite(msg.get('request_id')):
             ack['request_id'] = msg['request_id']
+        if kind == 'set_demo_bypass':
+            if type(msg.get('enabled')) is not bool: return error('INVALID_COMMAND','enabled must be boolean')
+            if self.estop or self.mode!='PERSON_FOLLOW': return error('NOT_IN_FOLLOW','Follow mode required')
+            if not msg['enabled'] and self.front.phase!='NONE': self.stop(idle=True)
+            self.front.set_demo(msg['enabled'],self.t)
+            return [ack]
         if kind == 'cmd_vel':
             v = [msg.get(k) for k in ('vx', 'vy', 'wz')]
             if any(not finite(x) or abs(x) > 1 for x in v):
@@ -62,20 +75,26 @@ class RobotSim:
                 return error('ESTOP_ACTIVE', 'Motion rejected while emergency stop is active')
             if any(v) and self.mode != 'MANUAL':
                 return error('NOT_IN_MANUAL', 'Choose manual mode before moving')
+            if not any(v): self.front.held=False
+            elif self.front.held: return error('FRONT_RELEASE_REQUIRED','Release joystick first')
             self.target = v
             self.last_command = now
             if not any(v):
-                self.stop()
+                self.stop(idle=self.mode=='PERSON_FOLLOW')
             return []
         if kind == 'set_mode':
             if msg.get('mode') not in MODES:
                 return error('INVALID_MODE', 'Unknown or reserved mode')
             if self.estop:
                 return error('ESTOP_ACTIVE', 'Clear emergency stop before changing mode')
+            if msg['mode'] in ('MANUAL','PERSON_FOLLOW') and self.front.held: return error('FRONT_RELEASE_REQUIRED','Release joystick first')
             self.stop()
+            self.front.cancel('mode_changed')
             self.mode = msg['mode']
+            if self.mode=='PERSON_FOLLOW': self.last_ping=now
             return [ack]
         if kind == 'estop':
+            self.front.cancel('estop')
             self.estop = True
             self.stop()
             return [ack]
@@ -84,6 +103,7 @@ class RobotSim:
             self.stop(idle=True)
             return [ack]
         if kind == 'ping':
+            self.last_ping=now
             return [{'type': 'pong', 'ts': stamp(), 'id': msg.get('id')}]
         return error('UNKNOWN_TYPE', 'Unsupported command type')
 
@@ -92,12 +112,19 @@ class RobotSim:
         self.t += dt
         if self.estop or (self.mode == 'MANUAL' and now - self.last_command > .250):
             self.stop()
+        if self.mode=='PERSON_FOLLOW' and (not self.person['found'] or now-self.last_ping>=.240): self.stop(idle=True,reason='target_lost' if not self.person['found'] else 'owner_watchdog')
         target = self.target[:] if self.mode == 'MANUAL' else [0., 0., 0.]
         if not self.estop and self.mode == 'PERSON_FOLLOW' and self.person['found']:
             target = [.15, 0., math.sin(self.t * .42) * .3]
         elif not self.estop and self.mode == 'GESTURE_CONTROL':
             target = {'THUMB_UP': [.4, 0., 0.], 'FIST': [-.3, 0., 0.],
                       'POINT_LEFT': [0., -.4, 0.], 'POINT_RIGHT': [0., .4, 0.]}.get(self.gesture, [0., 0., 0.])
+        if self.mode!='PERSON_FOLLOW' and self.front.enabled: self.front.cancel('mode_exit')
+        protected,abort=self.front.step(self.t,target,self.mode=='PERSON_FOLLOW')
+        if self.mode in ('MANUAL','PERSON_FOLLOW','GESTURE_CONTROL'):
+            target=protected
+            if abort: self.stop(idle=True,reason=self.front.reason)
+            if not any(target): self.velocity=[0.,0.,0.]
         k = min(1., dt * 6)
         self.velocity = [v + (a - v) * k for v, a in zip(self.velocity, target)]
         self.yaw = (self.yaw + self.velocity[2] * 90 * dt + 180) % 360 - 180
@@ -122,7 +149,7 @@ class RobotSim:
             status = 'TRACKING' if self.person['found'] else 'SEARCHING'
         if not self.estop and self.mode == 'HEALTH_CHECK':
             status = 'MEASURING'
-        return {'type': 'telemetry', 'ts': stamp(), 'connection': {'camera': True, 'main_mcu': True, 'simulated': True},
+        return {'type': 'telemetry', 'ts': stamp(), 'front':self.front.telemetry(self.t), 'connection': {'camera': True, 'main_mcu': True, 'simulated': True},
                 'robot': {'mode': 'ESTOP' if self.estop else self.mode, 'state': status, 'estop': self.estop,
                           'battery_pct': max(5, round(87 - self.t * .004)), **dict(zip(('vx', 'vy', 'wz'), (round(v, 3) for v in self.velocity)))},
                 'imu': {'yaw_deg': round(self.yaw, 1), 'pitch_deg': round(math.sin(self.t) * .4, 1), 'roll_deg': round(math.cos(self.t) * .3, 1)},
@@ -185,29 +212,35 @@ class Server:
                 except (ValueError, TypeError):
                     await ws.send_json({'type':'error','ts':stamp(),'code':'INVALID_JSON','message':'Malformed JSON'}); continue
                 kind = msg.get('type') if isinstance(msg, dict) else None
-                claims = kind in ('set_mode','clear_estop') or (kind == 'cmd_vel' and any(msg.get(k) for k in ('vx','vy','wz')))
+                claims = kind in ('set_mode','clear_estop','set_demo_bypass') or (kind == 'cmd_vel' and any(msg.get(k) for k in ('vx','vy','wz')))
                 if claims and self.owner is not None and self.owner is not ws:
                     await ws.send_json({'type':'error','ts':stamp(),'code':'CONTROL_BUSY','message':'Another browser owns motion control'}); continue
                 # Non-owner zero commands must not interfere with the owner's motion.
                 if kind == 'cmd_vel' and self.owner is not None and self.owner is not ws:
+                    continue
+                if kind=='ping' and self.owner is not None and self.owner is not ws:
+                    await ws.send_json({'type':'pong','ts':stamp(),'id':msg.get('id')})
                     continue
                 replies = self.sim.command(msg)
                 if claims and not any(r['type'] == 'error' for r in replies):
                     self.owner = ws
                 for reply in replies:
                     await ws.send_json(reply)
-                if kind in ('set_mode','estop','clear_estop'):
+                if kind in ('set_mode','estop','clear_estop','set_demo_bypass'):
                     await self.broadcast(self.sim.telemetry())
         finally:
             self.clients.discard(ws)
             if self.owner is ws:
-                self.owner = None; self.sim.stop(idle=True)
+                self.owner = None; self.sim.stop(idle=True,reason='network_down')
         return ws
 
     async def broadcast(self, msg):
         async def deliver(ws):
             try:
-                await asyncio.wait_for(ws.send_json(msg), .15)
+                payload=msg
+                if msg.get('type')=='telemetry':
+                    payload={**msg,'robot':{**msg['robot'],'control_allowed':self.owner is None or self.owner is ws}}
+                await asyncio.wait_for(ws.send_json(payload), .15)
             except (ConnectionError, asyncio.TimeoutError, RuntimeError):
                 await ws.close()
         await asyncio.gather(*(deliver(ws) for ws in tuple(self.clients)))

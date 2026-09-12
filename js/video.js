@@ -1,10 +1,12 @@
 import { VideoOverlay, computeContainFit, roundRect } from './video-overlay.js';
+import { streamUrl } from './protocol.js';
 import { defaultStreamUrl } from './transport.js';
 /** Video sources and metadata share a stage, never a transport implementation. */
 export class VideoPanel {
   constructor({ stage, source, overlay, image, video, select, input, openFile, notice }) {
     Object.assign(this, { stage, source, image, video, select, input, openFile, notice });
     this.overlay = new VideoOverlay(overlay, stage); this.ctx = source.getContext('2d');
+    this.streamUrl = null; this.retryTimer = null; this.retryMs = 1000; this.streamConnected = false;
     this.kind = 'canvas'; this.objectUrl = null; this.ready = false;
     this.abort = new AbortController(); const signal = this.abort.signal;
     select.addEventListener('change', () => {
@@ -19,11 +21,12 @@ export class VideoPanel {
     }, { signal });
     video.addEventListener('loadeddata', () => { this.ready = true; }, { signal });
     video.addEventListener('error', () => { this.ready = false; this.notice('video.failed'); }, { signal });
-    image.addEventListener('load', () => { this.ready = true; this.streamFailed = false; }, { signal });
-    image.addEventListener('error', () => { this.ready = false; this.streamFailed = true; this.notice('video.failed'); }, { signal });
+    image.addEventListener('load', () => { this.ready = true; this.streamFailed = false; this.retryMs = 1000; }, { signal });
+    image.addEventListener('error', () => { this.ready = false; this.streamFailed = true; this.notice('video.failed'); this.scheduleRetry(); }, { signal });
     this.setSource('canvas');
   }
   setSource(kind) {
+    clearTimeout(this.retryTimer); this.retryTimer = null;
     this.video.pause(); this.video.removeAttribute('src'); this.video.load();
     this.image.removeAttribute('src');
     if (this.objectUrl) { URL.revokeObjectURL(this.objectUrl); this.objectUrl = null; }
@@ -33,11 +36,27 @@ export class VideoPanel {
     this.stage.dataset.source = kind;
     if (kind === 'mjpeg') this.connection(true);
   }
+  setStreamUrl(url) {
+    const next = url || null;
+    if (next === this.streamUrl) return;
+    this.streamUrl = next;
+    if (this.kind === 'mjpeg') this.connection(true);
+  }
+  scheduleRetry() {
+    if (this.retryTimer || this.kind !== 'mjpeg' || !this.streamConnected) return;
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      if (this.kind === 'mjpeg' && this.streamConnected) this.connection(true);
+    }, this.retryMs);
+    this.retryMs = Math.min(5000, this.retryMs * 2);
+  }
   connection(connected) {
+    this.streamConnected = connected;
+    clearTimeout(this.retryTimer); this.retryTimer = null;
     if (this.kind !== 'mjpeg') return;
     this.ready = false; this.streamFailed = !connected;
     this.image.removeAttribute('src');
-    if (connected) this.image.src = new URLSearchParams(location.search).get('stream') || defaultStreamUrl();
+    if (connected) this.image.src = streamUrl(new URLSearchParams(location.search).get('stream'), this.streamUrl, defaultStreamUrl());
   }
   render(vision, flags) {
     if (this.kind === 'mjpeg' && !this.streamFailed && this.image.naturalWidth > 0) this.ready = true;
@@ -94,5 +113,5 @@ export class VideoPanel {
     const shade = ctx.createLinearGradient(0, 0, 0, ih); shade.addColorStop(0, 'rgba(5,10,12,.12)'); shade.addColorStop(.7, 'rgba(5,10,12,0)'); shade.addColorStop(1, 'rgba(5,10,12,.35)');
     ctx.fillStyle = shade; ctx.fillRect(0, 0, iw, ih); ctx.restore();
   }
-  destroy() { this.abort.abort(); this.overlay.destroy(); this.video.pause(); this.image.removeAttribute('src'); if (this.objectUrl) URL.revokeObjectURL(this.objectUrl); }
+  destroy() { clearTimeout(this.retryTimer); this.streamConnected = false; this.abort.abort(); this.overlay.destroy(); this.video.pause(); this.image.removeAttribute('src'); if (this.objectUrl) URL.revokeObjectURL(this.objectUrl); }
 }

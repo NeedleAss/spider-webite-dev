@@ -72,6 +72,25 @@ class NetworkTest(unittest.IsolatedAsyncioTestCase):
         await b.send_json(cmd('estop'));await self.receive(b,'ack')
         self.assertTrue((await self.receive(a,'telemetry',lambda m:m['robot']['estop']))['robot']['estop'])
         await a.close();await b.close()
+    async def test_bypass_command_ownership_and_observer_ping_cannot_renew_follow(self):
+        a=await self.session.ws_connect(self.server.make_url('/ws'))
+        b=await self.session.ws_connect(self.server.make_url('/ws'))
+        await a.send_json(cmd('set_mode',mode='PERSON_FOLLOW'))
+        await self.receive(a,'ack')
+        owner=await self.receive(a,'telemetry',lambda m:m['robot']['mode']=='PERSON_FOLLOW')
+        self.assertTrue(owner['robot']['control_allowed'])
+        await a.send_json(cmd('set_demo_bypass',enabled=True,request_id=12))
+        self.assertEqual((await self.receive(a,'ack',lambda m:m['request_type']=='set_demo_bypass'))['request_id'],12)
+        await b.send_json(cmd('set_demo_bypass',enabled=False))
+        self.assertEqual((await self.receive(b,'error'))['code'],'CONTROL_BUSY')
+        for i in range(5):
+            await b.send_json(cmd('ping',id=i))
+            await asyncio.sleep(.07)
+        stopped=await self.receive(a,'telemetry',lambda m:m['robot']['mode']=='IDLE')
+        self.assertFalse(stopped['front']['demo_enabled'])
+        self.assertEqual(stopped['robot']['vx'],0)
+        await a.close();await b.close()
+
     async def test_private_paths_and_cross_origin_control_are_blocked(self):
         for path in ('/.git/config','/.venv/pyvenv.cfg','/mock/server.py','/.env'):
             async with self.session.get(self.server.make_url(path)) as r:self.assertEqual(r.status,404)

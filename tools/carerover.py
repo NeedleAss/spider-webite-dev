@@ -31,6 +31,23 @@ def capture(args):
     return run(args, capture_output=True, text=True, encoding='utf-8').stdout
 
 
+def source_info():
+    """Archive builds retain export provenance without requiring a .git directory."""
+    if (ROOT / '.git').exists():
+        return {'source_commit': capture(['git', 'rev-parse', 'HEAD']).strip(),
+                'source_dirty': bool(capture(['git', 'status', '--porcelain', '--untracked-files=normal']).strip())}
+    metadata = ROOT / 'EXPORT_INFO.json'
+    info = json.loads(metadata.read_text(encoding='utf-8')) if metadata.exists() else {}
+    manifest = ROOT / 'SOURCE_MANIFEST.json'
+    changed = True
+    if manifest.exists():
+        entries = json.loads(manifest.read_text(encoding='utf-8'))
+        changed = any(not (ROOT / name).is_file() or sha(ROOT / name) != expected for name, expected in entries.items())
+    return {'source_commit': info.get('source_commit', 'archive-unknown'),
+            'source_dirty': bool(info.get('source_dirty', True) or changed),
+            'archive_modified': changed}
+
+
 def write_json(path, obj):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
@@ -81,7 +98,7 @@ def payload(destination):
         target.write_bytes(p.read_bytes())
     index = destination / 'index.html'
     index.write_text(index.read_text(encoding='utf-8').replace('<head>', f'<head>\n<meta name="carerover-web-version" content="{version}">', 1), encoding='utf-8')
-    write_json(destination / 'version.json', {'web': version, 'source_commit': capture(['git', 'rev-parse', 'HEAD']).strip()})
+    write_json(destination / 'version.json', {'web': version, 'source_commit': source_info()['source_commit']})
     return version
 
 
@@ -170,8 +187,12 @@ def build(args):
         raise ValueError(f"Install the exact core first: arduino-cli core install esp32:esp32@{profile['core_version']}")
     lib = sensor_library(profile['sensor_library_version'])
     source_files = [p for p in FIRMWARE.iterdir() if p.is_file() and p.name not in {'wifi_secrets.h', 'build_version.h'}]
+    integration = getattr(args, 'integration', 'legacy')
+    integration_id = {'legacy':0,'observe':1,'manual':2,'follow':3}[integration]
+    if integration_id and 'PSRAM=opi' not in profile['fqbn']:
+        raise ValueError('Tracking integration requires explicit PSRAM=opi board profile')
     source_version = content_id(source_files + runtime_files())
-    name = f"stage{args.stage}-{source_version}-{'check' if profile['verification']=='compile_only' else 'device'}"
+    name = f"stage{args.stage}-{integration}-{source_version}-{'check' if profile['verification']=='compile_only' else 'device'}"
     output = BUILD / name
     sketch = output / 'sketch/main_wireless'
     sketch.mkdir(parents=True, exist_ok=True)
@@ -182,8 +203,8 @@ def build(args):
     elif not secret.is_file():
         raise ValueError('Create firmware/main_wireless/wifi_secrets.h locally before a device build')
     else: shutil.copyfile(secret, sketch / secret.name)
-    build_version = f'{source_version}-s{args.stage}'
-    (sketch / 'build_version.h').write_text(f'#define CAREROVER_BUILD_VERSION "{build_version}"\n#define CAREROVER_STAGE {args.stage}\n')
+    build_version = f'{source_version}-s{args.stage}-{integration}'
+    (sketch / 'build_version.h').write_text(f'#define CAREROVER_BUILD_VERSION "{build_version}"\n#define CAREROVER_STAGE {args.stage}\n#define CAREROVER_INTEGRATION {integration_id}\n')
     binaries = output / 'binaries'; binaries.mkdir(exist_ok=True)
     with (output / 'compile.log').open('w', encoding='utf-8') as log:
         try:
@@ -203,9 +224,8 @@ def build(args):
         boot_app = Path(data_root) / f"packages/esp32/hardware/esp32/{profile['core_version']}/tools/partitions/boot_app0.bin"
     shutil.copyfile(boot_app, binaries / 'boot_app0.bin'); expected.append('boot_app0.bin')
     manifest = {'profile': profile, 'stage': args.stage, 'firmware_version': build_version,
-                'web_version': web_version, 'source_commit': capture(['git','rev-parse','HEAD']).strip(),
-                'source_dirty': bool(capture(['git','status','--porcelain','--untracked-files=normal']).strip()),
-                'arduino_cli': capture([arduino,'version']).strip(), 'test_backend_only': True,
+                'web_version': web_version, **source_info(),
+                'arduino_cli': capture([arduino,'version']).strip(), 'test_backend_only': integration_id < 2, 'integration': integration,
                 'files': {n: sha(binaries / n) for n in expected},
                 'addresses': {'main_wireless.ino.bootloader.bin': 0, 'main_wireless.ino.partitions.bin': 0x8000,
                               'boot_app0.bin': 0xe000, 'main_wireless.ino.bin': 0x10000, 'ffat.bin': PARTITION_OFFSET}}
@@ -236,7 +256,9 @@ def verify_package(package, flashing=False):
                           'boot_app0.bin':0xe000, 'main_wireless.ino.bin':0x10000, 'ffat.bin':PARTITION_OFFSET}
     if manifest.get('addresses') != expected_addresses or set(manifest['files']) != set(expected_addresses):
         raise ValueError('Unexpected flash file list/addresses')
-    if manifest.get('test_backend_only') is not True: raise ValueError('Only test target backend is supported')
+    integration = manifest.get('integration', 'legacy')
+    if integration not in {'legacy','observe','manual','follow'}: raise ValueError('Unknown integration backend')
+    if manifest.get('test_backend_only') != (integration in {'legacy','observe'}): raise ValueError('Inconsistent motion backend')
     for name, digest in manifest['files'].items():
         if sha(package / 'binaries' / name) != digest: raise ValueError(f'Checksum mismatch: {name}')
     check_partition_binary(package / 'binaries/main_wireless.ino.partitions.bin')
@@ -254,6 +276,7 @@ def flash(args):
     backups = BUILD / 'backups'; backups.mkdir(parents=True, exist_ok=True)
     backup = backups / f'main-before-{time.strftime("%Y%m%d-%H%M%S")}.bin'
     run(command + ['read-flash', '0', '0x1000000', backup])
+    if backup.stat().st_size != 0x1000000: raise ValueError('Incomplete main-controller backup')
     write_json(backup.with_suffix('.json'), {'sha256':sha(backup), 'bytes':backup.stat().st_size})
     if args.only == 'ffat': names = ['ffat.bin']
     elif args.only == 'firmware': names = [n for n in manifest['addresses'] if n != 'ffat.bin']
@@ -281,6 +304,7 @@ def main():
     sub.add_parser('fetch-tools')
     sub.add_parser('payload')
     b = sub.add_parser('build'); b.add_argument('--profile', required=True); b.add_argument('--stage', type=int, choices=range(1,6), default=5)
+    b.add_argument('--integration', choices=['legacy','observe','manual','follow'], default='legacy')
     v = sub.add_parser('verify'); v.add_argument('package')
     f = sub.add_parser('flash'); f.add_argument('package'); f.add_argument('--port',required=True); f.add_argument('--baud',type=int,default=460800); f.add_argument('--only',choices=['all','firmware','ffat'],default='all')
     args = p.parse_args()

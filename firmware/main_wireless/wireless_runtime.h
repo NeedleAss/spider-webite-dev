@@ -13,3 +13,12 @@ void wirelessHealth(const WirelessHealth& health);
 void wirelessPpg(uint32_t ir);
 void wirelessStatus();
 uint64_t wirelessNowMs();
+
+#include "vision_protocol.h"
+void wirelessVision(const carerover::VisionPacket& packet, bool resync);
+
+void wirelessDiagnostics();
+
+#include "front_guard.h"
+carerover::FrontSnapshot wirelessFront();
+const char* wirelessStopReason();
