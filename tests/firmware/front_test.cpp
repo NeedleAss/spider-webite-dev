@@ -58,7 +58,7 @@ int main() {
       if(fault==4)s.frontSample(0,false,t+1);
       if(fault==5)s.network(false,t+1);
       if(fault==6) { s.imu(false,false,false,t+1); s.tick(t+250); }
-      if(fault==7) {s.imu(true,true,false,t+240);s.cameraPacket(t+240);s.person(face(t+240));s.frontSample(120,true,t+240);s.tick(t+240);assert(std::strcmp(s.snapshot(t+240).stopReason,"owner_watchdog")==0);}
+      if(fault==7) {const auto at=t+SafetyController::CommandExpiryMs;s.imu(true,true,false,at);s.cameraPacket(at);s.person(face(at));s.frontSample(120,true,at);s.tick(at);assert(std::strcmp(s.snapshot(at).stopReason,"owner_watchdog")==0);}
       zero(s,t+1);assert(s.snapshot(t+1).mode==Mode::Idle);assert(!s.snapshot(t+1).front.demoEnabled);
     }
   }

@@ -18,7 +18,7 @@ struct SafetySnapshot {
 class SafetyController {
  public:
   static constexpr uint64_t CommandExpiryMs=tuning::CommandSafetyMs, CameraExpiryMs=tuning::CameraSafetyMs, PersonExpiryMs=tuning::PersonSafetyMs;
-  static constexpr uint16_t PersonAcceptScoreMilli=450;
+  static constexpr uint16_t PersonAcceptScoreMilli=tuning::balanced?400:450;
   static constexpr uint64_t GestureTurnTimeoutMs=12000;
   SafetySnapshot snapshot(uint64_t now) const {
     auto s=state_; s.camera=cameraSeen_&&now>=lastCameraMs_&&now-lastCameraMs_<CameraExpiryMs;

@@ -1,5 +1,6 @@
 #pragma once
 #include "vision_protocol.h"
+#include "demo_tuning.h"
 #include <algorithm>
 namespace carerover {
 // Constant-velocity Kalman tracking for display and association only.  The
@@ -39,7 +40,7 @@ struct ScalarKalman {
 class BoxTrack {
  public:
   void reset(){*this=BoxTrack{};}
-  bool ready(uint64_t now)const{return have_&&now>=last_.receivedMs&&now-last_.receivedMs<=700;}
+  bool ready(uint64_t now)const{return have_&&now>=last_.receivedMs&&now-last_.receivedMs<=tuning::PersonDisplayMs;}
   float cost(const VisionPacket& p,uint64_t now)const{
     if(!p.found||p.x1<=p.x0||p.y1<=p.y0)return 1000;
     if(!ready(now))return 0;
@@ -68,7 +69,7 @@ class BoxTrack {
   }
   VisionPacket view(uint64_t now)const{
     VisionPacket p=last_;if(!ready(now)){p.found=false;return p;}
-    const float dt=std::min(.7f,float(now-last_.receivedMs)/1000);
+    const float dt=std::min(1.0f,float(now-last_.receivedMs)/1000);
     const float ratio=float(last_.x1-last_.x0)/float(last_.y1-last_.y0);
     auto xFilter=cx_, yFilter=cy_, aFilter=area_;
     xFilter.predict(dt,180.f); yFilter.predict(dt,120.f); aFilter.predict(dt,1.5f);

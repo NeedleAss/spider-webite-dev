@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { safeStreamUrl, streamUrl, decode } from '../js/protocol.js';
 import * as store from '../js/state.js';
+import {CONFIG} from '../js/config.js';
 const telemetry = value => decode(JSON.stringify({type:'telemetry',...value})).msg;
 test('stream query and telemetry share URL validation and deterministic precedence',()=>{
   for(const value of ['javascript:alert(1)','data:image/png,xx','file:///etc/passwd','http://u:p@host/stream','x'.repeat(513)])assert.equal(safeStreamUrl(value),undefined);
@@ -15,9 +16,9 @@ test('duplicate person sequence cannot refresh its deadline; fresh sequence can'
     const update=(seq,age=0,found=true)=>store.applyTelemetry(telemetry({vision:{person:{seq,age_ms:age,found,x:20,y:20,w:40,h:40,confidence:.9}}}));
     store.resetForDisconnect();update(1);assert.equal(store.isPersonStale(),false);
     clock=1400;update(1);assert.equal(store.getState().vision.lastPersonTs,1000);
-    clock=2001;update(1);assert.equal(store.isPersonStale(),true);
+    clock=1000+CONFIG.VISION_STALE_MS+1;update(1);assert.equal(store.isPersonStale(),true);
     update(2,200);assert.equal(store.isPersonStale(),false);
-    update(3,1001);assert.equal(store.isPersonStale(),true);
+    update(3,CONFIG.VISION_STALE_MS+1);assert.equal(store.isPersonStale(),true);
     update(4,0,false);assert.equal(store.getState().vision.person.found,false);
   } finally {Date.now=realNow;}
 });

@@ -180,7 +180,7 @@ extern "C" void app_main() {
     if(faceTurn) {
       auto& results=faces.run(image);VisionPacket selected;float best=-1001,second=-1001;
       for(const auto& result:results) {
-        auto candidate=box(result,'P');if(!candidate.found||candidate.score<(tuning::balanced?350:450))continue;
+        auto candidate=box(result,'P');if(!candidate.found||candidate.score<(tuning::balanced?320:450))continue;
         const float score=tuning::balanced&&association.ready(began/1000)?-association.cost(candidate,began/1000):tracking&&!tuning::balanced?boxIou(previous,candidate):float((candidate.x1-candidate.x0)*(candidate.y1-candidate.y0));
         if(score>best){second=best;best=score;selected=candidate;}else if(score>second)second=score;
       }

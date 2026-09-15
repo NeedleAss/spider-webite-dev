@@ -31,8 +31,12 @@ class ImuFilter {
     if(!std::isfinite(ax+ay+az+gx+gy+gz)) { missing(); return; }
     const float norm=std::sqrt(ax*ax+ay*ay+az*az);
     if(tuning::balanced) {
-      const bool implausible=norm<.20f||norm>2.2f||std::fabs(gx)>245||std::fabs(gy)>245||std::fabs(gz)>245;
-      const bool transient=haveNorm_&&last_&&now>last_&&std::fabs(norm-previousNorm_)>.9f*float(now-last_)/10.f;
+      // Chassis acceleration and wheel vibration are expected during a demo.
+      // Reject only physically impossible sensor values; do not turn ordinary
+      // dynamic acceleration into an IMU fault. Large chassis tilt is handled
+      // separately below using the filtered angle and a sustained timer.
+      const bool implausible=norm<.12f||norm>3.5f||std::fabs(gx)>1000||std::fabs(gy)>1000||std::fabs(gz)>1000;
+      const bool transient=false;
       previousNorm_=norm;haveNorm_=true;
       if(implausible||transient) {
         ++state_.rejectedFrames;state_.held=true;tiltStart_=recoveryStart_=0;

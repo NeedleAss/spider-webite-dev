@@ -113,3 +113,13 @@
 已合并 0915 现场修复和现有超声波功能，三档配置及新字段详见 [0915 开发记录](0915-demo-development.md)。原包内层 617 项 SHA-256 PASS；外层 ZIP 缺失，NOT RUN。根目录 C++（含双配置）/Node 21/Python 33 通过，主控三配置、CAM balanced stream、独立校准工程编译通过，浏览器桌面/手机显示与断流清空通过。
 
 历史 Windows W2–W6 记录保存在原包 `reference_docs/windows-progress.md`，不能用本文件的旧模板反推现场从未测试，也不能把历史 PASS 算到新包。现场下一阶段为 safe/observe 复现与舵机断电 A/B；真人延迟、多人框关联、倾斜 A/B、落地及十分钟测试均待补。真实 PPG 回放首次 HR 14.35 s，低延迟目标尚未全部达到。
+
+## 2026-09-16 手动/IMU/视觉第二轮放宽（仍未烧录）
+
+- 根因补充：`DEMO_BALANCED` 原先把正常车体振动/加速度变化当作 `transient` 坏帧；坏帧持续超过旧的 180 ms IMU 新鲜度后，`SafetyController::tick()` 将模式置为 `IDLE`，网页下一次非零 `cmd_vel` 因而得到 `NOT_IN_MANUAL`。这不是摇杆协议错误，而是模式已被安全控制器收回。
+- IMU：删除动态加速度瞬态拒绝，仅拒绝非有限值、`|a|<0.12 g`、`|a|>3.5 g` 或 `|gyro|>1000 dps` 的物理异常；实际停车仍要求滤波后的俯仰/横滚达到 55° 并持续 400 ms，恢复阈值 42°。IMU 新鲜度窗口改为 750 ms。
+- 链路与跟随：CAM/人物来源窗口改为 1200 ms，人物显示窗口 1400 ms；人物跟随接受分数为 0.40（CAM balanced 候选阈值 0.32），目标丢失宽限 1.1 s；命令看门狗 300 ms，仍要求网页持续刷新命令。
+- 视觉：`BoxTrack` 使用有界常速度 Kalman（中心 x/y、log-area），只用于检测框显示和关联，不直接驱动车轮；预测显示上限 1.0 s。前端 `VISION_STALE_MS=1400`，覆盖当前 CAM 的 2G:1P 调度周期，单个漏检不会清框。
+- 手势：CAM 采用两帧手势后再跑一帧人脸；显示进入/保持门限为 0.30/0.14（safe 档仍为 0.35/0.18），保持 2.6 s、无手 1.7 s；动作门限 balanced 为 0.40。
+- 回归证据：`tools/check_firmware.py` 全部固件套件 PASS；`npm test` 21/21 PASS。主控与 CAM DEMO_BALANCED 包均重新 compile-only 构建，命令输出 `NO DEVICE WAS FLASHED`。
+- 当前设备状态：COM6/COM3 仍运行上一轮 SAFE_BASELINE，未因本次修复自动覆盖。需现场明确授权后，才可按备份和 115200 串口步骤烧录并做真人/实车验收；本机 Wi-Fi 未切换。

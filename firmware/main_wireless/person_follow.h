@@ -6,13 +6,13 @@
 namespace carerover {
 struct FollowVelocity { double vx=0, vy=0, wz=0; };
 struct FollowConfig {
-  float confidence=0.45f, ema=0.30f, centerDeadzone=0.07f, distanceDeadzone=0.08f;
+  float confidence=0.40f, ema=0.30f, centerDeadzone=0.07f, distanceDeadzone=0.08f;
   float distanceGain=0.55f, turnGain=0.75f;
   float maxVx=0.25f, maxWz=0.30f, matchIou=0.03f;
   // P results arrive at roughly 3.1-3.3 Hz in the combined stream.  Keep one
   // transient miss inside the 490 ms source deadline while commanding zero;
   // two consecutive misses still exceed this grace and latch target loss.
-  uint64_t lossGraceMs=450;
+  uint64_t lossGraceMs=1100;
 };
 class PersonFollowController {
  public:

@@ -17,13 +17,13 @@ inline constexpr const char* name=balanced?"DEMO_BALANCED":CAREROVER_TUNING_PROF
 // a demo may keep showing a plausible result, while motion actions still use
 // their independent confirmation gate.
 inline constexpr uint16_t GestureDisplayEnter=balanced?300:350, GestureDisplayHold=balanced?140:180;
-inline constexpr uint16_t GestureActionScore=450;
-inline constexpr uint64_t GestureDisplayHoldMs=2400, GestureDisplayNoHandMs=1500;
+inline constexpr uint16_t GestureActionScore=balanced?400:450;
+inline constexpr uint64_t GestureDisplayHoldMs=2600, GestureDisplayNoHandMs=1700;
 // CAM alternates gesture/face frames, so a single scheduling gap can approach
 // 0.5 s. Keep source freshness looser than the nominal frame period; the
 // command watchdog remains the independent dead-man stop.
-inline constexpr uint64_t CameraSafetyMs=900, PersonSafetyMs=900, ImuSafetyMs=180, CommandSafetyMs=240;
-inline constexpr uint64_t PersonDisplayMs=1000, HrDisplayHoldMs=30000, Spo2DisplayHoldMs=balanced?12000:8000;
+inline constexpr uint64_t CameraSafetyMs=1200, PersonSafetyMs=1200, ImuSafetyMs=750, CommandSafetyMs=300;
+inline constexpr uint64_t PersonDisplayMs=1400, HrDisplayHoldMs=30000, Spo2DisplayHoldMs=balanced?12000:8000;
 // A demo chassis may vibrate and briefly exceed 40 degrees in accelerometer
 // projection. Require a genuinely large, sustained tilt before stopping.
 inline constexpr float ImuSafetyTiltDeg=55, ImuSafetyRecoverDeg=42;

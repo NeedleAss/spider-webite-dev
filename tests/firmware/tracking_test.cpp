@@ -30,14 +30,14 @@ void followTests() {
   PersonFollowController f;f.reset();f.update(face(1,10));f.update(face(2,110));assert(!f.ready());f.update(face(3,210));assert(f.ready()&&f.referenceArea()==6400);
   f.update(face(4,310,120,60));assert(f.output().vx>=0);assert(f.output().vx<=.250001&&fabs(f.output().vy)<=.200001);
   VisionPacket no;no.seq=5;no.receivedMs=700;f.update(no);assert(!f.lost());assert(f.output().vx==0);
-  VisionPacket noAgain;noAgain.seq=6;noAgain.receivedMs=800;f.update(noAgain);assert(f.lost());assert(f.output().vx==0);
+  VisionPacket noAgain;noAgain.seq=6;noAgain.receivedMs=1600;f.update(noAgain);assert(f.lost());assert(f.output().vx==0);
   PersonFollowController transient;
   transient.update(face(1,100));transient.update(face(2,200));transient.update(face(3,300));
   VisionPacket oneMiss;oneMiss.seq=4;oneMiss.receivedMs=620;transient.update(oneMiss);
   assert(!transient.lost()&&transient.output().vx==0&&transient.output().wz==0);
   transient.update(face(5,940));assert(!transient.lost()&&transient.ready());
   VisionPacket firstMiss;firstMiss.seq=6;firstMiss.receivedMs=1260;transient.update(firstMiss);assert(!transient.lost());
-  VisionPacket secondMiss;secondMiss.seq=7;secondMiss.receivedMs=1580;transient.update(secondMiss);assert(transient.lost());
+  VisionPacket secondMiss;secondMiss.seq=7;secondMiss.receivedMs=2200;transient.update(secondMiss);assert(transient.lost());
   f.reset();for(int i=1;i<=3;++i)f.update(face(i,i*100,230));assert(f.output().vx==0&&f.output().vy==0&&f.output().wz>0&&f.output().wz<=.300001);
 }
 SafetyController followReady() {
@@ -55,12 +55,12 @@ void safetyTests() {
   for(int i=2;i<=4;++i){auto p=face(i,10+(i-1)*100);s.cameraPacket(p.receivedMs);s.heartbeat(1,p.receivedMs);s.person(p);s.computeFollow(p.receivedMs);}
   assert(s.followingReady());
   s.heartbeat(2,500);s.computeFollow(549);assert(s.snapshot(549).mode==Mode::Follow);
-  s.computeFollow(550);assert(s.snapshot(550).mode==Mode::Idle); // Observer cannot renew.
-  s=followReady();s.heartbeat(1,200);s.tick(250);assert(s.snapshot(250).mode==Mode::Idle); // Ping cannot renew controller computation.
-  s=followReady();for(int t=110;t<900;t+=100){s.cameraPacket(t);s.heartbeat(1,t);s.computeFollow(t);}s.tick(920);assert(s.snapshot(920).mode==Mode::Idle); // @G cannot renew person.
+  s.computeFollow(700);assert(s.snapshot(700).mode==Mode::Idle); // Observer cannot renew.
+  s=followReady();s.heartbeat(1,200);s.tick(510);assert(s.snapshot(510).mode==Mode::Idle); // Ping cannot renew controller computation.
+  s=followReady();for(int t=110;t<900;t+=100){s.cameraPacket(t);s.heartbeat(1,t);s.computeFollow(t);}s.tick(2100);assert(s.snapshot(2100).mode==Mode::Idle); // @G cannot renew person.
   s=followReady();assert(s.velocity(1,.1,0,0,20));s.velocity(1,0,0,0,21);assert(s.snapshot(21).mode==Mode::Idle);
   s=followReady();s.emergency(20);assert(s.snapshot(20).estop);s.clear(1,21);assert(s.snapshot(21).mode==Mode::Idle);
-  s=followReady();s.configureHardware(true,true);s.imu(true,true,false,20);s.tick(199);assert(s.snapshot(199).mode==Mode::Follow);s.tick(200);assert(s.snapshot(200).mode==Mode::Idle);
+  s=followReady();s.configureHardware(true,true);s.imu(true,true,false,20);s.tick(250);assert(s.snapshot(250).mode==Mode::Follow);s.tick(320);assert(s.snapshot(320).mode==Mode::Idle);
 }
 void imuTests() {
   ImuFilter f;for(int t=10;t<=5100;t+=10)f.update(0,0,1,.1f,.2f,.3f,t);

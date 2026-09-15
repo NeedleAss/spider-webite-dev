@@ -31,11 +31,11 @@ int main(){
   safety.emergency(31);safety.updateGestureTurn(-170,40);assert(safety.snapshot(40).target.wz==0);
   BoxTrack box;VisionPacket face;face.found=true;face.score=800;face.seq=1;face.receivedMs=100;face.x0=100;face.x1=160;face.y0=60;face.y1=140;
   assert(box.update(face));assert(!box.update(face));face.seq=2;face.receivedMs=420;face.x0+=8;face.x1+=8;assert(box.update(face));
-  assert(box.view(900).found);assert(!box.view(1121).found);
+  assert(box.view(900).found);assert(!box.view(420+tuning::PersonDisplayMs+1).found);
   auto distant=face;distant.x0=290;distant.x1=310;assert(box.cost(distant,420)>=1000);
   if(tuning::balanced){ImuFilter imu;for(unsigned t=10;t<=5100;t+=10)imu.update(0,0,1,0,0,0,t);
     assert(imu.state().calibrated);imu.update(0,0,8,0,0,0,5110);assert(imu.state().valid&&imu.state().held&&!imu.state().tiltFault);assert(imu.state().sampleMs==5100);
-    for(unsigned t=5120;t<=5310;t+=10){imu.update(0,0,8,0,0,0,t);}assert(!imu.state().valid);
+    for(unsigned t=5120;t<=5910;t+=10){imu.update(0,0,8,0,0,0,t);}assert(!imu.state().valid);
   }
   DemoPpg ppg;unsigned firstHr=0,firstSpo2=0;
   for(unsigned n=0;n<500;++n){float wave=std::sin(n*.04f*6.2831853f*1.25f);ppg.sample(uint32_t(100000+1000*wave),uint32_t(120000+2000*wave),40*(n+1));if(!firstHr&&ppg.hr.valid())firstHr=40*(n+1);if(!firstSpo2&&ppg.spo2.valid())firstSpo2=40*(n+1);}
