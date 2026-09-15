@@ -91,6 +91,11 @@
 - 115200 串口抓取 `build/windows/main-after-safe.jsonl`：`firmware=6123d4056525afc4-s5-follow`、`stage=5`、`backend=tracking`、`ap=true`、`mode=IDLE`、`estop=false`；`imu_status address=0x68 valid=true calibrated=true`；`vision_link valid` 持续增长且 `bad=0/stale=0/resync=0`；健康/手势/人物事件均能持续输出。未因无手指、无人入镜而判为模块故障。
 - 当前只完成软件写入与串口健康证据；网页连接、真人入镜跟随、手势动作和车轮运动仍属于后续 W3–W7 现场验收。
 
+### 2026-09-15 W3 前置与同步状态
+
+- 主控串口抓取证明 `ap=true`、固件 `6123d4056525afc4-s5-follow`、IMU `0x68 valid=true calibrated=true`；当前 Windows Wi-Fi 仍连接 `Tsinghua-Secure`，未擅自切换网络，因此网页 observe 尚未执行。
+- `git push origin feat/main-wireless` 本轮再次尝试时因 HTTPS connection reset 失败；本地提交 `b7955c9` 已保留，未使用强制推送。待网络稳定或用户完成 GitHub 凭据后重试。
+
 ## 2026-09-12 超声波集成增量
 
 新增 HC-SR04 驱动、前方保护/绕障状态机、网页/OLED 和 Mock。Windows/实物测试仍为 NOT RUN；接手时另读 ultrasonic-development.md。前方探头和绕障参数分别有 verified 门禁，模板 null 不可填写推测值。
