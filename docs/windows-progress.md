@@ -121,5 +121,5 @@
 - 链路与跟随：CAM/人物来源窗口改为 1200 ms，人物显示窗口 1400 ms；人物跟随接受分数为 0.40（CAM balanced 候选阈值 0.32），目标丢失宽限 1.1 s；命令看门狗 300 ms，仍要求网页持续刷新命令。
 - 视觉：`BoxTrack` 使用有界常速度 Kalman（中心 x/y、log-area），只用于检测框显示和关联，不直接驱动车轮；预测显示上限 1.0 s。前端 `VISION_STALE_MS=1400`，覆盖当前 CAM 的 2G:1P 调度周期，单个漏检不会清框。
 - 手势：CAM 采用两帧手势后再跑一帧人脸；显示进入/保持门限为 0.30/0.14（safe 档仍为 0.35/0.18），保持 2.6 s、无手 1.7 s；动作门限 balanced 为 0.40。
-- 回归证据：`tools/check_firmware.py` 全部固件套件 PASS；`npm test` 21/21 PASS。主控与 CAM DEMO_BALANCED 包均重新 compile-only 构建，命令输出 `NO DEVICE WAS FLASHED`。
+- 回归证据：`tools/check_firmware.py` 全部固件套件 PASS；`npm test` 21/21 PASS。主控包 `build/stage5-follow-7a160cd4dc396869-device`（16 MB，固件版本 `7a160cd4dc396869-s5-follow`）与 CAM 包 `build/cam-stream-demo_balanced-windows_baseline_confirmed`（8 MB，应用 `0x400e70`，约 43% 分区余量）均已 compile-only 构建；manifest 的 `source_commit=23ff6505b5cc8caf0d63654aadeee88d6ec25899`、`source_dirty=false`，命令输出 `NO DEVICE WAS FLASHED`。
 - 当前设备状态：COM6/COM3 仍运行上一轮 SAFE_BASELINE，未因本次修复自动覆盖。需现场明确授权后，才可按备份和 115200 串口步骤烧录并做真人/实车验收；本机 Wi-Fi 未切换。
