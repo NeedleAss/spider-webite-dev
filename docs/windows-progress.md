@@ -4,26 +4,26 @@
 
 ## 当前交接点
 
-- 当前阶段：W0 Windows 环境与 compile-only 构建复现（PASS）；W1 设备核对与完整备份（PASS）；W2 设备烧录前编译已启动后按用户要求暂停
-- 最近完成：主控三组、CAM 两组 compile-only 构建、本机浏览器 Mock 场景均 PASS；COM6/COM3 identity、Flash ID/容量与完整备份均完成；尚未烧录
-- 下一步：恢复后从 SAFE_BASELINE 设备包编译继续，先 verify 包与分区，再烧录 CAM/主控并进行串口/网页验收；舵机仍保持断电、车轮架空
-- 阻塞/待用户提供：W2 编译进程已按要求中止，设备未写入新固件；恢复时需确认现场仍满足舵机 5 V 断开和车轮架空
+- 当前阶段：W0 Windows 环境与构建复现（PASS）；W1 设备核对与完整备份（PASS）；W2 CAM 烧录/串口验收（PASS）；主控 SAFE_BASELINE 烧录完成，正在进入 W3 observe
+- 最近完成：CAM SAFE_BASELINE stream 和主控 SAFE_BASELINE stage5-follow 设备包均已写入并通过 Hash 校验；两板均完成硬复位；CAM/主控 115200 串口日志已保存
+- 下一步：保持舵机 5 V 断开、车轮架空，先加入 CareRover-EE68（密码 88888888）并访问 192.168.4.1 做网页/无线 observe；随后再由现场授权进行传感器、人物框和运动验收
+- 阻塞/待用户提供：尚未进行真人入镜、手指稳定放置、舵机落地或十分钟无线实物验收；这些需要现场输入和明确的运动授权
 - 版本同步：本地提交 `922ed6d` 已生成；推送到 GitHub 因本机 Git Credential Manager 无可用凭据而被拒绝，待用户在本机完成 GitHub 登录后重试，未使用强制推送
 - 最近修改及原因：仅补充本轮 Windows 可复现证据；尚未修改产品源码
-- 下一条命令或人工操作：在舵机 5 V 断开、车轮架空条件下连接主控和 CAM USB；只做端口/identity 盘点，不立即烧录
+- 下一条命令或人工操作：保持舵机 5 V 断开、车轮架空；电脑连接 `CareRover-EE68`（密码 `88888888`），打开 `http://192.168.4.1/?transport=ws&video=mjpeg`，执行网页 observe。需要运动时必须先由用户明确授权并保留急停可达。
 
 ## 环境与设备
 
 | 项目 | 实际值/证据 |
 |---|---|
 | Windows / Python / Git / Node | Windows 11 家庭中文版 10.0.26200 build 26200；Python 3.12.10；Git 2.52.0.windows.1；Node 24.15.0 / npm 11.12.1 |
-| Arduino CLI / Core / 库 / FQBN | Arduino IDE bundled CLI 1.5.1；esp32:esp32 3.3.10；ArduinoJson 7.4.2 等见 `build/environment-report.json`；当前只有 compile-only FQBN，实板 FQBN 待核对 |
+| Arduino CLI / Core / 库 / FQBN | Arduino IDE bundled CLI 1.5.1；esp32:esp32 3.3.10；ArduinoJson 7.4.2 等见 `build/environment-report.json`；实板 profile 已核对：主控 16MB/OPI PSRAM，CAM 8MB/OPI PSRAM |
 | ESP-IDF / ESP-DL 版本及 commit | ESP-IDF v5.3.4 / `1b459d9c4950395dec12ce19256c73f9a41e306f`；ESP-DL v3.3.11 / `5d9c36063dddbe98b5387828c831d6bbadb1370f`；两者工作树 clean；IDF 自带 CMake 3.30.2、Ninja 1.12.1 |
-| 主控型号、Flash、PSRAM、串口 | 初步确认 COM6 为主控：115200 只读日志含 `wireless_status`（`stage:5`、`backend:tracking`、`ap:true`、`firmware:fffc41be9b0db516-s5-follow`）、`imu_status`、`health`、`gesture`、`person`；Flash/PSRAM/FQBN 尚未用 esptool 读取 |
-| CAM 型号、Flash、PSRAM、串口 | 初步确认 COM3 为 CAM：115200 只读日志含 CRC 正确的 `@G/@P` 帧和 `cam_metrics`（gesture/face/JPEG 约 2.4–3 FPS，gesture 约 248–249 ms，face 约 37–40 ms，Wi-Fi=true）；Flash/PSRAM/FQBN 尚未用 esptool 读取 |
-| 主控 / CAM profile 路径（不写密码） | 新仓库 local profile 均缺失；旧现场目录存在 `wifi_secrets.h`、`board.local.json`、`cam-board.local.json`，尚未复制，待核对确为同一两块板 |
+| 主控型号、Flash、PSRAM、串口 | COM6：ESP32-S3 rev0.2、16 MB Flash、8 MB embedded PSRAM，MAC `68:ee:8f:60:68:24`；烧录后 115200 日志含 `firmware=6123d4056525afc4-s5-follow`、`stage=5`、`backend=tracking`、`ap=true`、`imu_status valid=true calibrated=true`、`vision_link bad=0` |
+| CAM 型号、Flash、PSRAM、串口 | COM3：ESP32-S3 rev0.2、8 MB Flash、8 MB embedded PSRAM，MAC `44:b1:76:b9:fe:b8`；烧录后 115200 日志含 CRC 正确的 `@G/@P`、`cam_metrics`，gesture/face/JPEG 约 2.4–2.9 FPS，gesture 约 249 ms，face 约 38–40 ms，`jpeg_drops=0`、`capture_drops=0`、`wifi=true` |
+| 主控 / CAM profile 路径（不写密码） | 本地忽略文件 `config/board.local.json`、`config/cam-board.local.json` 和 `firmware/main_wireless/wifi_secrets.h` 已按实测板型与现场 AP 配置生成；密码不入库 |
 | Flash 与 NVS 备份路径、大小、SHA-256 | 主控 `build/backups/main-before-20260915-com6.bin`，16,777,216 B，SHA-256 `89102E245B56035C004265584E5F80BD18FD0EC7725EB6FA50CE5E204D9969B9`；CAM `build/backups/cam-before-20260915-com3.bin`，8,388,608 B，SHA-256 `CB117F3D78E612CC43DEF0E200E13A145CF5C3B201EB4240DA90738E0736D8B5`；NVS 包含在整片备份内，未单独擦除 |
-| 接线 / 电源 / 架空状态 | 仅确认 COM6 有主控运行日志；未从串口推断供电/舵机/车轮状态，未操作复位、烧录或运动；现场安全状态仍待用户确认 |
+| 接线 / 电源 / 架空状态 | 本轮烧录前按现场约定保持舵机 5 V 断开、车轮架空；串口烧录/抓取未驱动舵机。真实落地运动和供电负载仍未验收 |
 
 ## 阶段记录
 
@@ -31,8 +31,8 @@
 |---|---|---|---|---|
 | W0 接收/环境/构建 | PASS | `a7d1f4135c88a114d85a697e994ae9c8dee7ed04` | `build/environment-report.json`；`output/windows/0915-replay.json`；五个 `build/*-check` / `build/cam-*-compile_only` 包；localhost Mock 浏览器记录 | Python/Node/C++/清单/回放、主控三组、CAM 两组及 Mock PASS；全部软件/模拟结果，不能代替实物验收 |
 | W1 设备核对/备份 | PASS | COM6=16MB、COM3=8MB，均为 ESP32-S3 rev0.2 / 8MB PSRAM；两板完整备份成功 | `build/backups/main-before-20260915-com6.bin`、`build/backups/cam-before-20260915-com3.bin`（本地产物，未入库）；两份 SHA-256 见上表 | NVS 未擦除；备份文件不提交 Git，恢复时保留原路径 |
-| W2 CAM | NOT RUN | — | — | — |
-| W3 observe | NOT RUN | — | — | — |
+| W2 CAM | PASS | `cam-stream-safe_baseline-windows_baseline_confirmed` | `build/windows/cam-after-safe.jsonl`；备份 `build/backups/cam-20260915-213322.bin` | 烧录全部分区 Hash PASS，硬复位后 `cam_metrics`/`@G`/`@P` 连续输出；未做真人手势/人物实物验收 |
+| W3 observe | IN PROGRESS | `6123d4056525afc4-s5-follow` | `build/windows/main-after-safe.jsonl` | 主控已烧录且 `wireless_status ap=true`、IMU valid、vision_link bad=0；待网页连接和现场输入验证 |
 | W4 校准 | NOT RUN | — | — | — |
 | W5 manual | NOT RUN | — | — | — |
 | W6 follow | NOT RUN | — | — | — |
@@ -77,6 +77,19 @@
 - 使用 esptool 读取两板身份（用户已授权进入烧录流程）：COM6 为 ESP32-S3 rev0.2、16MB Flash、8MB embedded PSRAM、MAC `68:ee:8f:60:68:24`；COM3 为 ESP32-S3 rev0.2、8MB Flash、8MB embedded PSRAM、MAC `44:b1:76:b9:fe:b8`。容量与私有 local profile 完全匹配。
 - 主控从地址 0 读取 `0x1000000` 字节成功；CAM 从地址 0 读取 `0x800000` 字节成功。备份文件大小与目标容量一致，SHA-256 已写入表格。备份包含 NVS，未执行擦除或修改。
 - 随后启动 SAFE_BASELINE 主控设备包编译；因用户要求暂停，在 Arduino 编译完成前中止。此次中止不涉及串口写入，未产生设备变更；恢复时可直接重新运行同一命令。
+
+### 2026-09-15 W2 CAM SAFE_BASELINE 实物烧录与串口验收
+
+- 使用 `tools/tracking.py cam-flash build/cam-stream-safe_baseline-windows_baseline_confirmed --port COM3`，以 venv 的 esptool 5.1.0 执行；先自动保存整片 8 MB 备份 `build/backups/cam-20260915-213322.bin`（SHA-256 `5E24EAB61E519A9C102454B89F5A6BDB7F9C83AF6F3D55A8E16D1EB5B0B358E6`），再写入 bootloader、分区表和应用。
+- 三个写入区域均报告 `Hash of data verified`，最终重新读取 Flash ID 仍为 8 MB，并通过 RTS 硬复位；无擦除 NVS 的操作。
+- 115200 串口抓取 `build/windows/cam-after-safe.jsonl`：连续出现 CRC 正确 `@G/@P`，`cam_metrics` 显示 `wifi=true`、gesture/face/JPEG 约 2.4–2.9 FPS、gesture 约 249 ms、face 约 38–40 ms，`jpeg_drops=0`、`capture_drops=0`。本次画面为空背景，不能据此宣称真人手势或人物跟随 PASS。
+
+### 2026-09-15 主控 SAFE_BASELINE stage5-follow 实物烧录与串口验收
+
+- 使用 `tools/carerover.py flash build/stage5-follow-6123d4056525afc4-device --port COM6 --baud 460800 --only all`；先自动保存整片 16 MB 备份 `build/backups/main-before-20260915-214923.bin`（SHA-256 `CBBCFBBF34713707AD8A545CC334F1801C978CD583758ED1D01874DE88E0E655`），随后写入 bootloader、分区表、boot_app0、应用和 FFat。
+- 所有写入区域均报告 `Hash of data verified`，检测到 16 MB Flash，最终通过 RTS 硬复位；未擦除 NVS。
+- 115200 串口抓取 `build/windows/main-after-safe.jsonl`：`firmware=6123d4056525afc4-s5-follow`、`stage=5`、`backend=tracking`、`ap=true`、`mode=IDLE`、`estop=false`；`imu_status address=0x68 valid=true calibrated=true`；`vision_link valid` 持续增长且 `bad=0/stale=0/resync=0`；健康/手势/人物事件均能持续输出。未因无手指、无人入镜而判为模块故障。
+- 当前只完成软件写入与串口健康证据；网页连接、真人入镜跟随、手势动作和车轮运动仍属于后续 W3–W7 现场验收。
 
 ## 2026-09-12 超声波集成增量
 
