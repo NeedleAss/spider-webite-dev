@@ -1,6 +1,6 @@
 # CareRover Windows 续作
 
-这是已有集成源码，不是空白项目。先读 `docs/0915-demo-development.md` 了解 0915 合并、配置选择与证据边界；原始 0915 文件夹同样保持不变。开始工作先读 `WINDOWS_START_HERE.md`、`docs/WINDOWS_ULTRASONIC_HANDOFF.md`，再读 `docs/tracking-development.md`、`docs/ultrasonic-development.md` 和对应验收记录。`docs/WINDOWS_AI_HANDOFF.md` 是早期改动索引，其历史未提交状态不代表当前 Git。本文件适用于此工程；原始参考目录保持不变。
+这是已有集成源码，不是空白项目。先读 `docs/0915-demo-development.md` 了解 0915 合并、配置选择与证据边界；原始 0915 文件夹同样保持不变。开始工作先读 `WINDOWS_START_HERE.md`、`docs/WINDOWS_0915_HANDOFF.md`（当前入口），按需参考 `docs/WINDOWS_ULTRASONIC_HANDOFF.md` 的现场流程，再读 `docs/tracking-development.md`、`docs/ultrasonic-development.md` 和对应验收记录。`docs/WINDOWS_AI_HANDOFF.md` 是早期改动索引，其历史未提交状态不代表当前 Git。本文件适用于此工程；原始参考目录保持不变。
 
 - 当前根目录 `firmware/`、`js/`、`tools/` 是开发代码；`CareRover_Tracking_Motion_Handoff_2026-09-11/` 是原始参考，不能整目录覆盖回来。
 - 本机软件构建/主机测试通过，本轮新代码尚无 Windows/实物证据；0915 原包含历史现场记录，不能转算为本轮新代码验收。不要把 Mac PASS、模拟遥测或控制输出当作实物验收。
