@@ -1,0 +1,6 @@
+Command: python tools/check_firmware.py
+
+Safety controller: all assertions passed, including 20 fault scenarios
+Tracking protocol, follow, safety, IMU and JPEG leases passed
+Orthogonal omni mixing, PWM calibration, rejection, deadline and initialization failure passed
+Field tuning regressions passed

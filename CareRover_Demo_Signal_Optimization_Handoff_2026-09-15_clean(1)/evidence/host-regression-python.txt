@@ -1,0 +1,4 @@
+Command: python -m unittest discover -s tests -p "test_*.py"
+
+Ran 28 tests in 0.519s
+OK

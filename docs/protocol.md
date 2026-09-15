@@ -162,3 +162,13 @@ CRC8 多项式 0x07、初值 0，覆盖 `G,...` 或 `P,...`，不含 @、* 和�
 仅当前 PERSON_FOLLOW 控制者可执行，保留时间戳有效期、只读阶段、所有者和急停约束；必须是 boolean。使用已有 ACK/error 及 request_id 关联。途中禁用会停止并回 IDLE。错误可能为 NOT_IN_FOLLOW / BYPASS_CALIBRATION_REQUIRED / FRONT_CALIBRATION_REQUIRED / FRONT_UNKNOWN / FRONT_RELEASE_REQUIRED，以及既有 CONTROL_BUSY / ESTOP_ACTIVE / READ_ONLY / STALE_COMMAND。
 
 绕障临时覆盖跟随输出，但不续租目标、IMU、控制者或计算输出。动作失败、断链、急停均退出 IDLE，不自动重试。所有停止使用原校准中值；网页速度仍为控制输出，非实测轮速。详细标定和失败语义见 [超声波开发指南](ultrasonic-development.md)。
+
+## 0915 向后兼容扩展
+
+- 顶层 `tuning_profile`：`SAFE_BASELINE` / `DEMO_BALANCED` / `DIAGNOSTIC_RAW`。
+- `vision.gesture.held/age_ms`：显示保持及距直接支持帧的年龄；`stable` 由主控确认，不再以网页置信度二次否决。
+- `vision.person.predicted`：该框为明确标记的预测；`seq/age_ms` 仍来自最后实测，重复消息不续期。预测最大 700 ms，不授权运动。
+- `health.hr_valid/hr_held/hr_age_ms` 与 `spo2_valid/spo2_held/spo2_age_ms` 独立；`quality` 为 0–1 诊断分数。旧数值字段保持 number/null。掉线、无手指、250 ms 样本超时清空数值。
+- `imu.held/warning_tilt/rejected_frames/accepted_frames`：样本保持、倾角提示与计数；拒绝样本不刷新 `age_ms` 的来源时间。
+
+详见 [0915 实现与验收边界](0915-demo-development.md)。

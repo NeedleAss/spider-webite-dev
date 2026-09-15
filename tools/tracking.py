@@ -9,15 +9,18 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import zipfile
 
 try:
-    from .carerover import source_info
+    from .carerover import read_log_text, source_info
 except ImportError:
-    from carerover import source_info
+    from carerover import read_log_text, source_info
 
-ROOT=Path(__file__).resolve().parents[1]
+# Preserve an English SUBST path on Windows; resolve() expands it back to the
+# Unicode source path and can make the ESP-IDF linker fail.
+ROOT=Path(__file__).absolute().parents[1]
 BUILD=ROOT/'build'
 LOCK=ROOT/'config/cam-toolchain.lock.json'
 def run(args,**kw):
@@ -25,6 +28,35 @@ def run(args,**kw):
 def digest(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def write_json(p,value):
     p.parent.mkdir(parents=True,exist_ok=True);p.write_text(json.dumps(value,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+
+def windows_idf_build_settings(base_env=None, platform_name=None):
+    """Return process-local settings needed by ESP-IDF in a Unicode Windows path."""
+    env=dict(os.environ if base_env is None else base_env)
+    definitions=[]
+    if (os.name if platform_name is None else platform_name)=='nt':
+        # Kconfig helper files are UTF-8, while the Windows locale may default
+        # to GBK. ccache 4.11 also fails to parse Unicode prefix-map paths.
+        env['PYTHONUTF8']='1'
+        env['IDF_CCACHE_ENABLE']='0'
+        definitions.append('-DCCACHE_ENABLE=0')
+    return env,definitions
+
+def windows_cam_build_directory(package_out, platform_name=None, temp_root=None):
+    """Keep generated IDF objects off Windows paths that may resolve to Unicode."""
+    package_out=Path(package_out)
+    if (os.name if platform_name is None else platform_name)=='nt':
+        root=Path(tempfile.gettempdir() if temp_root is None else temp_root)/'CareRover-cam-build'
+        staged=root/package_out.name
+        if any(ord(c)>=128 for c in str(staged)):
+            raise ValueError(f'Windows CAM staging path must be ASCII: {staged}')
+        return staged
+    return package_out
+
+def console_safe(value, encoding=None):
+    """Make diagnostic text printable even when the Windows console uses GBK."""
+    selected=encoding or getattr(sys.stdout,'encoding',None) or 'utf-8'
+    return str(value).encode(selected,errors='replace').decode(selected,errors='replace')
+
 def checkout(key,destination,recursive=False):
     spec=json.loads(LOCK.read_text())[key]
     if not destination.exists():
@@ -54,42 +86,72 @@ def cam_build(args):
     if not idf.is_file():raise ValueError('Activate ESP-IDF 5.3.4 first (export.sh / export.bat).')
     version=run([sys.executable,idf,'--version'],capture_output=True,text=True).stdout
     if 'v5.3.4' not in version:raise ValueError('Expected ESP-IDF v5.3.4: '+version)
-    out=BUILD/f'cam-{args.variant}-{profile["verification"]}';out.mkdir(parents=True,exist_ok=True)
+    tuning_profile=getattr(args,'tuning_profile','SAFE_BASELINE')
+    tuning_id={'SAFE_BASELINE':0,'DEMO_BALANCED':1,'DIAGNOSTIC_RAW':2}[tuning_profile]
+    out=BUILD/f'cam-{args.variant}-{tuning_profile.lower()}-{profile["verification"]}';out.mkdir(parents=True,exist_ok=True)
+    work_out=windows_cam_build_directory(out)
+    work_project=ROOT/'firmware/cam_tracking'
+    work_defaults=None
+    if work_out!=out:
+        workspace=work_out.with_name(work_out.name+'-workspace')
+        if work_out.exists():shutil.rmtree(work_out)
+        if workspace.exists():shutil.rmtree(workspace)
+        work_project=workspace/'firmware/cam_tracking'
+        shutil.copytree(ROOT/'firmware/cam_tracking',work_project)
+        shutil.copytree(ROOT/'firmware/main_wireless',workspace/'firmware/main_wireless')
+        staged_esp_dl=workspace/'build/dependencies/esp-dl'
+        for relative in ['esp-dl','models/hand_detect','models/hand_gesture_recognition','models/human_face_detect']:
+            shutil.copytree(BUILD/'dependencies/esp-dl'/relative,staged_esp_dl/relative)
+    work_out.mkdir(parents=True,exist_ok=True)
     defaults=out/'variant.defaults'
-    defaults.write_text('\n'.join([
+    defaults_text='\n'.join([
+        'CONFIG_CAREROVER_TUNING_PROFILE='+str(tuning_id),
         'CONFIG_CAREROVER_FACE='+('n' if args.variant=='gesture' else 'y'),
         'CONFIG_CAREROVER_VIDEO='+('y' if args.variant in {'stream','pico'} else 'n'),
         'CONFIG_CAREROVER_PICO_FACE='+('y' if args.variant=='pico' else 'n'),
         'CONFIG_FLASH_ESPDET_PICO_224_224_FACE='+('y' if args.variant=='pico' else 'n'),
         'CONFIG_FLASH_HUMAN_FACE_DETECT_MSRMNP_S8_V1='+('n' if args.variant=='pico' else 'y'),
         'CONFIG_CAREROVER_WIFI_SSID='+json.dumps(profile['ssid']),
-        'CONFIG_CAREROVER_WIFI_PASSWORD='+json.dumps(profile['password'])])+'\n',encoding='utf-8')
+        'CONFIG_CAREROVER_WIFI_PASSWORD='+json.dumps(profile['password'])])+'\n'
+    defaults.write_text(defaults_text,encoding='utf-8')
+    work_defaults=defaults
+    if work_project!=ROOT/'firmware/cam_tracking':
+        work_defaults=work_project/'variant.defaults';work_defaults.write_text(defaults_text,encoding='utf-8')
     # Generated SDK config is an output, never a user-maintained input.
-    sdk=out/'sdkconfig'
+    sdk=work_out/'sdkconfig'
     if sdk.exists():sdk.unlink()
     frozen=ROOT/'config/cam-dependencies.lock'
-    if frozen.exists(): (ROOT/'firmware/cam_tracking/dependencies.lock').write_text(frozen.read_text().replace('${PROJECT_ROOT}',ROOT.as_posix()))
-    command=[sys.executable,idf,'-C',ROOT/'firmware/cam_tracking','-B',out,
-      '-DIDF_TARGET=esp32s3',f'-DSDKCONFIG={sdk}',f'-DSDKCONFIG_DEFAULTS={ROOT/"firmware/cam_tracking/sdkconfig.defaults"};{defaults}','build']
+    if frozen.exists():
+        lock_root=workspace if work_project!=ROOT/'firmware/cam_tracking' else ROOT
+        (work_project/'dependencies.lock').write_text(frozen.read_text().replace('${PROJECT_ROOT}',lock_root.as_posix()))
+    build_env,build_definitions=windows_idf_build_settings()
+    command=[sys.executable,idf,'-C',work_project,'-B',work_out,
+      '-DIDF_TARGET=esp32s3',f'-DSDKCONFIG={sdk}',f'-DSDKCONFIG_DEFAULTS={work_project/"sdkconfig.defaults"};{work_defaults}',
+      *build_definitions,'build']
     with (out/'compile.log').open('w',encoding='utf-8') as log:
-        try:run(command,stdout=log,stderr=subprocess.STDOUT)
+        try:run(command,stdout=log,stderr=subprocess.STDOUT,env=build_env)
         except subprocess.CalledProcessError:
-            print((out/'compile.log').read_text(encoding='utf-8')[-9000:]);raise
-    flash=json.loads((out/'flasher_args.json').read_text())['flash_files']
+            print(console_safe(read_log_text(out/'compile.log')[-9000:]));raise
+    flash_args=work_out/'flasher_args.json'
+    if work_out!=out:
+        shutil.copy2(flash_args,out/'flasher_args.json')
+        shutil.copy2(sdk,out/'sdkconfig')
+    flash=json.loads(flash_args.read_text())['flash_files']
     expected={0x0:0x8000,0x8000:0x1000,0x10000:0x700000}
     if set(map(lambda x:int(x,0),flash))!=set(expected):raise ValueError('Unexpected CAM partition addresses')
     files={}
     for address,name in flash.items():
-        p=out/name
+        source=work_out/name;p=out/name;p.parent.mkdir(parents=True,exist_ok=True)
+        if source!=p:shutil.copy2(source,p)
         if p.stat().st_size>expected[int(address,0)]:raise ValueError('CAM binary exceeds partition')
         files[name]={'address':int(address,0),'sha256':digest(p),'bytes':p.stat().st_size}
-    write_json(out/'manifest.json',{'target':'cam','variant':args.variant,'verification':profile['verification'],
+    write_json(out/'manifest.json',{'target':'cam','variant':args.variant,'tuning_profile':tuning_profile,'verification':profile['verification'],
       'flash_size':'8MB','idf':'5.3.4','dependencies':json.loads(LOCK.read_text()),'files':files,
       'hardware_status':'NOT RUN',
       **source_info(),
-      'source_files':{str(p.relative_to(ROOT)):digest(p) for p in [*sorted((ROOT/'firmware/cam_tracking/main').glob('*')),ROOT/'firmware/cam_tracking/CMakeLists.txt',ROOT/'firmware/cam_tracking/partitions.csv',ROOT/'firmware/cam_tracking/sdkconfig.defaults',ROOT/'firmware/main_wireless/vision_protocol.h'] if p.is_file()},
-      'sdkconfig_sha256':digest(sdk)})
-    print((out/'compile.log').read_text(encoding='utf-8')[-1700:]);print('CAM package:',out,'\nNO DEVICE WAS FLASHED.')
+      'source_files':{str(p.relative_to(ROOT)):digest(p) for p in [*sorted((ROOT/'firmware/cam_tracking/main').glob('*')),ROOT/'firmware/cam_tracking/CMakeLists.txt',ROOT/'firmware/cam_tracking/partitions.csv',ROOT/'firmware/cam_tracking/sdkconfig.defaults',ROOT/'firmware/main_wireless/vision_protocol.h',ROOT/'firmware/main_wireless/box_track.h',ROOT/'firmware/main_wireless/demo_tuning.h'] if p.is_file()},
+      'sdkconfig_sha256':digest(out/'sdkconfig')})
+    print(console_safe(read_log_text(out/'compile.log')[-1700:]));print('CAM package:',out,'\nNO DEVICE WAS FLASHED.')
 
 def calibration_build(args):
     # Reuse the single maintained PWM/kinematics sources in a staged Arduino sketch.
@@ -100,11 +162,11 @@ def calibration_build(args):
     if installed!=profile['core_version']:raise ValueError('Installed Arduino core differs from calibration profile')
     out=BUILD/'calibration';sketch=out/'motion_calibration';sketch.mkdir(parents=True,exist_ok=True)
     shutil.copyfile(ROOT/'firmware/motion_calibration/motion_calibration.ino',sketch/'motion_calibration.ino')
-    for name in ['continuous_servo_drive.h','continuous_servo_drive.cpp','omni_kinematics.h','partitions.csv']:
+    for name in ['continuous_servo_drive.h','continuous_servo_drive.cpp','omni_kinematics.h','motion_layout.h','partitions.csv']:
         shutil.copyfile(ROOT/'firmware/main_wireless'/name,sketch/name)
     with (out/'compile.log').open('w',encoding='utf-8') as log:
         try:run([cli(),'compile','--fqbn',profile['fqbn'],'--output-dir',out/'binaries',sketch],stdout=log,stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError:print((out/'compile.log').read_text()[-6000:]);raise
+        except subprocess.CalledProcessError:print(read_log_text(out/'compile.log')[-6000:]);raise
     print('Calibration compiled:',out,'; upload only after board verification and backup.')
 
 def cam_flash(args):
@@ -160,9 +222,12 @@ def analyze(path):
 def capture(args):
     import serial
     out=Path(args.output);out.parent.mkdir(parents=True,exist_ok=True)
-    # Configure before open to avoid deliberate reset pulses; this tool never sends commands.
+    # Configure before open to avoid an implicit reset pulse.  An explicit reset only
+    # toggles EN through RTS; DTR remains inactive so GPIO0 stays out of download mode.
     port=serial.Serial(port=None,baudrate=115200,timeout=.1);port.dtr=False;port.rts=False;port.port=args.port
     with port,out.open('w',encoding='utf-8') as log:
+        if getattr(args,'reset',False):
+            port.dtr=False;port.rts=True;time.sleep(.12);port.rts=False
         began=time.monotonic()
         while time.monotonic()-began<args.seconds:
             raw=port.readline(4096)
@@ -198,10 +263,10 @@ def release(args):
 def main():
     p=argparse.ArgumentParser(description=__doc__);sub=p.add_subparsers(dest='action',required=True)
     s=sub.add_parser('prepare');s.add_argument('--idf',action='store_true')
-    s=sub.add_parser('cam-build');s.add_argument('--variant',choices=['gesture','vision','stream','pico'],default='stream');s.add_argument('--profile',default='config/cam-board.example.json')
+    s=sub.add_parser('cam-build');s.add_argument('--tuning-profile',choices=['SAFE_BASELINE','DEMO_BALANCED','DIAGNOSTIC_RAW'],default='SAFE_BASELINE');s.add_argument('--variant',choices=['gesture','vision','stream','pico'],default='stream');s.add_argument('--profile',default='config/cam-board.example.json')
     s=sub.add_parser('cam-flash');s.add_argument('package');s.add_argument('--port',required=True)
     s=sub.add_parser('calibration-build');s.add_argument('--profile',default='config/tracking-development.json')
-    s=sub.add_parser('capture');s.add_argument('--port',required=True);s.add_argument('--seconds',type=float,default=120);s.add_argument('--output',required=True)
+    s=sub.add_parser('capture');s.add_argument('--port',required=True);s.add_argument('--seconds',type=float,default=120);s.add_argument('--output',required=True);s.add_argument('--reset',action='store_true',help='Reset the board through RTS after opening the capture port')
     s=sub.add_parser('analyze');s.add_argument('log')
     s=sub.add_parser('release');s.add_argument('--output',default='output/CareRover_Tracking_Software.zip');s.add_argument('--include-reference',action='store_true')
     args=p.parse_args()

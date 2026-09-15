@@ -128,7 +128,7 @@ export function decode(raw) {
  * 注意：这里刻意不填默认值，因为"传感器没上报"和"传感器上报了 0"是两回事。
  */
 export function normalizeTelemetry(o) {
-  const out = { type: 'telemetry' };
+  const out = { type: 'telemetry', tuning_profile: enumOf(o.tuning_profile,['SAFE_BASELINE','DEMO_BALANCED','DIAGNOSTIC_RAW']) };
 
   const c = obj(o.connection);
   if (c) out.connection = { camera: bool(c.camera), main_mcu: bool(c.main_mcu), simulated: bool(c.simulated) };
@@ -170,6 +170,7 @@ export function normalizeTelemetry(o) {
   const i = obj(o.imu);
   if (i) out.imu = {
     yaw_deg: i.yaw_deg === null ? null : num(i.yaw_deg), pitch_deg: i.pitch_deg === null ? null : num(i.pitch_deg), roll_deg: i.roll_deg === null ? null : num(i.roll_deg),
+    held: bool(i.held,false), warning_tilt: bool(i.warning_tilt,false), rejected_frames: num(i.rejected_frames),
     valid: bool(i.valid), calibrated: bool(i.calibrated), tilt_fault: bool(i.tilt_fault), age_ms: num(i.age_ms)
   };
   const video = obj(o.video);
@@ -191,7 +192,7 @@ export function normalizeTelemetry(o) {
       const found = bool(p.found, false);
       out.vision.person = found
         ? {
-            found: true,
+            found: true, predicted: bool(p.predicted,false),
             x: num(p.x, 0), y: num(p.y, 0),
             w: Math.max(0, num(p.w, 0)), h: Math.max(0, num(p.h, 0)),
             confidence: clamp(num(p.confidence, 0), 0, 1),
@@ -204,12 +205,16 @@ export function normalizeTelemetry(o) {
     if (g) out.vision.gesture = {
       label: enumOf(g.label, GESTURES, 'UNKNOWN'),
       confidence: clamp(num(g.confidence, 0), 0, 1),
-      stable: bool(g.stable, false)
+      stable: bool(g.stable, false), held: bool(g.held,false), age_ms: Math.max(0,num(g.age_ms,0))
     };
   }
 
   const h = obj(o.health);
   if (h) out.health = {
+    hr_valid: bool(h.hr_valid), spo2_valid: bool(h.spo2_valid),
+    hr_held: bool(h.hr_held,false), spo2_held: bool(h.spo2_held,false),
+    hr_age_ms: Math.max(0,num(h.hr_age_ms,0)), spo2_age_ms: Math.max(0,num(h.spo2_age_ms,0)),
+    quality: num(h.quality),
     hr_bpm:   h.hr_bpm === null ? null : num(h.hr_bpm),
     spo2_pct: h.spo2_pct === null ? null : num(h.spo2_pct),
     sqi:      num(h.sqi) !== undefined ? clamp(num(h.sqi), 0, 1) : undefined,

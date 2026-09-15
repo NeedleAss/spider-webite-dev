@@ -162,7 +162,7 @@ function render() {
   const gestureLabel = gestureStale ? tr('等待手势', 'Waiting for gesture') : `${t(`g.${g.label}`)}${g.label === 'NONE' ? '' : ' · ' + value(g.confidence * 100, 0, '%')}`;
   text('hudGesture', gestureLabel);
   $('hudGesture').dataset.stable = String(!gestureStale && g.stable);
-  text('gestureDetail', gestureStale ? '—' : `${g.stable && g.confidence >= .75 ? tr('已稳定', 'Stable') : tr('待确认', 'Unconfirmed')} · ${value((Date.now() - state.vision.lastGestureTs) / 1000, 1, ' s')}`);
+  text('gestureDetail', gestureStale ? '—' : `${g.held ? tr('保持', 'Held') : g.stable ? tr('已稳定', 'Stable') : tr('待确认', 'Unconfirmed')} · ${value(((g.age_ms || 0) + Date.now() - state.vision.lastGestureTs) / 1000, 1, ' s')}`);
   text('sceneLabel', video?.kind === 'canvas' ? tr('模拟视野', 'SIMULATED VIEW') : video?.kind === 'file' ? tr('本地视频 · 识别数据独立', 'LOCAL VIDEO · SEPARATE METADATA') : state.connection.simulated ? tr('模拟摄像头', 'SIMULATED CAMERA') : tr('摄像头视频', 'CAMERA STREAM'));
   $('videoError').hidden = video?.kind === 'canvas' || video?.ready;
   const confirmed = !stale || state.ui.replaying;
@@ -186,9 +186,12 @@ function render() {
   }
   const healthFresh = confirmed && Date.now() - state.connection.lastHealthTs < CONFIG.HEALTH_STALE_MS;
   const healthy = healthFresh && state.health.finger_detected && state.health.state === 'VALID';
-  text('mHr', healthy ? value(state.health.hr_bpm) : '—'); text('mSpo2', healthy ? value(state.health.spo2_pct) : '—');
+  const hrVisible=healthFresh && state.health.finger_detected && (state.health.hr_valid ?? healthy);
+  const spo2Visible=healthFresh && state.health.finger_detected && (state.health.spo2_valid ?? healthy);
+  text('mHr', hrVisible ? value(state.health.hr_bpm)+(state.health.hr_held ? ' ~' : '') : '—');
+  text('mSpo2', spo2Visible ? value(state.health.spo2_pct)+(state.health.spo2_held ? ' ~' : '') : '—');
   text('mSqi', healthFresh && state.health.finger_detected ? value(state.health.sqi * 100, 0, '%') : '—');
-  text('healthState', healthFresh ? t(`hs.${state.health.state}`) : tr('等待信号', 'Waiting for signal'));
+  text('healthState', healthFresh ? t(`hs.${state.health.state}`)+(state.health.hr_held||state.health.spo2_held ? tr(' · ~ 保持值',' · ~ held value') : '') : tr('等待信号', 'Waiting for signal'));
   $('healthState').dataset.tone = healthy ? 'ok' : 'muted';
   text('mFinger', healthFresh && state.health.finger_detected ? t('health.finger') : t('health.nofinger'));
   $('mFinger').dataset.on = String(healthFresh && state.health.finger_detected);

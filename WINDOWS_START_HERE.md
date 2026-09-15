@@ -1,5 +1,7 @@
 # Windows 接手入口
 
+> **0915 更新：** 已合并现场修复并加入可选 Demo 优化。先读 [0915 开发与验收记录](docs/0915-demo-development.md)。根目录为当前开发源，原包保持归档；新代码未做本轮实物验收。以下 0912 说明保留为历史环境与联调流程。
+
 当前推荐从 GitHub 拉取 `feat/main-wireless`。主控/CAM/网页/超声波功能已提交，功能基线 `67fea55` 的 CI 全部通过；真实设备、Windows 和机械标定仍需现场验收。
 
 **首先阅读 [Windows 整机与超声波交接](docs/WINDOWS_ULTRASONIC_HANDOFF.md)。** 其中包含资源清单、PowerShell/CMD 命令、模块分工、引脚占用、验收顺序，以及可直接复制给 Windows Agent 的提示词。

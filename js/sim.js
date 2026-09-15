@@ -282,7 +282,7 @@ export class RobotSim {
           ? { found: true, x: r.x, y: r.y, w: r.w, h: r.h,
               confidence: this.trackingScenario==='low-confidence' ? .4 : round2(clamp(0.87 + Math.sin(this.t * 1.3) * 0.09, 0.5, 0.99)) }
           : { found: false },
-        gesture: { label, confidence: round2(this.gestureConf), stable: this.gestureConf > 0.75 }
+        gesture: { label, confidence: round2(this.gestureConf), stable: this.gestureConf >= CONFIG.GESTURE_STABLE_CONFIDENCE }
       },
       health: {
         hr_bpm: Math.round(this.hr),

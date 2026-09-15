@@ -202,6 +202,8 @@ void OledUi::renderData(const OledUiSnapshot &snapshot) {
       flush();return;
     }
   }
+  if(snapshot.heartRateValid&&snapshot.heartRateHeld)drawText(108,18,"~");
+  if(snapshot.spo2Valid&&snapshot.spo2Held)drawText(108,40,"~");
   drawHorizontalLine(54);
   if (!snapshot.camConnected) drawText(0, 56, "CAM OFF");
   if (!snapshot.heartRateValid && !snapshot.spo2Valid) drawText(72, 56, "HEALTH --");

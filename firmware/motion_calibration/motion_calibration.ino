@@ -2,12 +2,13 @@
 #include <Preferences.h>
 
 #include "continuous_servo_drive.h"
+#include "motion_layout.h"
 
 using namespace carerover;
 
 // Chosen to avoid current CareRover allocations:
 // OLED 4/5, MAX30102 8/9, CAM UART 17/18.
-constexpr uint8_t SERVO_PINS[WHEEL_COUNT] = {10, 11, 12, 13};
+constexpr auto& SERVO_PINS = MOTION_SERVO_PINS;
 constexpr uint32_t SERIAL_BAUD = 115200;
 constexpr uint16_t DEFAULT_MOVE_MS = 1000;
 constexpr float DEFAULT_TEST_SPEED = 0.25f;
@@ -57,6 +58,7 @@ bool parseLongStrict(const char* text, long& value) {
 
 void loadCalibration() {
   preferences.begin("cr-motion", true);
+  if(preferences.getUInt("layout",0)!=MOTION_LAYOUT_ID){preferences.end();return;}
   calibration.speedSpanUs = preferences.getUShort("span", 300);
   for (uint8_t i = 0; i < WHEEL_COUNT; ++i) {
     char key[8];
@@ -72,6 +74,7 @@ void loadCalibration() {
 
 void saveCalibration() {
   preferences.begin("cr-motion", false);
+  preferences.putUInt("layout", MOTION_LAYOUT_ID);
   preferences.putBool("verified", false); // Every edit invalidates prior physical verification.
   preferences.putUShort("span", calibration.speedSpanUs);
   for (uint8_t i = 0; i < WHEEL_COUNT; ++i) {
@@ -365,7 +368,7 @@ void setup() {
   loadCalibration();
 
   const bool ok = drive.begin(SERVO_PINS, calibration);
-  Serial.printf("{\"type\":\"motion_boot\",\"protocol\":1,\"layout\":\"x_drive_4_omni\","
+  Serial.printf("{\"type\":\"motion_boot\",\"protocol\":1,\"layout\":\"orthogonal_4_omni\","
                 "\"ready\":%s,\"baud\":%lu}\n",
                 ok ? "true" : "false", static_cast<unsigned long>(SERIAL_BAUD));
   if (!ok) {

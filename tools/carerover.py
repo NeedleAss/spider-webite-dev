@@ -5,17 +5,21 @@ import argparse
 import hashlib
 import io
 import json
+import locale
 import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tarfile
+import tempfile
 import time
 import urllib.request
 import zipfile
 
-ROOT = Path(__file__).resolve().parents[1]
+# Keep a caller-provided short Windows path (for example a SUBST drive).  resolve()
+# expands it back to the Unicode source path and breaks the ESP32 linker.
+ROOT = Path(__file__).absolute().parents[1]
 BUILD = ROOT / 'build'
 FIRMWARE = ROOT / 'firmware/main_wireless'
 LIBRARY = 'SparkFun MAX3010x Pulse and Proximity Sensor Library'
@@ -53,6 +57,24 @@ def write_json(path, obj):
     path.write_text(json.dumps(obj, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
 
+def read_log_text(path):
+    """Decode tool output without hiding the original Windows compiler error."""
+    data = Path(path).read_bytes()
+    encodings = ('utf-8', locale.getpreferredencoding(False), 'gb18030')
+    for encoding in dict.fromkeys(encodings):
+        try:
+            return data.decode(encoding)
+        except (LookupError, UnicodeDecodeError):
+            pass
+    return data.decode('utf-8', errors='replace')
+
+
+def console_safe(value, encoding=None):
+    """Keep compiler diagnostics printable on a GBK-configured console."""
+    selected = encoding or getattr(sys.stdout, 'encoding', None) or 'utf-8'
+    return str(value).encode(selected, errors='replace').decode(selected, errors='replace')
+
+
 def sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -74,6 +96,18 @@ def runtime_files():
     for name in ['js', 'css', 'assets']:
         files += sorted(p for p in (ROOT / name).rglob('*') if p.is_file() and p.suffix in {'.js', '.css', '.png', '.svg', '.ico'})
     return files
+
+
+def windows_main_build_directory(output, platform_name=None, temp_root=None):
+    """Stage Arduino build outputs off Unicode Windows paths."""
+    output = Path(output)
+    if (os.name if platform_name is None else platform_name) == 'nt':
+        root = Path(tempfile.gettempdir() if temp_root is None else temp_root) / 'CareRover-main-build'
+        staged = root / output.name
+        if any(ord(char) >= 128 for char in str(staged)):
+            raise ValueError(f'Windows main staging path must be ASCII: {staged}')
+        return staged
+    return output
 
 
 def content_id(files):
@@ -191,9 +225,15 @@ def build(args):
     integration_id = {'legacy':0,'observe':1,'manual':2,'follow':3}[integration]
     if integration_id and 'PSRAM=opi' not in profile['fqbn']:
         raise ValueError('Tracking integration requires explicit PSRAM=opi board profile')
+    tuning_profile = getattr(args, "tuning_profile", "SAFE_BASELINE")
+    tuning_id = {"SAFE_BASELINE": 0, "DEMO_BALANCED": 1, "DIAGNOSTIC_RAW": 2}[tuning_profile]
     source_version = content_id(source_files + runtime_files())
+    source_version = hashlib.sha256((source_version + tuning_profile).encode()).hexdigest()[:16]
     name = f"stage{args.stage}-{integration}-{source_version}-{'check' if profile['verification']=='compile_only' else 'device'}"
-    output = BUILD / name
+    final_output = BUILD / name
+    output = windows_main_build_directory(final_output)
+    if output != final_output and output.exists():
+        shutil.rmtree(output)
     sketch = output / 'sketch/main_wireless'
     sketch.mkdir(parents=True, exist_ok=True)
     for p in source_files: shutil.copyfile(p, sketch / p.name)
@@ -204,14 +244,17 @@ def build(args):
         raise ValueError('Create firmware/main_wireless/wifi_secrets.h locally before a device build')
     else: shutil.copyfile(secret, sketch / secret.name)
     build_version = f'{source_version}-s{args.stage}-{integration}'
-    (sketch / 'build_version.h').write_text(f'#define CAREROVER_BUILD_VERSION "{build_version}"\n#define CAREROVER_STAGE {args.stage}\n#define CAREROVER_INTEGRATION {integration_id}\n')
+    (sketch / 'build_version.h').write_text(f'#define CAREROVER_BUILD_VERSION "{build_version}"\n#define CAREROVER_STAGE {args.stage}\n#define CAREROVER_INTEGRATION {integration_id}\n#define CAREROVER_TUNING_PROFILE {tuning_id}\n')
     binaries = output / 'binaries'; binaries.mkdir(exist_ok=True)
     with (output / 'compile.log').open('w', encoding='utf-8') as log:
         try:
             run([arduino, 'compile', '--fqbn', profile['fqbn'], '--library', lib,
                  '--build-path', output / 'objects', '--output-dir', binaries, sketch], stdout=log, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError:
-            print((output / 'compile.log').read_text(encoding='utf-8')[-8000:]); raise
+            if output != final_output and (output / 'compile.log').is_file():
+                final_output.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(output / 'compile.log', final_output / 'compile.log')
+            print(console_safe(read_log_text(output / 'compile.log')[-8000:])); raise
     # Always validate the actual binary partition table, not only the source CSV.
     check_partition_binary(binaries / 'main_wireless.ino.partitions.bin')
     web_version = payload(output / 'webroot')
@@ -227,11 +270,18 @@ def build(args):
                 'web_version': web_version, **source_info(),
                 'arduino_cli': capture([arduino,'version']).strip(), 'test_backend_only': integration_id < 2, 'integration': integration,
                 'files': {n: sha(binaries / n) for n in expected},
+                'tuning_profile': tuning_profile,
                 'addresses': {'main_wireless.ino.bootloader.bin': 0, 'main_wireless.ino.partitions.bin': 0x8000,
                               'boot_app0.bin': 0xe000, 'main_wireless.ino.bin': 0x10000, 'ffat.bin': PARTITION_OFFSET}}
     write_json(output / 'manifest.json', manifest)
-    print((output / 'compile.log').read_text(encoding='utf-8').split('Used library')[0][-1600:])
-    print(f'Build package: {output}\nProfile: {profile["verification"]}\nNO DEVICE WAS FLASHED.')
+    if output != final_output:
+        if final_output.exists():
+            shutil.rmtree(final_output)
+        final_output.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(output, final_output)
+        output = final_output
+    print(console_safe(read_log_text(output / 'compile.log').split('Used library')[0][-1600:]))
+    print(console_safe(f'Build package: {output}\nProfile: {profile["verification"]}\nNO DEVICE WAS FLASHED.'))
 
 
 def check_partition_binary(path):
@@ -304,6 +354,7 @@ def main():
     sub.add_parser('fetch-tools')
     sub.add_parser('payload')
     b = sub.add_parser('build'); b.add_argument('--profile', required=True); b.add_argument('--stage', type=int, choices=range(1,6), default=5)
+    b.add_argument('--tuning-profile', choices=['SAFE_BASELINE','DEMO_BALANCED','DIAGNOSTIC_RAW'], default='SAFE_BASELINE')
     b.add_argument('--integration', choices=['legacy','observe','manual','follow'], default='legacy')
     v = sub.add_parser('verify'); v.add_argument('package')
     f = sub.add_parser('flash'); f.add_argument('package'); f.add_argument('--port',required=True); f.add_argument('--baud',type=int,default=460800); f.add_argument('--only',choices=['all','firmware','ffat'],default='all')
@@ -318,4 +369,4 @@ def main():
 if __name__ == '__main__':
     try: main()
     except (ValueError, OSError, subprocess.CalledProcessError) as exc:
-        print(f'ERROR: {exc}',file=sys.stderr); sys.exit(1)
+        print(console_safe(f'ERROR: {exc}'),file=sys.stderr); sys.exit(1)

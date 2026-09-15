@@ -1,19 +1,39 @@
 #pragma once
 #include <cmath>
 #include <cstdint>
+#include <algorithm>
+#include "demo_tuning.h"
 namespace carerover {
 struct ImuSample {
   float yaw=0,pitch=0,roll=0,gx=0,gy=0,gz=0,ax=0,ay=0,az=0;
   float biasX=0,biasY=0,biasZ=0;
   bool valid=false,calibrated=false,tiltFault=false;
   uint64_t sampleMs=0;
+  uint32_t acceptedFrames=0,rejectedFrames=0;
+  bool held=false,warningTilt=false;
 };
 class ImuFilter {
  public:
-  void missing() { state_.valid=false; state_.tiltFault=true; recoveryStart_=0; }
+  static constexpr float TiltFaultDeg=tuning::ImuSafetyTiltDeg;
+  static constexpr float TiltRecoverDeg=tuning::ImuSafetyRecoverDeg;
+  static constexpr uint64_t TiltConfirmMs=tuning::ImuSafetyTiltMs;
+  static constexpr uint64_t TiltRecoveryMs=1000;
+  void missing() { state_.valid=false; state_.tiltFault=true; tiltStart_=0; recoveryStart_=0; }
   const ImuSample& state() const { return state_; }
   void update(float ax,float ay,float az,float gx,float gy,float gz,uint64_t now) {
     if(!std::isfinite(ax+ay+az+gx+gy+gz)) { missing(); return; }
+    const float norm=std::sqrt(ax*ax+ay*ay+az*az);
+    if(tuning::balanced) {
+      const bool implausible=norm<.20f||norm>2.2f||std::fabs(gx)>245||std::fabs(gy)>245||std::fabs(gz)>245;
+      const bool transient=haveNorm_&&last_&&now>last_&&std::fabs(norm-previousNorm_)>.9f*float(now-last_)/10.f;
+      previousNorm_=norm;haveNorm_=true;
+      if(implausible||transient) {
+        ++state_.rejectedFrames;state_.held=true;tiltStart_=recoveryStart_=0;
+        if(!state_.sampleMs||now<state_.sampleMs||now-state_.sampleMs>=tuning::ImuSafetyMs)missing();
+        return;
+      }
+    }
+    state_.held=false;++state_.acceptedFrames;
     float dt=last_&&now>=last_?float(now-last_)/1000:0.01f;
     if(dt>0.1f) { missing(); dt=0.01f; }
     last_=now;
@@ -30,7 +50,8 @@ class ImuFilter {
       }
       state_.pitch=pitch;state_.roll=roll;
     } else {
-      const float alpha=0.5f/(0.5f+dt);
+      const float tau=tuning::balanced?.5f+4.f*std::fabs(gravity-1.f):.5f;
+      const float alpha=tuning::balanced&&(gravity<.70f||gravity>1.30f)?1.f:tau/(tau+dt);
       state_.roll=alpha*(state_.roll+(gx-state_.biasX)*dt)+(1-alpha)*roll;
       state_.pitch=alpha*(state_.pitch+(gy-state_.biasY)*dt)+(1-alpha)*pitch;
       state_.yaw+=(gz-state_.biasZ)*dt;
@@ -38,17 +59,29 @@ class ImuFilter {
       if(state_.yaw<-180) state_.yaw+=360;
     }
     state_.valid=true;state_.sampleMs=now;
-    // Check raw gravity tilt too: the complementary filter must not delay a stop.
-    if(std::fabs(pitch)>=25||std::fabs(roll)>=25||std::fabs(state_.pitch)>=25||std::fabs(state_.roll)>=25) { state_.tiltFault=true;recoveryStart_=0; }
-    else if(state_.tiltFault) {
-      if(std::fabs(pitch)<20&&std::fabs(roll)<20&&std::fabs(state_.pitch)<20&&std::fabs(state_.roll)<20) {
+    // Require a sustained large tilt. A single raw accelerometer spike is
+    // expected when the chassis starts, stops, or crosses a small obstacle.
+    state_.warningTilt=std::fabs(pitch)>=35||std::fabs(roll)>=35;
+    const bool overTilt=std::fabs(pitch)>=TiltFaultDeg||std::fabs(roll)>=TiltFaultDeg||
+                        std::fabs(state_.pitch)>=TiltFaultDeg||std::fabs(state_.roll)>=TiltFaultDeg;
+    if(overTilt) {
+      recoveryStart_=0;
+      if(!tiltStart_) tiltStart_=now;
+      if(now-tiltStart_>=TiltConfirmMs) state_.tiltFault=true;
+    } else {
+      tiltStart_=0;
+    }
+    if(state_.tiltFault) {
+      if(std::fabs(pitch)<TiltRecoverDeg&&std::fabs(roll)<TiltRecoverDeg&&
+         std::fabs(state_.pitch)<TiltRecoverDeg&&std::fabs(state_.roll)<TiltRecoverDeg) {
         if(!recoveryStart_) recoveryStart_=now;
-        if(now-recoveryStart_>=1000) state_.tiltFault=false;
+        if(now-recoveryStart_>=TiltRecoveryMs) state_.tiltFault=false;
       } else recoveryStart_=0;
     }
   }
  private:
-  ImuSample state_; uint64_t last_=0,calibrationStart_=0,recoveryStart_=0;
+  ImuSample state_; uint64_t last_=0,calibrationStart_=0,tiltStart_=0,recoveryStart_=0;
+  float previousNorm_=1;bool haveNorm_=false;
   uint32_t count_=0;float sx_=0,sy_=0,sz_=0;
 };
 }

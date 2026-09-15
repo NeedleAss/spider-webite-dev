@@ -6,7 +6,25 @@ from unittest.mock import patch
 from tools.tracking import crc8, analyze, cam_profile, cam_flash
 from tools import carerover
 import hashlib
+import zipfile
+from types import SimpleNamespace
+from tools import tracking
 class TrackingToolTests(unittest.TestCase):
+    def test_front_diagnostics_and_private_installation_remain_protected(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);firmware=root/'firmware/main_wireless';firmware.mkdir(parents=True)
+            for name in ['README.md','index.html','package.json']:(root/name).write_text('test fixture')
+            (firmware/'front_config.local.h').write_text('private installation')
+            (firmware/'front_guard.h').write_text('public source')
+            log=root/'front.jsonl';log.write_text(json.dumps({'elapsed_ms':1,'text':json.dumps({'type':'front_status','distance_cm':42})}))
+            self.assertEqual(analyze(log)['metrics'][0]['distance_cm'],42)
+            out=root/'release.zip'
+            with patch.object(tracking,'ROOT',root),patch.object(tracking,'source_info',return_value={}):
+                tracking.release(SimpleNamespace(output=str(out),include_reference=False))
+            with zipfile.ZipFile(out) as archive:
+                self.assertIn('firmware/main_wireless/front_guard.h',archive.namelist())
+                self.assertNotIn('firmware/main_wireless/front_config.local.h',archive.namelist())
+
     def test_archive_provenance_without_git_and_after_edit(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d);source=root/'example.cpp';source.write_text('original')

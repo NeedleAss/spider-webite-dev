@@ -3,7 +3,13 @@
 #include <esp_arduino_version.h>
 #include <math.h>
 #include "MAX30105.h"
+#include "demo_tuning.h"
+#include "demo_signal_filters.h"
+#include "demo_ppg.h"
+#include "gesture_actions.h"
+#include "health_quality.h"
 #include "oled_ui.h"
+#include "ppg_rate_estimator.h"
 #include "signal_state_filters.h"
 #include "wireless_runtime.h"
 
@@ -36,34 +42,46 @@ static constexpr uint8_t FINGER_LOST_SAMPLES = 5;
 static constexpr uint8_t INITIAL_LED_POWER = 30;
 static constexpr uint32_t IR_TARGET_LOW = 90000;
 static constexpr uint32_t IR_TARGET_HIGH = 190000;
-static constexpr uint16_t CAM_SOURCE_ACCEPT_SCORE_MILLI = 600;
-static constexpr uint16_t GESTURE_ENTER_SCORE_MILLI = 550;
-static constexpr uint16_t GESTURE_HOLD_SCORE_MILLI = 350;
+static constexpr uint16_t CAM_SOURCE_ACCEPT_SCORE_MILLI = 450;
+static constexpr uint16_t GESTURE_ENTER_SCORE_MILLI = carerover::tuning::GestureDisplayEnter;
+static constexpr uint16_t GESTURE_HOLD_SCORE_MILLI = carerover::tuning::GestureDisplayHold;
 static constexpr uint8_t GESTURE_ENTER_FRAMES = 2;
-static constexpr uint8_t GESTURE_SWITCH_FRAMES = 3;
-static constexpr uint8_t GESTURE_CLASSIFY_GRACE_FRAMES = 5;
-static constexpr uint8_t GESTURE_NO_HAND_GRACE_FRAMES = 2;
-static constexpr float PPG_MIN_AC_DC = 0.00030f;
-static constexpr float PPG_MAX_AC_DC = 0.020f;
-static constexpr float PPG_MIN_SPECTRAL_SNR = 4.0f;
-static constexpr float SPO2_MIN_RED_IR_CORRELATION = 0.60f;
+static constexpr uint8_t GESTURE_SWITCH_FRAMES = 2;
+static constexpr uint8_t GESTURE_CLASSIFY_GRACE_FRAMES = 7;
+static constexpr uint8_t GESTURE_NO_HAND_GRACE_FRAMES = 3;
+static constexpr float PPG_MIN_AC_DC = 0.00002f;
+static constexpr float PPG_MAX_AC_DC = 0.030f;
+static constexpr float PPG_MIN_SPECTRAL_SNR = 2.0f;
+static constexpr float SPO2_MIN_RED_IR_CORRELATION = 0.30f;
 static constexpr uint8_t HEALTH_GOOD_WINDOWS = 2;
-static constexpr uint8_t HEALTH_GRACE_WINDOWS = 2;
-static constexpr int32_t HR_MAX_WINDOW_DELTA = 8;
-static constexpr int32_t SPO2_MAX_WINDOW_DELTA = 4;
+static constexpr uint8_t HR_GRACE_WINDOWS = 30;
+static constexpr uint8_t SPO2_GRACE_WINDOWS = 8;
+static constexpr int32_t HR_MAX_WINDOW_DELTA = 12;
+static constexpr int32_t SPO2_MAX_WINDOW_DELTA = 6;
+static constexpr int32_t HR_MAX_OUTPUT_STEP = 3;
+static constexpr int32_t SPO2_MAX_OUTPUT_STEP = 1;
 
 HardwareSerial CamLink(1);
 TwoWire OledWire(1);
 MAX30105 particleSensor;
 OledUi oledUi;
-GestureHysteresis gestureFilter(GESTURE_ENTER_SCORE_MILLI, GESTURE_HOLD_SCORE_MILLI,
+carerover::GestureDisplay gestureFilter(GESTURE_ENTER_SCORE_MILLI, GESTURE_HOLD_SCORE_MILLI,
                                 GESTURE_ENTER_FRAMES, GESTURE_SWITCH_FRAMES,
                                 GESTURE_CLASSIFY_GRACE_FRAMES,
                                 GESTURE_NO_HAND_GRACE_FRAMES);
-StableMetric heartRateFilter(HEALTH_GOOD_WINDOWS, HEALTH_GRACE_WINDOWS,
-                             HR_MAX_WINDOW_DELTA);
-StableMetric spo2Filter(HEALTH_GOOD_WINDOWS, HEALTH_GRACE_WINDOWS,
-                        SPO2_MAX_WINDOW_DELTA);
+StableMetric heartRateFilter(HEALTH_GOOD_WINDOWS, HR_GRACE_WINDOWS,
+                             HR_MAX_WINDOW_DELTA, HR_MAX_OUTPUT_STEP);
+StableMetric spo2Filter(HEALTH_GOOD_WINDOWS, SPO2_GRACE_WINDOWS,
+                        SPO2_MAX_WINDOW_DELTA, SPO2_MAX_OUTPUT_STEP);
+Median5Filter heartRateMedian;
+Median5Filter spo2Median;
+carerover::DemoPpg demoPpg;
+uint8_t fingerEnterSamples=0;
+uint64_t hrFreshMs=0,spo2FreshMs=0;
+int32_t currentHr(){return carerover::tuning::balanced?demoPpg.hr.output():heartRateFilter.output();}
+int32_t currentSpo2(){return carerover::tuning::balanced?demoPpg.spo2.output():spo2Filter.output();}
+bool hrHeld(){return carerover::tuning::balanced?demoPpg.hr.held():heartRateFilter.held();}
+bool spo2Held(){return carerover::tuning::balanced?demoPpg.spo2.held():spo2Filter.held();}
 
 char camRxLine[RX_LINE_CAPACITY];
 size_t camRxLength = 0;
@@ -108,6 +126,7 @@ float windowIrMean = 0.0f;
 float windowAcDc = 0.0f;
 float windowCorrelation = 0.0f;
 float windowSpectralSnr = 0.0f;
+float windowPulseCorrelation = 0.0f;
 float windowRatioR = 0.0f;
 float windowSampleHz = 0.0f;
 bool algorithmHrValid = false;
@@ -158,9 +177,11 @@ void processCamPacket(const carerover::VisionPacket& p, bool resync) {
   const bool sourceAccepted = handDetected != 0 && scoreMilli >= CAM_SOURCE_ACCEPT_SCORE_MILLI &&
                               strcmp(label, "no_gesture") != 0 && strcmp(label, "no_hand") != 0;
   const uint16_t boundedScore = static_cast<uint16_t>(constrain(scoreMilli, 0, 1000));
-  gestureFilter.update(handDetected != 0, label, boundedScore);
+  gestureFilter.update(handDetected != 0, label, boundedScore, p.receivedMs);
+  const bool actionEligible = boundedScore >= carerover::tuning::GestureActionScore && gestureFilter.accepted() && !gestureFilter.holding() &&
+                               carerover::gestureActionBoxValid(label, x0, y0, x1, y1);
   wirelessGesture(gestureFilter.label(), gestureFilter.scoreMilli() / 1000.0f,
-                  gestureFilter.accepted(), inferMs);
+                  gestureFilter.accepted(), actionEligible, gestureFilter.holding(), gestureFilter.age(p.receivedMs), inferMs);
 
   Serial.printf(
       "{\"type\":\"gesture\",\"seq\":%lu,\"cam_ms\":%lu,\"hand\":%s,"
@@ -239,14 +260,18 @@ bool i2cAddressPresent(uint8_t address) {
 
 void resetPpgState(const char *state) {
   ppgSamples = 0;
+  demoPpg.reset();hrFreshMs=spo2FreshMs=0;
   heartRateFilter.reset();
   spo2Filter.reset();
+  heartRateMedian.reset();
+  spo2Median.reset();
   algorithmHrValid = false;
   algorithmSpo2Valid = false;
   windowIrMean = 0.0f;
   windowAcDc = 0.0f;
   windowCorrelation = 0.0f;
   windowSpectralSnr = 0.0f;
+  windowPulseCorrelation = 0.0f;
   windowRatioR = 0.0f;
   windowSampleHz = 0.0f;
   measurementValid = false;
@@ -410,19 +435,17 @@ void estimatePpgWindow() {
 
   const float selectedPower = spectralPowers[selectedIndex];
   windowSpectralSnr = totalPower > 0.0f ? selectedPower / (totalPower / binCount) : 0.0f;
-  heartRate = lroundf(selectedFrequency * 60.0f);
+  const carerover::PulsePeriodEstimate pulse =
+      carerover::estimatePulsePeriod(irFiltered, PPG_WINDOW_SIZE, windowSampleHz);
+  windowPulseCorrelation = pulse.correlation;
+  heartRate = pulse.valid ? pulse.bpm : 0;
   spo2 = lroundf(110.0f - 25.0f * windowRatioR);
 
-  algorithmHrValid = windowSampleHz >= 20.0f && windowSampleHz <= 30.0f &&
-                      heartRate >= 45 && heartRate <= 180 &&
-                      windowSpectralSnr >= PPG_MIN_SPECTRAL_SNR &&
-                      windowAcDc >= PPG_MIN_AC_DC && windowAcDc <= PPG_MAX_AC_DC;
-  algorithmSpo2Valid = windowSampleHz >= 20.0f && windowSampleHz <= 30.0f &&
-                        windowSpectralSnr >= PPG_MIN_SPECTRAL_SNR &&
-                        windowAcDc >= PPG_MIN_AC_DC && windowAcDc <= PPG_MAX_AC_DC &&
-                        windowCorrelation >= SPO2_MIN_RED_IR_CORRELATION &&
-                        windowRatioR >= 0.20f && windowRatioR <= 1.20f &&
-                        spo2 >= 80 && spo2 <= 100;
+  const carerover::PpgWindowQuality quality = {
+      windowSampleHz, windowAcDc, windowCorrelation, windowSpectralSnr,
+      windowRatioR, heartRate, spo2};
+  algorithmHrValid = pulse.valid && carerover::heartRateCandidateValid(quality);
+  algorithmSpo2Valid = carerover::spo2CandidateValid(quality);
 
   sqi = 0;
   if (irMean >= FINGER_IR_THRESHOLD && irMean <= 210000.0) sqi += 20;
@@ -456,18 +479,22 @@ void evaluatePpgWindow() {
   estimatePpgWindow();
   if (adjustLedPowerIfNeeded()) return;
 
+  if (algorithmHrValid) heartRate = heartRateMedian.update(heartRate);
+  if (algorithmSpo2Valid) spo2 = spo2Median.update(spo2);
   heartRateFilter.update(algorithmHrValid, heartRate);
   spo2Filter.update(algorithmSpo2Valid, spo2);
   heartRateValid = heartRateFilter.valid();
   spo2Valid = spo2Filter.valid();
   measurementValid = heartRateValid || spo2Valid;
+  if(heartRateValid&&!hrHeld())hrFreshMs=wirelessNowMs();
+  if(spo2Valid&&!spo2Held())spo2FreshMs=wirelessNowMs();
 
   if (heartRateValid && spo2Valid) {
-    healthState = heartRateFilter.held() || spo2Filter.held() ? "holding" : "stable";
+    healthState = hrHeld() || spo2Held() ? "holding" : "stable";
   } else if (heartRateValid) {
-    healthState = heartRateFilter.held() ? "hr_holding" : "hr_stable";
+    healthState = hrHeld() ? "hr_holding" : "hr_stable";
   } else if (spo2Valid) {
-    healthState = spo2Filter.held() ? "spo2_holding" : "spo2_stable";
+    healthState = spo2Held() ? "spo2_holding" : "spo2_stable";
   } else if (heartRateFilter.goodWindows() > 0 || spo2Filter.goodWindows() > 0) {
     healthState = "acquiring";
   } else {
@@ -497,6 +524,25 @@ void acceptPpgSample(uint32_t red, uint32_t ir) {
                   static_cast<unsigned long>(ir), static_cast<unsigned long>(red));
   }
 
+  if(carerover::tuning::balanced){
+    if(!fingerPresent){
+      fingerEnterSamples=ir>=35000?uint8_t(fingerEnterSamples+1):0;
+      if(fingerEnterSamples<3)return;
+      fingerPresent=true;fingerEnterSamples=0;resetPpgState("acquiring");
+    }
+    noFingerSamples=ir<20000?uint8_t(noFingerSamples+1):0;
+    if(noFingerSamples>=8){fingerPresent=false;fingerEnterSamples=0;resetPpgState("no_finger");return;}
+    if(demoPpg.sample(red,ir,wirelessNowMs())){
+      const auto& q=demoPpg.result;windowIrMean=q.irMean;windowSampleHz=q.hz;windowAcDc=q.acDc;
+      windowCorrelation=q.corr;windowSpectralSnr=q.snr;windowPulseCorrelation=q.pulseCorr;windowRatioR=q.ratio;
+      algorithmHrValid=q.hrCandidate;algorithmSpo2Valid=q.spo2Candidate;heartRate=q.hr;spo2=q.spo2;sqi=uint8_t(q.quality*100);
+      heartRateValid=demoPpg.hr.valid();spo2Valid=demoPpg.spo2.valid();measurementValid=heartRateValid||spo2Valid;
+      healthState=measurementValid?(hrHeld()||spo2Held()?"holding":"stable"):"acquiring";
+      if(heartRateValid)hrFreshMs=wirelessNowMs()-demoPpg.hr.age(wirelessNowMs());
+      if(spo2Valid)spo2FreshMs=wirelessNowMs()-demoPpg.spo2.age(wirelessNowMs());
+    }
+    return;
+  }
   if (ir < FINGER_IR_THRESHOLD) {
     if (noFingerSamples < FINGER_LOST_SAMPLES) ++noFingerSamples;
     if (noFingerSamples >= FINGER_LOST_SAMPLES) {
@@ -556,12 +602,12 @@ void printHealthTelemetry() {
   char spo2Text[16];
   if (heartRateValid) {
     snprintf(heartRateText, sizeof(heartRateText), "%ld",
-             static_cast<long>(heartRateFilter.output()));
+             static_cast<long>(currentHr()));
   } else {
     strcpy(heartRateText, "null");
   }
   if (spo2Valid) {
-    snprintf(spo2Text, sizeof(spo2Text), "%ld", static_cast<long>(spo2Filter.output()));
+    snprintf(spo2Text, sizeof(spo2Text), "%ld", static_cast<long>(currentSpo2()));
   } else {
     strcpy(spo2Text, "null");
   }
@@ -572,17 +618,19 @@ void printHealthTelemetry() {
       "\"hr_bpm\":%s,\"spo2_pct\":%s,\"sqi\":%u,\"ir\":%lu,\"red\":%lu,"
       "\"sample_hz\":%.1f,\"fifo_overflow\":%lu,\"window_samples\":%u,\"led_power\":%u,"
       "\"ir_mean\":%.0f,\"ac_dc\":%.5f,\"red_ir_corr\":%.3f,\"spectral_snr\":%.2f,"
+      "\"pulse_corr\":%.3f,"
       "\"ratio_r\":%.3f,\"window_hz\":%.2f,\"candidate_hr\":%ld,"
       "\"candidate_spo2\":%ld,\"algorithm_hr_valid\":%s,\"algorithm_spo2_valid\":%s,"
       "\"hr_good_windows\":%u,\"spo2_good_windows\":%u,"
       "\"hr_bad_windows\":%u,\"spo2_bad_windows\":%u}\r\n",
       healthState, fingerPresent ? "true" : "false", measurementValid ? "true" : "false",
       heartRateValid ? "true" : "false", spo2Valid ? "true" : "false",
-      heartRateFilter.held() ? "true" : "false", spo2Filter.held() ? "true" : "false",
+      hrHeld() ? "true" : "false", spo2Held() ? "true" : "false",
       heartRateText, spo2Text, sqi, static_cast<unsigned long>(lastIr),
       static_cast<unsigned long>(lastRed), effectiveSampleHz,
       static_cast<unsigned long>(fifoOverflowTotal), static_cast<unsigned>(ppgSamples), ledPower,
-      windowIrMean, windowAcDc, windowCorrelation, windowSpectralSnr, windowRatioR,
+      windowIrMean, windowAcDc, windowCorrelation, windowSpectralSnr,
+      windowPulseCorrelation, windowRatioR,
       windowSampleHz, static_cast<long>(heartRate), static_cast<long>(spo2),
       algorithmHrValid ? "true" : "false", algorithmSpo2Valid ? "true" : "false",
       heartRateFilter.goodWindows(), spo2Filter.goodWindows(),
@@ -612,9 +660,9 @@ void serviceOled(uint32_t nowMs) {
   snapshot.gestureLabel = snapshot.gestureValid ? gestureFilter.label() : "--";
   snapshot.gestureScoreMilli = snapshot.gestureValid ? gestureFilter.scoreMilli() : 0;
   snapshot.heartRateValid = heartRateValid;
-  snapshot.heartRateBpm = heartRateFilter.output();
+  snapshot.heartRateBpm = currentHr();snapshot.heartRateHeld=hrHeld();
   snapshot.spo2Valid = spo2Valid;
-  snapshot.spo2Percent = spo2Filter.output();
+  snapshot.spo2Percent = currentSpo2();snapshot.spo2Held=spo2Held();
   const auto front=wirelessFront();snapshot.frontEnabled=front.enabled;snapshot.frontValid=front.valid;
   snapshot.frontCm=front.distanceCm;snapshot.frontStatus=front.status;snapshot.frontPhase=carerover::phaseName(front.phase);
   snapshot.stopReason=wirelessStopReason();
@@ -647,6 +695,10 @@ void loop() {
   serviceMax30102();
 
   const uint32_t now = millis();
+  if(sensorReady&&wirelessSampleMs&&wirelessNowMs()-wirelessSampleMs>=250){
+    fingerPresent=false;fingerEnterSamples=0;resetPpgState("sample_timeout");
+    sensorReady=false;lastSensorAttemptMs=now;
+  }
   if (!timeoutReported && now - lastValidPacketMs > LINK_TIMEOUT_MS) {
     timeoutReported = true;
     gestureFilter.reset();
@@ -658,7 +710,9 @@ void loop() {
   WirelessHealth health = {};
   health.ready = sensorReady; health.finger = fingerPresent;
   health.hrValid = heartRateValid; health.spo2Valid = spo2Valid;
-  health.hr = heartRateFilter.output(); health.spo2 = spo2Filter.output(); health.sqi = sqi;
+  health.hr = currentHr(); health.spo2 = currentSpo2(); health.sqi = sqi;
+  health.hrHeld=hrHeld();health.spo2Held=spo2Held();health.hrFreshMs=hrFreshMs;health.spo2FreshMs=spo2FreshMs;
+  health.quality=carerover::tuning::balanced?demoPpg.result.quality:sqi/100.f;
   health.sampleMs = wirelessSampleMs;
   health.reportMs = wirelessReportMs;
   strlcpy(health.state, healthState, sizeof(health.state));

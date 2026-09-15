@@ -124,6 +124,7 @@ function mergeDefined(target, src) {
 export function applyTelemetry(msg) {
   const t = Date.now();
   state.connection.lastTelemetryTs = t;
+  if(msg.tuning_profile)state.device.tuning_profile=msg.tuning_profile;
 
   if (msg.connection) mergeDefined(state.connection, msg.connection);
   state.front=msg.front ? { ...msg.front, receivedAt:Date.now() } : null;
@@ -150,7 +151,10 @@ export function applyTelemetry(msg) {
     if (v.gesture) { state.vision.gesture = v.gesture; state.vision.lastGestureTs = t; }
   }
 
-  if (msg.health) { mergeDefined(state.health, msg.health); state.connection.lastHealthTs = t; }
+  if (msg.health) {
+    if(msg.health.hr_valid===undefined)state.health.hr_valid=undefined;
+    if(msg.health.spo2_valid===undefined)state.health.spo2_valid=undefined;
+    mergeDefined(state.health, msg.health); state.connection.lastHealthTs = t; }
 
   // 机器人确认了模式 → 清除 pending
   if (state.ui.requestedMode && state.robot.mode === state.ui.requestedMode) {
@@ -215,12 +219,12 @@ export function isTelemetryStale(nowMs = Date.now()) {
 }
 
 export function isPersonStale(nowMs = Date.now()) {
-  return (nowMs - state.vision.lastPersonTs) > CONFIG.VISION_STALE_MS;
+  return (nowMs - state.vision.lastPersonTs) > (state.vision.person?.predicted ? 700 : CONFIG.VISION_STALE_MS);
 }
 
 export function isGestureStale(nowMs = Date.now()) {
   // 手势更新频率低（2–4 Hz），过期阈值放宽到 bbox 的 4 倍
-  return (nowMs - state.vision.lastGestureTs) > CONFIG.VISION_STALE_MS * 4;
+  return (nowMs - state.vision.lastGestureTs) > 2200;
 }
 
 /**
@@ -247,6 +251,7 @@ export function resetForDisconnect() {
   state.robot.control_allowed = undefined;
   state.robot.motion_output_installed = undefined;
   state.connection.lastHealthTs = 0;
+  state.health.hr_valid=undefined;state.health.spo2_valid=undefined;state.health.hr_held=false;state.health.spo2_held=false;
   state.health.hr_bpm = undefined; state.health.spo2_pct = undefined;
   state.connection.lastRobotTs = 0;
   state.connection.lastTelemetryTs = 0;

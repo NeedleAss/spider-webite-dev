@@ -4,6 +4,7 @@
 #include <Wire.h>
 
 struct OledUiSnapshot {
+  bool heartRateHeld=false,spo2Held=false;
   bool frontEnabled=false,frontValid=false;
   float frontCm=0;
   const char *frontStatus="",*frontPhase="",*stopReason="";

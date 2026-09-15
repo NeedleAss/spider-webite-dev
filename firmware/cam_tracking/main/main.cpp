@@ -1,3 +1,6 @@
+#include "sdkconfig.h"
+#include "demo_tuning.h"
+#include "box_track.h"
 #include <algorithm>
 #include <list>
 #include <cstdio>
@@ -143,6 +146,7 @@ void send(VisionPacket p,int64_t began) {
 extern "C" void app_main() {
   ESP_ERROR_CHECK(init_link_uart());ESP_ERROR_CHECK(init_camera());
   HandDetect hands(HandDetect::ESPDET_PICO_224_224_HAND,false);
+  hands.set_score_thr(tuning::balanced?.16f:.20f);
   HandGestureRecognizer gestures(HandGestureCls::MOBILENETV2_0_5_S8_V1);
 #if CONFIG_CAREROVER_FACE
   HumanFaceDetect faces(
@@ -152,10 +156,15 @@ extern "C" void app_main() {
     HumanFaceDetect::MSRMNP_S8_V1,
 #endif
     false);
+  faces.set_score_thr(tuning::balanced?.35f:.42f,0);
+#if !CONFIG_CAREROVER_PICO_FACE
+  faces.set_score_thr(tuning::balanced?.38f:.42f,1);
+#endif
 #endif
 #if CONFIG_CAREROVER_VIDEO
   wifiBegin();ESP_ERROR_CHECK(videoBegin()?ESP_OK:ESP_FAIL);
 #endif
+  BoxTrack association;uint32_t associationSeq=0;
   bool faceTurn=false,tracking=false;VisionPacket previous;
   uint32_t handCount=0,faceCount=0,captureDrops=0;int64_t epoch=esp_timer_get_time(),lastJpeg=0;
   uint32_t handMs=0,faceMs=0,previousJpeg=0,minHeap=UINT32_MAX,minPsram=UINT32_MAX;
@@ -165,14 +174,20 @@ extern "C" void app_main() {
     const int64_t began=esp_timer_get_time();
 #if CONFIG_CAREROVER_FACE
     if(faceTurn) {
-      auto& results=faces.run(image);VisionPacket selected;float best=-1,second=-1;
+      auto& results=faces.run(image);VisionPacket selected;float best=-1001,second=-1001;
       for(const auto& result:results) {
-        auto candidate=box(result,'P');if(!candidate.found||candidate.score<600)continue;
-        const float score=tracking?boxIou(previous,candidate):float((candidate.x1-candidate.x0)*(candidate.y1-candidate.y0));
+        auto candidate=box(result,'P');if(!candidate.found||candidate.score<(tuning::balanced?350:450))continue;
+        const float score=tuning::balanced&&association.ready(began/1000)?-association.cost(candidate,began/1000):tracking&&!tuning::balanced?boxIou(previous,candidate):float((candidate.x1-candidate.x0)*(candidate.y1-candidate.y0));
         if(score>best){second=best;best=score;selected=candidate;}else if(score>second)second=score;
       }
-      if(tracking&&(best<0.10f||(second>=0&&best-second<0.05f)))selected=VisionPacket{};
-      tracking=selected.found;if(tracking)previous=selected;
+      if(tuning::balanced){
+        if(association.ready(began/1000)&&(best<=-1000||(second>-1000&&best-second<.08f)))selected=VisionPacket{};
+        selected.receivedMs=began/1000;selected.seq=++associationSeq;
+        if(selected.found&&!association.update(selected))selected=VisionPacket{};
+      }else{
+        if(tracking&&(best<0.03f||(second>=0&&best-second<0.02f)))selected=VisionPacket{};
+        tracking=selected.found;if(tracking)previous=selected;
+      }
       send(selected,began);++faceCount;faceMs=uint32_t((esp_timer_get_time()-began)/1000);
     } else
 #endif

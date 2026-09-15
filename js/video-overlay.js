@@ -128,19 +128,20 @@ export class VideoOverlay {
     // bbox 超过 VISION_STALE_MS 未更新就直接不画：宁可没有，也不能显示过期位置
     if (p && p.found && !flags.personStale) {
       const r = mapImageRectToCanvas(p.x, p.y, p.w, p.h, iw, ih, W, H);
-      this._drawBox(r, `PERSON ${Math.round((p.confidence ?? 0) * 100)}%`, COLOR.box);
+      this._drawBox(r, `${p.predicted ? 'PREDICTED' : 'PERSON'} ${Math.round((p.confidence ?? 0) * 100)}%`, COLOR.box, p.predicted);
       this._drawCenter(r);
       if (flags.showGuide) this._drawOffset(r, fit);
     }
   }
 
   /** AF 取景框式的四角标记，比整圈矩形更像仪器，也不遮挡目标。 */
-  _drawBox(r, label, color) {
+  _drawBox(r, label, color, predicted=false) {
     const ctx = this.ctx;
     const corner = Math.max(10, Math.min(r.w, r.h) * 0.22);
 
     ctx.save();
     ctx.strokeStyle = color;
+    if(predicted)ctx.setLineDash([5,4]);
     ctx.lineWidth = 2;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';

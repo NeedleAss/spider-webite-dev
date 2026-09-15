@@ -1,0 +1,5 @@
+Command: npm test
+
+tests 14
+pass 14
+fail 0

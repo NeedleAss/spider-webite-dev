@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+"""Run host tests against the same C++ headers/drivers compiled into firmware."""
+from pathlib import Path
+import os
+import subprocess
+import tempfile
+ROOT=Path(__file__).resolve().parents[1]
+with tempfile.TemporaryDirectory(prefix='carerover-tests-') as d:
+    for name in ['safety','tracking','drive','tuning']:
+        command=[os.environ.get('CXX','c++'),'-std=c++17','-Wall','-Wextra','-Werror','-Ifirmware/main_wireless','-Ifirmware/cam_tracking/main']
+        if name=='drive':command+=['-Itests/fakes','firmware/main_wireless/continuous_servo_drive.cpp']
+        exe=Path(d)/(name+('.exe' if os.name=='nt' else ''))
+        subprocess.run(command+[f'tests/firmware/{name}_test.cpp','-o',str(exe)],cwd=ROOT,check=True)
+        subprocess.run([str(exe)],check=True)

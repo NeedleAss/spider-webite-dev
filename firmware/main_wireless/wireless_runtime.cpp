@@ -1,6 +1,7 @@
 #include "wireless_runtime.h"
 #include "safety_controller.h"
 #include "frame_guard.h"
+#include "gesture_actions.h"
 #include "mpu6050_soft.h"
 #include "motion_calibration.h"
 #include "hcsr04.h"
@@ -42,6 +43,9 @@ portMUX_TYPE safetyMux = portMUX_INITIALIZER_UNLOCKED;
 portMUX_TYPE sourceMux = portMUX_INITIALIZER_UNLOCKED;
 SafetyController safety;
 FrontInstallation frontInstallation;
+GestureActionLatch gestureActions(4,3,tuning::balanced);
+uint64_t pendingGestureFollowUntil=0;
+uint32_t pendingGestureStopSequence=0;
 ContinuousServoDrive drive;
 bool calibrationReady=false;
 std::atomic<bool> driveReady{false};
@@ -51,6 +55,8 @@ std::atomic<bool> apOnline{false};
 std::atomic<uint32_t> publishDrops{0};
 std::atomic<uint32_t> maxSafetyGapMs{0};
 struct Sources {
+  BoxTrack displayTrack;
+  bool gestureHeld=false;uint64_t gestureFreshMs=0;
   WirelessHealth health;
   VisionPacket person;
   ImuSample imu;
@@ -198,6 +204,7 @@ void command(Session& c, const cJSON* j) {
     else if (strcmp(m->valuestring,"MANUAL")==0) mode=Mode::Manual;
     else if (strcmp(m->valuestring,"HEALTH_CHECK")==0) mode=Mode::Health;
     else if (CAREROVER_INTEGRATION>=3 && !strcmp(m->valuestring,"PERSON_FOLLOW")) mode=Mode::Follow;
+    else if (CAREROVER_INTEGRATION>=3 && !strcmp(m->valuestring,"GESTURE_CONTROL")) mode=Mode::Gesture;
     else { replyError(c,strcmp(m->valuestring,"PERSON_FOLLOW")==0 || strcmp(m->valuestring,"GESTURE_CONTROL")==0 ? "UNSUPPORTED_MODE" : "INVALID_MODE",j); return; }
     portENTER_CRITICAL(&safetyMux); error=safety.setMode(c.id,mode,now); portEXIT_CRITICAL(&safetyMux);
   } else {
@@ -287,6 +294,7 @@ void publish(void*) {
     const auto now=wirelessNowMs(); const auto state=readSafety(now);
     if(httpd_ws_get_fd_info(server,c.fd)!=HTTPD_WS_CLIENT_WEBSOCKET) continue;
     auto* j=object("telemetry",c,now);
+    cJSON_AddStringToObject(j,"tuning_profile",tuning::name);
     auto* connection=cJSON_AddObjectToObject(j,"connection");
     cJSON_AddBoolToObject(connection,"camera",state.camera); cJSON_AddBoolToObject(connection,"main_mcu",true);
     auto* front=cJSON_AddObjectToObject(j,"front");
@@ -302,7 +310,7 @@ void publish(void*) {
     auto* robot=cJSON_AddObjectToObject(j,"robot");
     const char* mode=state.estop?"ESTOP":state.fault?"FAULT":modeName(state.mode);
     cJSON_AddStringToObject(robot,"mode",mode);
-    cJSON_AddStringToObject(robot,"state",state.estop?"ESTOP":state.fault?"FAULT":state.mode==Mode::Manual?(state.target.vx||state.target.vy||state.target.wz?"DRIVING":"READY"):state.mode==Mode::Health?"MEASURING":state.mode==Mode::Follow?"TRACKING":"IDLE");
+    cJSON_AddStringToObject(robot,"state",state.estop?"ESTOP":state.fault?"FAULT":state.mode==Mode::Manual?(state.target.vx||state.target.vy||state.target.wz?"DRIVING":"READY"):state.mode==Mode::Health?"MEASURING":state.mode==Mode::Follow?"TRACKING":state.mode==Mode::Gesture?(state.target.wz?"TURNING":"READY"):"IDLE");
     cJSON_AddBoolToObject(robot,"estop",state.estop);
     cJSON_AddBoolToObject(robot,"motion_output_installed",driveReady.load());
     cJSON_AddBoolToObject(robot,"calibration_ready",calibrationReady);
@@ -317,7 +325,10 @@ void publish(void*) {
       cJSON_AddItemToArray(modes,cJSON_CreateString("IDLE"));
       cJSON_AddItemToArray(modes,cJSON_CreateString("HEALTH_CHECK"));
       cJSON_AddItemToArray(modes,cJSON_CreateString("MANUAL"));
-      if(CAREROVER_INTEGRATION>=3) cJSON_AddItemToArray(modes,cJSON_CreateString("PERSON_FOLLOW"));
+      if(CAREROVER_INTEGRATION>=3) {
+        cJSON_AddItemToArray(modes,cJSON_CreateString("PERSON_FOLLOW"));
+        cJSON_AddItemToArray(modes,cJSON_CreateString("GESTURE_CONTROL"));
+      }
     }
     cJSON_AddNumberToObject(device,"uptime_ms",double(now));
     cJSON_AddNumberToObject(device,"last_cmd_ms",double(state.lastCommandMs)); cJSON_AddNumberToObject(device,"stopped_at_ms",double(state.stoppedAtMs));
@@ -336,14 +347,19 @@ void publish(void*) {
       cJSON_AddStringToObject(gesture,"label",gestureFresh&&source.accepted?source.label:"NONE");
       cJSON_AddNumberToObject(gesture,"confidence",gestureFresh?source.score:0);
       cJSON_AddBoolToObject(gesture,"stable",gestureFresh&&source.accepted);
+      cJSON_AddBoolToObject(gesture,"held",gestureFresh&&source.accepted&&source.gestureHeld);
+      cJSON_AddNumberToObject(gesture,"age_ms",double(now-source.gestureFreshMs));
       c.gestureSeq=source.gestureSeq;c.gestureFresh=gestureFresh;
     }
     if(CAREROVER_INTEGRATION) {
-      const auto& p=source.person;
-      const uint64_t age=source.personSeen?now-p.receivedMs:500;
-      const bool found=source.personSeen&&age<490&&p.found;
+      auto p=tuning::balanced?source.displayTrack.view(now):source.person;
+      const uint64_t age=source.personSeen&&now>=p.receivedMs?now-p.receivedMs:700;
+      const bool predicted=tuning::balanced&&(age>=490||!source.person.found||source.person.seq!=p.seq);
+      if(tuning::balanced&&!predicted)p=source.displayTrack.view(p.receivedMs);
+      const bool found=source.personSeen&&age<(tuning::balanced?700:490)&&p.found;
       auto* person=cJSON_AddObjectToObject(vision,"person");
       cJSON_AddBoolToObject(person,"found",found);
+      cJSON_AddBoolToObject(person,"predicted",found&&predicted);
       cJSON_AddNumberToObject(person,"seq",p.seq);cJSON_AddNumberToObject(person,"age_ms",double(age));
       cJSON_AddNumberToObject(person,"x",found?p.x0:0);cJSON_AddNumberToObject(person,"y",found?p.y0:0);
       cJSON_AddNumberToObject(person,"w",found?p.x1-p.x0:0);cJSON_AddNumberToObject(person,"h",found?p.y1-p.y0:0);
@@ -355,6 +371,8 @@ void publish(void*) {
       const bool fresh=i.valid&&now>=i.sampleMs&&now-i.sampleMs<100;
       cJSON_AddBoolToObject(imu,"valid",fresh);cJSON_AddBoolToObject(imu,"calibrated",i.calibrated);
       cJSON_AddBoolToObject(imu,"tilt_fault",i.tiltFault);
+      cJSON_AddBoolToObject(imu,"held",i.held);cJSON_AddBoolToObject(imu,"warning_tilt",i.warningTilt);
+      cJSON_AddNumberToObject(imu,"rejected_frames",i.rejectedFrames);cJSON_AddNumberToObject(imu,"accepted_frames",i.acceptedFrames);
       cJSON_AddNumberToObject(imu,"age_ms",double(now-i.sampleMs));
       if(fresh) { cJSON_AddNumberToObject(imu,"yaw_deg",i.yaw);cJSON_AddNumberToObject(imu,"pitch_deg",i.pitch);cJSON_AddNumberToObject(imu,"roll_deg",i.roll); }
       else { cJSON_AddNullToObject(imu,"yaw_deg");cJSON_AddNullToObject(imu,"pitch_deg");cJSON_AddNullToObject(imu,"roll_deg"); }
@@ -363,7 +381,11 @@ void publish(void*) {
     const bool fresh=h.sampleMs && now-h.sampleMs<250 && now-h.reportMs<2500;
     if(c.healthSeq!=source.healthSeq || c.healthFresh!=fresh) {
       auto* health=cJSON_AddObjectToObject(j,"health"); const char* status=healthState(h,fresh);
-      const bool valid=!strcmp(status,"VALID");
+      const bool valid=fresh&&h.ready&&h.finger;
+      cJSON_AddBoolToObject(health,"hr_valid",valid&&h.hrValid);cJSON_AddBoolToObject(health,"spo2_valid",valid&&h.spo2Valid);
+      cJSON_AddBoolToObject(health,"hr_held",valid&&h.hrValid&&h.hrHeld);cJSON_AddBoolToObject(health,"spo2_held",valid&&h.spo2Valid&&h.spo2Held);
+      cJSON_AddNumberToObject(health,"hr_age_ms",h.hrValid?double(now-h.hrFreshMs):0);cJSON_AddNumberToObject(health,"spo2_age_ms",h.spo2Valid?double(now-h.spo2FreshMs):0);
+      cJSON_AddNumberToObject(health,"quality",h.quality);
       if(valid&&h.hrValid) cJSON_AddNumberToObject(health,"hr_bpm",h.hr); else cJSON_AddNullToObject(health,"hr_bpm");
       if(valid&&h.spo2Valid) cJSON_AddNumberToObject(health,"spo2_pct",h.spo2); else cJSON_AddNullToObject(health,"spo2_pct");
       cJSON_AddNumberToObject(health,"sqi",fresh?h.sqi/100.0:0);
@@ -403,10 +425,13 @@ void imuTask(void*) {
     if(!ready&&now>=retry) { ready=imu.begin();retry=now+1000; }
     auto sample=imu.sample(now); if(!sample.valid) ready=false;
     portENTER_CRITICAL(&sourceMux);sources.imu=sample;portEXIT_CRITICAL(&sourceMux);
-    portENTER_CRITICAL(&safetyMux);safety.imu(sample.valid,sample.calibrated,sample.tiltFault,now);portEXIT_CRITICAL(&safetyMux);
+    portENTER_CRITICAL(&safetyMux);
+    safety.imu(sample.valid,sample.calibrated,sample.tiltFault,now,sample.sampleMs);
+    if(sample.valid&&!sample.held&&sample.calibrated&&!sample.tiltFault) safety.updateGestureTurn(sample.yaw,now);
+    portEXIT_CRITICAL(&safetyMux);
     if(now-lastReport>=1000) {
       lastReport=now;
-      Serial.printf("{\"type\":\"imu_status\",\"valid\":%s,\"calibrated\":%s,\"tilt_fault\":%s,\"yaw\":%.3f,\"pitch\":%.3f,\"roll\":%.3f,\"bias_dps\":[%.4f,%.4f,%.4f]}\n",sample.valid?"true":"false",sample.calibrated?"true":"false",sample.tiltFault?"true":"false",sample.yaw,sample.pitch,sample.roll,sample.biasX,sample.biasY,sample.biasZ);
+      Serial.printf("{\"type\":\"imu_status\",\"address\":\"0x%02X\",\"valid\":%s,\"calibrated\":%s,\"tilt_fault\":%s,\"yaw\":%.3f,\"pitch\":%.3f,\"roll\":%.3f,\"bias_dps\":[%.4f,%.4f,%.4f],\"accel_g\":[%.4f,%.4f,%.4f],\"gyro_dps\":[%.4f,%.4f,%.4f]}\n",imu.address(),sample.valid?"true":"false",sample.calibrated?"true":"false",sample.tiltFault?"true":"false",sample.yaw,sample.pitch,sample.roll,sample.biasX,sample.biasY,sample.biasZ,sample.ax,sample.ay,sample.az,sample.gx,sample.gy,sample.gz);
     }
     vTaskDelayUntil(&wake,pdMS_TO_TICKS(10));
   }
@@ -456,7 +481,7 @@ void safetyTask(void*) {
 } // namespace
 
 uint64_t wirelessNowMs() { return uint64_t(esp_timer_get_time())/1000; }
-void wirelessGesture(const char* label,float score,bool accepted,uint32_t inferMs) {
+void wirelessGesture(const char* label,float score,bool accepted,bool actionEligible,bool held,uint64_t ageMs,uint32_t inferMs) {
   const auto now=wirelessNowMs();
   portENTER_CRITICAL(&safetyMux); safety.cameraPacket(now); portEXIT_CRITICAL(&safetyMux);
   char upper[24]; size_t n=0;
@@ -464,8 +489,34 @@ void wirelessGesture(const char* label,float score,bool accepted,uint32_t inferM
   upper[n]=0;
   portENTER_CRITICAL(&sourceMux);
   memcpy(sources.label,upper,n+1); sources.score=score; sources.accepted=accepted;
+  sources.gestureHeld=held;sources.gestureFreshMs=now>=ageMs?now-ageMs:0;
   sources.inferMs=inferMs; sources.gestureMs=now; ++sources.gestureSeq;
   portEXIT_CRITICAL(&sourceMux);
+  // Display hysteresis may temporarily hold a label through detector gaps.  Only
+  // fresh, directly supported stable frames are allowed to arm motion actions.
+  if(CAREROVER_STAGE<4 || CAREROVER_INTEGRATION<3) return;
+  const auto action=gestureActions.update(actionEligible,upper,now);
+  if(action==GestureAction::None) return;
+  const char* error=nullptr;
+  if(action==GestureAction::StartFollow) {
+    portENTER_CRITICAL(&safetyMux); error=safety.autonomousFollow(now); portEXIT_CRITICAL(&safetyMux);
+    pendingGestureFollowUntil=error&&!strcmp(error,"TARGET_NOT_READY")?now+2000:0;
+    pendingGestureStopSequence=readSafety(now).stopSequence;
+  } else if(action==GestureAction::Stop) {
+    pendingGestureFollowUntil=0;
+    portENTER_CRITICAL(&safetyMux); safety.autonomousStop(now); portEXIT_CRITICAL(&safetyMux);
+  } else {
+    pendingGestureFollowUntil=0;
+    ImuSample imu;
+    portENTER_CRITICAL(&sourceMux); imu=sources.imu; portEXIT_CRITICAL(&sourceMux);
+    if(!imu.valid||!imu.calibrated||imu.tiltFault) error="IMU_NOT_READY";
+    else {
+      portENTER_CRITICAL(&safetyMux);
+      error=safety.autonomousTurn(action==GestureAction::TurnClockwise,imu.yaw,now);
+      portEXIT_CRITICAL(&safetyMux);
+    }
+  }
+  Serial.printf("{\"type\":\"gesture_action\",\"label\":\"%s\",\"ok\":%s,\"error\":\"%s\"}\n",upper,error?"false":"true",error?error:"");
 }
 void wirelessHealth(const WirelessHealth& h) {
   portENTER_CRITICAL(&sourceMux);
@@ -500,7 +551,7 @@ void wirelessBegin() {
     ServoCalibration calibration{};calibrationReady=loadMotionCalibration(calibration);
     safety.configureHardware(true,calibrationReady);
     if(CAREROVER_INTEGRATION>=2 && calibrationReady) {
-      const uint8_t pins[4]={10,11,12,13};driveReady.store(drive.begin(pins,calibration));
+      driveReady.store(drive.begin(MOTION_SERVO_PINS,calibration));
       if(!driveReady.load()) safety.fault(true,wirelessNowMs());
     }
     if(xTaskCreate(imuTask,"imu",4096,nullptr,3,nullptr)!=pdPASS) safety.fault(true,wirelessNowMs());
@@ -546,10 +597,17 @@ void wirelessVision(const carerover::VisionPacket& p,bool resync) {
   portENTER_CRITICAL(&safetyMux);
   if(resync) safety.cameraReset(p.receivedMs);
   safety.cameraPacket(p.receivedMs);
-  if(p.kind=='P') safety.person(p);
+  if(p.kind=='P') {
+    safety.person(p);
+    if(pendingGestureFollowUntil) {
+      if(p.receivedMs>pendingGestureFollowUntil || safety.snapshot(p.receivedMs).stopSequence!=pendingGestureStopSequence) pendingGestureFollowUntil=0;
+      else if(p.found&&p.score>=SafetyController::PersonAcceptScoreMilli&&!safety.autonomousFollow(p.receivedMs)) pendingGestureFollowUntil=0;
+    }
+  }
   portEXIT_CRITICAL(&safetyMux);
   portENTER_CRITICAL(&sourceMux);
-  if(p.kind=='P') { sources.person=p;sources.personSeen=true; }
+  if(resync)sources.displayTrack.reset();
+  if(p.kind=='P') { sources.person=p;sources.personSeen=true;if(tuning::balanced)sources.displayTrack.update(p); }
   if(!sources.fpsStart) sources.fpsStart=p.receivedMs;
   ++sources.resultCount;
   if(p.receivedMs-sources.fpsStart>=1000) {
