@@ -8,6 +8,7 @@
 - 最近完成：主控三组、CAM 两组 compile-only 构建、本机浏览器 Mock 场景均 PASS；COM6 只读捕获确认当前运行的是主控跟随固件；未烧录
 - 下一步：保持舵机电源断开/车轮架空，重新枚举并核对 CAM 串口与两板 FQBN/Flash/PSRAM；身份完全匹配且用户明确授权后，先做整片 Flash/NVS 备份，再进入 W2
 - 阻塞/待用户提供：COM6 可读到主控日志，但 CAM 尚未在本轮识别；不能据历史资料猜测 CAM 端口、FQBN 或直接烧录。W1 备份需用户确认现场安全状态和目标板
+- 版本同步：本地提交 `922ed6d` 已生成；推送到 GitHub 因本机 Git Credential Manager 无可用凭据而被拒绝，待用户在本机完成 GitHub 登录后重试，未使用强制推送
 - 最近修改及原因：仅补充本轮 Windows 可复现证据；尚未修改产品源码
 - 下一条命令或人工操作：在舵机 5 V 断开、车轮架空条件下连接主控和 CAM USB；只做端口/identity 盘点，不立即烧录
 
@@ -63,6 +64,7 @@
 - 在不触发 reset、不开启 DTR/RTS 脉冲、不写入串口的前提下，以 115200 波特率只读 COM6 5 秒，捕获 62 行。日志连续包含 `wireless_status`、`imu_status`、`health`、`gesture`、`person` 和 `vision_link`：`firmware=fffc41be9b0db516-s5-follow`、`stage=5`、`backend=tracking`、`ap=true`、`imu address=0x68 valid=true calibrated=true`，因此 COM6 可确认是当前主控而非 CAM。
 - 该捕获仅证明串口身份和运行状态：没有读取 Flash ID、没有整片备份、没有烧录、没有证明实物运动/人物框或无线网页验收。`health` 当时为 `no_finger`、`person found=false` 属于现场输入状态，不判为产品故障。
 - COM6 捕获摘要仍保留工具给出的 `hardware_acceptance=NOT EVALUATED`；下一步是现场确认 CAM 单独端口和板型，再在舵机断电/车轮架空条件下执行 W1 备份。
+- 版本同步：尝试 `git push origin feat/main-wireless` 返回“unable to get password from user”；提交仍安全保存在本地，远端尚未包含 `922ed6d`。
 
 ## 2026-09-12 超声波集成增量
 
