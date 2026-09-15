@@ -219,7 +219,7 @@ export function isTelemetryStale(nowMs = Date.now()) {
 }
 
 export function isPersonStale(nowMs = Date.now()) {
-  return (nowMs - state.vision.lastPersonTs) > (state.vision.person?.predicted ? 700 : CONFIG.VISION_STALE_MS);
+  return (nowMs - state.vision.lastPersonTs) > CONFIG.VISION_STALE_MS;
 }
 
 export function isGestureStale(nowMs = Date.now()) {

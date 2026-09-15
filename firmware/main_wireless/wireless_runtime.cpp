@@ -65,10 +65,13 @@ struct Sources {
   uint64_t fpsStart=0;
   float aiFps=0;
   char label[24] = "NONE";
+  char displayLabel[24] = "NONE";
   float score = 0;
+  float displayScore = 0;
   bool accepted = false;
+  bool displayAccepted = false;
   uint32_t inferMs = 0, gestureSeq = 0, healthSeq = 0, ppgSeq = 0;
-  uint64_t gestureMs = 0, ppgMs = 0;
+  uint64_t gestureMs = 0, displayGestureMs = 0, ppgMs = 0;
   uint32_t ppg[5] = {};
 } sources;
 uint32_t partialPpg[5] = {};
@@ -341,22 +344,26 @@ void publish(void*) {
     auto* vision=cJSON_AddObjectToObject(j,"vision");
     cJSON_AddNumberToObject(vision,"image_width",320);cJSON_AddNumberToObject(vision,"image_height",240);
     cJSON_AddNumberToObject(vision,"ai_fps",state.camera?source.aiFps:0);
-    const bool gestureFresh=source.gestureSeq && now-source.gestureMs<1000;
-    if(c.gestureSeq!=source.gestureSeq || c.gestureFresh!=gestureFresh) {
+    const bool displayGestureFresh=source.displayAccepted && now>=source.displayGestureMs &&
+      now-source.displayGestureMs<tuning::GestureDisplayHoldMs;
+    if(c.gestureSeq!=source.gestureSeq || c.gestureFresh!=displayGestureFresh) {
       auto* gesture=cJSON_AddObjectToObject(vision,"gesture");
-      cJSON_AddStringToObject(gesture,"label",gestureFresh&&source.accepted?source.label:"NONE");
-      cJSON_AddNumberToObject(gesture,"confidence",gestureFresh?source.score:0);
-      cJSON_AddBoolToObject(gesture,"stable",gestureFresh&&source.accepted);
-      cJSON_AddBoolToObject(gesture,"held",gestureFresh&&source.accepted&&source.gestureHeld);
-      cJSON_AddNumberToObject(gesture,"age_ms",double(now-source.gestureFreshMs));
-      c.gestureSeq=source.gestureSeq;c.gestureFresh=gestureFresh;
+      cJSON_AddStringToObject(gesture,"label",displayGestureFresh?source.displayLabel:"NONE");
+      cJSON_AddNumberToObject(gesture,"confidence",displayGestureFresh?source.displayScore:0);
+      cJSON_AddBoolToObject(gesture,"stable",displayGestureFresh);
+      cJSON_AddBoolToObject(gesture,"held",displayGestureFresh&&source.gestureHeld);
+      cJSON_AddNumberToObject(gesture,"age_ms",displayGestureFresh?double(now-source.displayGestureMs):0);
+      c.gestureSeq=source.gestureSeq;c.gestureFresh=displayGestureFresh;
     }
     if(CAREROVER_INTEGRATION) {
-      auto p=tuning::balanced?source.displayTrack.view(now):source.person;
-      const uint64_t age=source.personSeen&&now>=p.receivedMs?now-p.receivedMs:700;
-      const bool predicted=tuning::balanced&&(age>=490||!source.person.found||source.person.seq!=p.seq);
-      if(tuning::balanced&&!predicted)p=source.displayTrack.view(p.receivedMs);
-      const bool found=source.personSeen&&age<(tuning::balanced?700:490)&&p.found;
+      // Use the bounded Kalman display track for every tuning profile. A
+      // transient detector miss should not erase the last box; this prediction
+      // is display-only and is never passed to the motion controller.
+      auto p=source.displayTrack.view(now);
+      const uint64_t age=source.personSeen&&now>=p.receivedMs?now-p.receivedMs:tuning::PersonDisplayMs;
+      const bool predicted=source.personSeen &&
+        ((now>=source.person.receivedMs && now-source.person.receivedMs>150) || !source.person.found);
+      const bool found=source.displayTrack.ready(now)&&age<tuning::PersonDisplayMs&&p.found;
       auto* person=cJSON_AddObjectToObject(vision,"person");
       cJSON_AddBoolToObject(person,"found",found);
       cJSON_AddBoolToObject(person,"predicted",found&&predicted);
@@ -368,7 +375,7 @@ void publish(void*) {
       cJSON_AddStringToObject(video,"stream_url","http://192.168.4.2/stream");cJSON_AddStringToObject(video,"protocol","mjpeg");
       cJSON_AddNumberToObject(video,"source_width",320);cJSON_AddNumberToObject(video,"source_height",240);
       auto* imu=cJSON_AddObjectToObject(j,"imu"); const auto& i=source.imu;
-      const bool fresh=i.valid&&now>=i.sampleMs&&now-i.sampleMs<100;
+      const bool fresh=i.valid&&now>=i.sampleMs&&now-i.sampleMs<tuning::ImuSafetyMs;
       cJSON_AddBoolToObject(imu,"valid",fresh);cJSON_AddBoolToObject(imu,"calibrated",i.calibrated);
       cJSON_AddBoolToObject(imu,"tilt_fault",i.tiltFault);
       cJSON_AddBoolToObject(imu,"held",i.held);cJSON_AddBoolToObject(imu,"warning_tilt",i.warningTilt);
@@ -489,6 +496,18 @@ void wirelessGesture(const char* label,float score,bool accepted,bool actionElig
   upper[n]=0;
   portENTER_CRITICAL(&sourceMux);
   memcpy(sources.label,upper,n+1); sources.score=score; sources.accepted=accepted;
+  const bool usable = accepted && strcmp(upper,"NO_GESTURE") && strcmp(upper,"NO_HAND");
+  if(usable) {
+    memcpy(sources.displayLabel,upper,n+1);
+    sources.displayScore=score;
+    sources.displayAccepted=true;
+    sources.displayGestureMs=now;
+  } else if(sources.displayAccepted && now>=sources.displayGestureMs &&
+            now-sources.displayGestureMs>=tuning::GestureDisplayHoldMs) {
+    sources.displayAccepted=false;
+    sources.displayLabel[0]='\0';
+    sources.displayScore=0;
+  }
   sources.gestureHeld=held;sources.gestureFreshMs=now>=ageMs?now-ageMs:0;
   sources.inferMs=inferMs; sources.gestureMs=now; ++sources.gestureSeq;
   portEXIT_CRITICAL(&sourceMux);
@@ -607,7 +626,14 @@ void wirelessVision(const carerover::VisionPacket& p,bool resync) {
   portEXIT_CRITICAL(&safetyMux);
   portENTER_CRITICAL(&sourceMux);
   if(resync)sources.displayTrack.reset();
-  if(p.kind=='P') { sources.person=p;sources.personSeen=true;if(tuning::balanced)sources.displayTrack.update(p); }
+  if(p.kind=='P') {
+    sources.person=p;
+    sources.personSeen=true;
+    // Keep the UI track alive through a single invalid detector frame. The
+    // filtered prediction is display-only; follow commands still use the raw
+    // accepted source and its freshness gate.
+    sources.displayTrack.update(p);
+  }
   if(!sources.fpsStart) sources.fpsStart=p.receivedMs;
   ++sources.resultCount;
   if(p.receivedMs-sources.fpsStart>=1000) {

@@ -12,6 +12,8 @@
 - 最近修改及原因：仅补充本轮 Windows 可复现证据；尚未修改产品源码
 - 下一条命令或人工操作：保持舵机 5 V 断开、车轮架空；电脑连接 `CareRover-EE68`（密码 `88888888`），打开 `http://192.168.4.1/?transport=ws&video=mjpeg`，执行网页 observe。需要运动时必须先由用户明确授权并保留急停可达。
 
+- 软件修复待部署：当前已完成一轮“手动模式/姿态/视觉显示/手势响应”改进并通过主机回归；新主控和 CAM DEMO_BALANCED 设备包需用户明确授权后再烧录，现有板上仍是上一轮 SAFE_BASELINE。
+
 ## 环境与设备
 
 | 项目 | 实际值/证据 |
@@ -95,6 +97,12 @@
 
 - 主控串口抓取证明 `ap=true`、固件 `6123d4056525afc4-s5-follow`、IMU `0x68 valid=true calibrated=true`；当前 Windows Wi-Fi 仍连接 `Tsinghua-Secure`，未擅自切换网络，因此网页 observe 尚未执行。
 - `git push origin feat/main-wireless` 本轮再次尝试时因 HTTPS connection reset 失败；本地提交 `b7955c9` 已保留，未使用强制推送。待网络稳定或用户完成 GitHub 凭据后重试。
+
+### 2026-09-15 手动/姿态/视觉回归修复（尚未烧录）
+
+- 根因：主控 `SafetyController::tick()` 原先在 CAM 来源超过 490 ms、IMU 来源超过 100 ms 或滤波器瞬时无效时直接 `stop()`；模式被置为 `IDLE` 后，网页下一包非零速度自然收到 `NOT_IN_MANUAL`。视觉发布在 SAFE_BASELINE 直接采用原始人脸包，单帧漏检就清框。
+- 修复：CAM/人物来源门限调整为 900 ms；IMU 新鲜度调整为 180 ms，单次 I²C/坏帧在窗口内保留最近健康状态；倾角改为 55°、恢复 42°、持续 400 ms；`BoxTrack` 改为有界常速度 Kalman（仅显示/关联，不驱动车轮），所有调优档均启用短时框保持；手势显示独立保持 2.4 s/无手 1.5 s；CAM 调度改为两帧手势一帧人脸，提高手势帧率。
+- 回归：`tools/check_firmware.py` 全部测试 PASS；`npm test` 21/21 PASS。新主控包 `build/stage5-follow-bd75ab23c459ce7b-device`、新 CAM 包 `build/cam-stream-demo_balanced-windows_baseline_confirmed` 均已 compile-only 构建，尚未写入设备。
 
 ## 2026-09-12 超声波集成增量
 

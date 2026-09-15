@@ -10,7 +10,7 @@ using namespace carerover;
 int main(){
   GestureDisplay g(350,180,2,2,8,4);
   g.update(true,"LIKE",480,100);g.update(true,"LIKE",120,400);g.update(true,"LIKE",460,700);
-  if(tuning::balanced){assert(g.accepted()&&!g.holding());g.update(true,"no_gesture",0,1000);assert(g.accepted()&&g.holding());g.update(false,"no_hand",0,1100);g.update(false,"no_hand",0,2000);assert(!g.accepted());}
+  if(tuning::balanced){assert(g.accepted()&&!g.holding());g.update(true,"no_gesture",0,1000);assert(g.accepted()&&g.holding());g.update(false,"no_hand",0,1100);g.update(false,"no_hand",0,2800);assert(!g.accepted());}
   else assert(!g.accepted());
   GestureActionLatch action(4,3,true);
   assert(action.update(true,"LIKE",100)==GestureAction::None);
@@ -35,7 +35,7 @@ int main(){
   auto distant=face;distant.x0=290;distant.x1=310;assert(box.cost(distant,420)>=1000);
   if(tuning::balanced){ImuFilter imu;for(unsigned t=10;t<=5100;t+=10)imu.update(0,0,1,0,0,0,t);
     assert(imu.state().calibrated);imu.update(0,0,8,0,0,0,5110);assert(imu.state().valid&&imu.state().held&&!imu.state().tiltFault);assert(imu.state().sampleMs==5100);
-    for(unsigned t=5120;t<=5210;t+=10){imu.update(0,0,8,0,0,0,t);}assert(!imu.state().valid);
+    for(unsigned t=5120;t<=5310;t+=10){imu.update(0,0,8,0,0,0,t);}assert(!imu.state().valid);
   }
   DemoPpg ppg;unsigned firstHr=0,firstSpo2=0;
   for(unsigned n=0;n<500;++n){float wave=std::sin(n*.04f*6.2831853f*1.25f);ppg.sample(uint32_t(100000+1000*wave),uint32_t(120000+2000*wave),40*(n+1));if(!firstHr&&ppg.hr.valid())firstHr=40*(n+1);if(!firstSpo2&&ppg.spo2.valid())firstSpo2=40*(n+1);}
@@ -52,12 +52,13 @@ int main(){
     assert(now<3500);
     if(fault==0)controller.emergency(now+1);
     if(fault==1)controller.network(false,now+1);
-    if(fault==2){VisionPacket miss;miss.seq=now+1;miss.receivedMs=now+1;controller.person(miss);}
-    if(fault==3)controller.imu(false,false,false,now+1);
+    uint64_t checkNow=now+1;
+    if(fault==2){VisionPacket miss;miss.seq=now+1;miss.receivedMs=now+1;controller.person(miss);controller.tick(now+950);checkNow=now+950;}
+    if(fault==3){controller.imu(false,false,false,now+1);controller.tick(now+250);checkNow=now+250;}
     if(fault==4)controller.frontSample(0,false,now+1);
     if(fault==5)controller.disconnect(1,now+1);
     if(fault==6)controller.fault(true,now+1);
-    const auto stopped=controller.snapshot(now+1);assert(stopped.mode==Mode::Idle&&!stopped.target.vx&&!stopped.target.vy&&!stopped.target.wz&&!stopped.front.demoEnabled);
+    const auto stopped=controller.snapshot(checkNow);assert(stopped.mode==Mode::Idle&&!stopped.target.vx&&!stopped.target.vy&&!stopped.target.wz&&!stopped.front.demoEnabled);
   }
   std::cout<<"Demo display votes, action freshness, timed metric hold and gesture arbitration passed\n";
 }

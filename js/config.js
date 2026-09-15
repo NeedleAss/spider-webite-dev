@@ -6,7 +6,7 @@ export const CONFIG = {
   /* ── 时序 / 新鲜度 ─────────────────────────────────────────────────── */
   TELEMETRY_STALE_MS: 1000,   // 超过此时间没收到 telemetry → 判定遥测中断
   HEALTH_STALE_MS: 2500,     // 健康结果约 1 Hz，单独维护新鲜度
-  VISION_STALE_MS: 500,       // 超过此时间没收到新 bbox → 视觉结果标记过期并隐藏框
+  VISION_STALE_MS: 1000,      // 允许一次 CAM 调度/关联间隔，避免画框因单帧漏检闪烁
   PING_INTERVAL_MS: 2000,     // ping 周期（用于测 RTT）
   PING_TIMEOUT_MS: 4000,      // 超过此时间没有 pong → 延迟显示为 --
 

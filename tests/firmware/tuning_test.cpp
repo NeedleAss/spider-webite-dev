@@ -5,6 +5,7 @@
 #include "ppg_rate_estimator.h"
 #include "safety_controller.h"
 #include "signal_state_filters.h"
+#include "box_track.h"
 
 #include <cmath>
 #include <iostream>
@@ -42,7 +43,34 @@ int main() {
   imu.update(-0.574f, 0, 0.819f, 0, 0, 0, 5110);  // one 35-degree acceleration spike
   expect(!imu.state().tiltFault, "brief acceleration tilt must not latch a fault");
   for (int t = 5120; t <= 5330; t += 10) imu.update(-0.707f, 0, 0.707f, 0, 0, 0, t);
-  expect(imu.state().tiltFault, "sustained 45-degree tilt must still stop motion");
+  expect(!imu.state().tiltFault, "45-degree chassis motion must not stop demo motion");
+  for (int t = 5340; t <= 5900; t += 10) imu.update(-0.866f, 0, 0.5f, 0, 0, 0, t);
+  expect(imu.state().tiltFault, "sustained 60-degree tilt must still stop motion");
+
+  SafetyController manual;
+  manual.configureHardware(true, true);
+  manual.network(true, 0);
+  manual.cameraPacket(0);
+  manual.imu(true, true, false, 0);
+  expect(!manual.setMode(7, Mode::Manual, 0), "manual accepts mode with healthy IMU");
+  expect(!manual.velocity(7, .4, 0, 0, 0), "manual accepts first velocity");
+  // CAM alternates gesture/face frames. A single >490 ms gap used to latch
+  // IDLE, making the next joystick packet report NOT_IN_MANUAL.
+  for (uint64_t t = 80; t <= 640; t += 80) {
+    manual.imu(true, true, false, t);
+    manual.velocity(7, .4, 0, 0, t);
+  }
+  expect(manual.snapshot(640).mode == Mode::Manual,
+         "manual remains active across a transient camera scheduling gap");
+
+  BoxTrack displayTrack;
+  displayTrack.update(face(1, 100, 120, 80, 500));
+  displayTrack.update(face(2, 200, 123, 80, 500));
+  VisionPacket missed;
+  missed.kind = 'P'; missed.seq = 3; missed.receivedMs = 300; missed.found = false;
+  displayTrack.update(missed);
+  expect(displayTrack.view(650).found,
+         "display track holds a recent box through one invalid detector frame");
 
   PersonFollowController follow;
   for (int i = 1; i <= 3; ++i) follow.update(face(i, i * 100, 120, 80, 500));

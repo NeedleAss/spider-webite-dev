@@ -54,13 +54,13 @@ int main() {
   }
   {
     auto s = ready(520); assert(!s.setMode(1,Mode::Manual,900)); s.velocity(1,1,0,0,900);
-    s.tick(1010); zero(s,1010); assert(s.snapshot(1010).mode == Mode::Idle);
-    s.cameraPacket(1011); error(s.velocity(1,1,0,0,1012), "NOT_IN_MANUAL");
-    s.setMode(1,Mode::Manual,1013); s.velocity(1,1,0,0,1013);
-    s.network(false,1014); zero(s,1014); s.network(true,1015);
-    error(s.velocity(1,1,0,0,1016), "NOT_IN_MANUAL");
-    s.setMode(1,Mode::Manual,1017); s.velocity(1,1,0,0,1017);
-    s.setMode(1,Mode::Health,1018); zero(s,1018);
+    s.tick(1500); zero(s,1500); assert(s.snapshot(1500).mode == Mode::Idle);
+    s.cameraPacket(1501); error(s.velocity(1,1,0,0,1502), "NOT_IN_MANUAL");
+    s.setMode(1,Mode::Manual,1503); s.velocity(1,1,0,0,1503);
+    s.network(false,1504); zero(s,1504); s.network(true,1505);
+    error(s.velocity(1,1,0,0,1506), "NOT_IN_MANUAL");
+    s.setMode(1,Mode::Manual,1507); s.velocity(1,1,0,0,1507);
+    s.setMode(1,Mode::Health,1508); zero(s,1508);
   }
   {
     auto s = ready(0x100000000ULL); const uint64_t t = 0x100000000ULL;
@@ -72,8 +72,8 @@ int main() {
     if(i%4==0) s.disconnect(1,901);
     if(i%4==1) { s.cameraPacket(1100); s.tick(1140); }
     if(i%4==2) s.network(false,901);
-    if(i%4==3) s.tick(1010);
-    zero(s,1140);
+    if(i%4==3) s.tick(1500);
+    zero(s,1540);
   }
   std::cout << "Safety controller: all assertions passed, including 20 fault scenarios\n";
 }

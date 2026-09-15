@@ -2,7 +2,40 @@
 #include "vision_protocol.h"
 #include <algorithm>
 namespace carerover {
-// Constant-velocity alpha-beta tracking for display and association only.
+// Constant-velocity Kalman tracking for display and association only.  The
+// filtered box is never used as a motion source; wheel commands still require
+// a fresh accepted detector measurement.
+struct ScalarKalman {
+  bool initialized = false;
+  float x = 0, v = 0;
+  float p00 = 25, p01 = 0, p11 = 100;
+
+  void reset() { *this = ScalarKalman{}; }
+  void init(float value) { initialized = true; x = value; v = 0; p00 = 25; p01 = 0; p11 = 100; }
+  void predict(float dt, float processNoise) {
+    if (!initialized) return;
+    dt = std::clamp(dt, 0.001f, 1.0f);
+    x += v * dt;
+    const float oldP01 = p01;
+    p00 += dt * (2.0f * oldP01 + dt * p11) + processNoise * dt * dt;
+    p01 += dt * p11;
+    p11 += processNoise;
+  }
+  void update(float measurement, float measurementNoise) {
+    if (!initialized) { init(measurement); return; }
+    const float innovation = measurement - x;
+    const float s = std::max(0.001f, p00 + measurementNoise);
+    const float k0 = p00 / s;
+    const float k1 = p01 / s;
+    x += k0 * innovation;
+    v += k1 * innovation;
+    const float oldP01 = p01;
+    p00 = std::max(0.0001f, (1.0f - k0) * p00);
+    p01 = (1.0f - k0) * oldP01;
+    p11 = std::max(0.0001f, p11 - k1 * oldP01);
+  }
+};
+
 class BoxTrack {
  public:
   void reset(){*this=BoxTrack{};}
@@ -24,12 +57,12 @@ class BoxTrack {
     if(have_&&(p.seq==last_.seq||p.receivedMs<=last_.receivedMs))return false;
     if(cost(p,p.receivedMs)>=1000)return false;
     const float x=(p.x0+p.x1)*.5f,y=(p.y0+p.y1)*.5f,a=std::log(float((p.x1-p.x0)*(p.y1-p.y0)));
-    if(!ready(p.receivedMs)){cx_=x;cy_=y;area_=a;vx_=vy_=va_=0;}
-    else{
-      const float dt=std::max(.01f,float(p.receivedMs-last_.receivedMs)/1000),alpha=p.score>=450?.55f:.25f;
-      const float rx=x-(cx_+vx_*dt),ry=y-(cy_+vy_*dt),ra=a-(area_+va_*dt);
-      cx_+=vx_*dt+alpha*rx;cy_+=vy_*dt+alpha*ry;area_+=va_*dt+alpha*ra;
-      vx_=std::clamp(vx_+.10f*rx/dt,-160.f,160.f);vy_=std::clamp(vy_+.10f*ry/dt,-120.f,120.f);va_=std::clamp(va_+.10f*ra/dt,-1.f,1.f);
+    if(!ready(p.receivedMs)){cx_.init(x);cy_.init(y);area_.init(a);}
+    else {
+      const float dt=std::max(.01f,float(p.receivedMs-last_.receivedMs)/1000);
+      cx_.predict(dt,180.f); cy_.predict(dt,120.f); area_.predict(dt,1.5f);
+      const float noise=p.score>=450?4.f:16.f;
+      cx_.update(x,noise); cy_.update(y,noise); area_.update(a,p.score>=450?.04f:.16f);
     }
     last_=p;have_=true;return true;
   }
@@ -37,12 +70,14 @@ class BoxTrack {
     VisionPacket p=last_;if(!ready(now)){p.found=false;return p;}
     const float dt=std::min(.7f,float(now-last_.receivedMs)/1000);
     const float ratio=float(last_.x1-last_.x0)/float(last_.y1-last_.y0);
-    const float a=std::exp(std::clamp(area_+va_*dt,0.f,11.25f));
+    auto xFilter=cx_, yFilter=cy_, aFilter=area_;
+    xFilter.predict(dt,180.f); yFilter.predict(dt,120.f); aFilter.predict(dt,1.5f);
+    const float a=std::exp(std::clamp(aFilter.x,0.f,11.25f));
     const float w=std::min(320.f,std::sqrt(a*ratio)),h=std::min(240.f,std::sqrt(a/ratio));
-    const float x=std::clamp(cx_+vx_*dt,w/2,320-w/2),y=std::clamp(cy_+vy_*dt,h/2,240-h/2);
+    const float x=std::clamp(xFilter.x,w/2,320-w/2),y=std::clamp(yFilter.x,h/2,240-h/2);
     p.x0=uint16_t(x-w/2);p.x1=uint16_t(x+w/2);p.y0=uint16_t(y-h/2);p.y1=uint16_t(y+h/2);return p;
   }
  private:
-  VisionPacket last_;bool have_=false;float cx_=0,cy_=0,area_=0,vx_=0,vy_=0,va_=0;
+  VisionPacket last_;bool have_=false;ScalarKalman cx_,cy_,area_;
 };
 }

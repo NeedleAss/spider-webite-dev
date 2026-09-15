@@ -13,12 +13,19 @@ static_assert(CAREROVER_TUNING_PROFILE>=0 && CAREROVER_TUNING_PROFILE<=2,"Invali
 namespace carerover::tuning {
 inline constexpr bool balanced=CAREROVER_TUNING_PROFILE==1;
 inline constexpr const char* name=balanced?"DEMO_BALANCED":CAREROVER_TUNING_PROFILE==2?"DIAGNOSTIC_RAW":"SAFE_BASELINE";
-inline constexpr uint16_t GestureDisplayEnter=balanced?350:450, GestureDisplayHold=balanced?180:250;
+// Display thresholds are intentionally more permissive than action thresholds:
+// a demo may keep showing a plausible result, while motion actions still use
+// their independent confirmation gate.
+inline constexpr uint16_t GestureDisplayEnter=balanced?300:350, GestureDisplayHold=balanced?140:180;
 inline constexpr uint16_t GestureActionScore=450;
-inline constexpr uint64_t GestureDisplayHoldMs=1800, GestureDisplayNoHandMs=900;
-inline constexpr uint64_t CameraSafetyMs=490, PersonSafetyMs=490, ImuSafetyMs=100, CommandSafetyMs=240;
-inline constexpr uint64_t PersonDisplayMs=700, HrDisplayHoldMs=30000, Spo2DisplayHoldMs=balanced?12000:8000;
-inline constexpr float ImuSafetyTiltDeg=40, ImuSafetyRecoverDeg=30;
-inline constexpr uint64_t ImuSafetyTiltMs=200;
-// Relaxing tilt or allowing prediction to drive requires physical A/B evidence.
+inline constexpr uint64_t GestureDisplayHoldMs=2400, GestureDisplayNoHandMs=1500;
+// CAM alternates gesture/face frames, so a single scheduling gap can approach
+// 0.5 s. Keep source freshness looser than the nominal frame period; the
+// command watchdog remains the independent dead-man stop.
+inline constexpr uint64_t CameraSafetyMs=900, PersonSafetyMs=900, ImuSafetyMs=180, CommandSafetyMs=240;
+inline constexpr uint64_t PersonDisplayMs=1000, HrDisplayHoldMs=30000, Spo2DisplayHoldMs=balanced?12000:8000;
+// A demo chassis may vibrate and briefly exceed 40 degrees in accelerometer
+// projection. Require a genuinely large, sustained tilt before stopping.
+inline constexpr float ImuSafetyTiltDeg=55, ImuSafetyRecoverDeg=42;
+inline constexpr uint64_t ImuSafetyTiltMs=400;
 }

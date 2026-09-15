@@ -165,7 +165,7 @@ extern "C" void app_main() {
   wifiBegin();ESP_ERROR_CHECK(videoBegin()?ESP_OK:ESP_FAIL);
 #endif
   BoxTrack association;uint32_t associationSeq=0;
-  bool faceTurn=false,tracking=false;VisionPacket previous;
+  bool tracking=false;uint8_t frameTurn=0;VisionPacket previous;
   uint32_t handCount=0,faceCount=0,captureDrops=0;int64_t epoch=esp_timer_get_time(),lastJpeg=0;
   uint32_t handMs=0,faceMs=0,previousJpeg=0,minHeap=UINT32_MAX,minPsram=UINT32_MAX;
   for(;;) {
@@ -173,6 +173,10 @@ extern "C" void app_main() {
     const dl::image::img_t image={.data=frame->buf,.width=uint16_t(frame->width),.height=uint16_t(frame->height),.pix_type=dl::image::DL_IMAGE_PIX_TYPE_RGB565BE};
     const int64_t began=esp_timer_get_time();
 #if CONFIG_CAREROVER_FACE
+    // Gesture inference is the interactive path. Run two gesture frames for
+    // every face frame; the face cadence remains comfortably inside the
+    // relaxed 900 ms source deadline while gesture response improves.
+    const bool faceTurn=(frameTurn++%3U)==2U;
     if(faceTurn) {
       auto& results=faces.run(image);VisionPacket selected;float best=-1001,second=-1001;
       for(const auto& result:results) {
@@ -201,7 +205,6 @@ extern "C" void app_main() {
       }
       send(p,began);++handCount;handMs=uint32_t((esp_timer_get_time()-began)/1000);
     }
-    faceTurn=!faceTurn;
 #if CONFIG_CAREROVER_VIDEO
     if(esp_timer_get_time()-lastJpeg>=200000){videoPublish(frame);lastJpeg=esp_timer_get_time();}
 #endif

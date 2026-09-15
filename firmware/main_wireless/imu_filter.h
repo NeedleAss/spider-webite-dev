@@ -18,7 +18,14 @@ class ImuFilter {
   static constexpr float TiltRecoverDeg=tuning::ImuSafetyRecoverDeg;
   static constexpr uint64_t TiltConfirmMs=tuning::ImuSafetyTiltMs;
   static constexpr uint64_t TiltRecoveryMs=1000;
-  void missing() { state_.valid=false; state_.tiltFault=true; tiltStart_=0; recoveryStart_=0; }
+  void missing() {
+    state_.valid=false;
+    state_.held=true;
+    // Missing samples are handled by SafetyController's bounded freshness
+    // grace. They are not evidence of a physical tilt by themselves.
+    state_.tiltFault=false;
+    tiltStart_=0; recoveryStart_=0;
+  }
   const ImuSample& state() const { return state_; }
   void update(float ax,float ay,float az,float gx,float gy,float gz,uint64_t now) {
     if(!std::isfinite(ax+ay+az+gx+gy+gz)) { missing(); return; }

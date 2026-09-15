@@ -16,9 +16,9 @@ test('prediction age comes from last measured seq and expires even with repeated
   store.resetForDisconnect();const t=Date.now();
   const message=normalizeTelemetry({vision:{person:{found:true,predicted:true,seq:8,age_ms:600,x:100,y:60,w:80,h:80,confidence:.5}}});
   store.applyTelemetry(message);assert.equal(store.getState().vision.person.predicted,true);
-  assert.equal(store.isPersonStale(t),false);assert.equal(store.isPersonStale(t+110),true);
+  assert.equal(store.isPersonStale(t),false);assert.equal(store.isPersonStale(t+410),true);
   store.applyTelemetry(normalizeTelemetry({vision:{person:{found:true,predicted:true,seq:8,age_ms:0}}}));
-  assert.equal(store.isPersonStale(t+110),true);
+  assert.equal(store.isPersonStale(t+410),true);
 });
 test('gesture holding is distinct from confidence and IMU rejected count survives decoding',()=>{
   const message=normalizeTelemetry({vision:{gesture:{label:'LIKE',confidence:.18,stable:true,held:true,age_ms:420}},imu:{valid:true,held:true,rejected_frames:3,age_ms:40}});

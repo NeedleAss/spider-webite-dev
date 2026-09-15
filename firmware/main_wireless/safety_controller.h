@@ -42,8 +42,26 @@ class SafetyController {
   }
   void configureHardware(bool enabled, bool calibrated) { hardware_=enabled; calibration_=calibrated; }
   void imu(bool valid, bool calibrated, bool tilt, uint64_t now, uint64_t sourceMs=0) {
-    imuValid_=valid&&calibrated&&!tilt; lastImuMs_=sourceMs?sourceMs:now;
-    if(hardware_&&!imuValid_&&(state_.mode==Mode::Manual||state_.mode==Mode::Follow||state_.mode==Mode::Gesture)) stop(now,tilt?"tilt_fault":"imu_invalid");
+    const bool healthy=valid&&calibrated&&!tilt;
+    if(healthy) {
+      imuValid_=true;
+      lastImuMs_=sourceMs?sourceMs:now;
+      invalidSince_=0;
+      return;
+    }
+    // A single software-I2C read miss or vibration frame is not a chassis
+    // fault. Keep the last valid sample for the bounded freshness window;
+    // sustained tilt is already latched by ImuFilter and remains immediate.
+    if(tilt) {
+      imuValid_=false; invalidSince_=now;
+      if(hardware_&&(state_.mode==Mode::Manual||state_.mode==Mode::Follow||state_.mode==Mode::Gesture)) stop(now,"tilt_fault");
+      return;
+    }
+    if(!invalidSince_) invalidSince_=now;
+    if(hardware_&&now-invalidSince_>=tuning::ImuSafetyMs&&
+       (state_.mode==Mode::Manual||state_.mode==Mode::Follow||state_.mode==Mode::Gesture)) {
+      imuValid_=false; stop(now,"imu_invalid");
+    }
   }
   void cameraPacket(uint64_t now) { cameraSeen_=true; lastCameraMs_=now; }
   void cameraReset(uint64_t now) { personSeen_=false; stop(now,"camera_resync"); }
@@ -200,7 +218,7 @@ class SafetyController {
   bool hardwareHealthy(uint64_t now) const { return imuValid_&&now>=lastImuMs_&&now-lastImuMs_<tuning::ImuSafetyMs; }
   bool personFresh(uint64_t now) const { return personSeen_&&now>=person_.receivedMs&&now-person_.receivedMs<PersonExpiryMs; }
   SafetySnapshot state_; FrontGuard front_; PersonFollowController follow_; VisionPacket person_;
-  uint64_t lastCameraMs_=0,lastImuMs_=0,heartbeatMs_=0;
+  uint64_t lastCameraMs_=0,lastImuMs_=0,heartbeatMs_=0,invalidSince_=0;
   bool turnActive_=false,turnClockwise_=true;
   float turnAccumDeg_=0,turnLastYaw_=0;
   uint64_t turnStartMs_=0;

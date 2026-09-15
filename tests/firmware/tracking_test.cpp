@@ -57,15 +57,17 @@ void safetyTests() {
   s.heartbeat(2,500);s.computeFollow(549);assert(s.snapshot(549).mode==Mode::Follow);
   s.computeFollow(550);assert(s.snapshot(550).mode==Mode::Idle); // Observer cannot renew.
   s=followReady();s.heartbeat(1,200);s.tick(250);assert(s.snapshot(250).mode==Mode::Idle); // Ping cannot renew controller computation.
-  s=followReady();for(int t=110;t<500;t+=100){s.cameraPacket(t);s.heartbeat(1,t);s.computeFollow(t);}s.tick(500);assert(s.snapshot(500).mode==Mode::Idle); // @G cannot renew person.
+  s=followReady();for(int t=110;t<900;t+=100){s.cameraPacket(t);s.heartbeat(1,t);s.computeFollow(t);}s.tick(920);assert(s.snapshot(920).mode==Mode::Idle); // @G cannot renew person.
   s=followReady();assert(s.velocity(1,.1,0,0,20));s.velocity(1,0,0,0,21);assert(s.snapshot(21).mode==Mode::Idle);
   s=followReady();s.emergency(20);assert(s.snapshot(20).estop);s.clear(1,21);assert(s.snapshot(21).mode==Mode::Idle);
-  s=followReady();s.configureHardware(true,true);s.imu(true,true,false,20);s.tick(119);assert(s.snapshot(119).mode==Mode::Follow);s.tick(120);assert(s.snapshot(120).mode==Mode::Idle);
+  s=followReady();s.configureHardware(true,true);s.imu(true,true,false,20);s.tick(199);assert(s.snapshot(199).mode==Mode::Follow);s.tick(200);assert(s.snapshot(200).mode==Mode::Idle);
 }
 void imuTests() {
   ImuFilter f;for(int t=10;t<=5100;t+=10)f.update(0,0,1,.1f,.2f,.3f,t);
   assert(f.state().calibrated&&f.state().valid);assert(fabs(f.state().biasX-.1f)<.001);
   for(int t=5110;t<=5320;t+=10)f.update(-.707f,0,.707f,0,0,0,t);
+  assert(!f.state().tiltFault);
+  for(int t=5330;t<=5900;t+=10)f.update(-.866f,0,.5f,0,0,0,t);
   assert(f.state().tiltFault);
   for(int t=5330;t<7350;t+=10)f.update(0,0,1,0,0,0,t);
   assert(!f.state().tiltFault);f.missing();assert(!f.state().valid);

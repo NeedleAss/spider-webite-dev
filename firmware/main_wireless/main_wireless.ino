@@ -28,7 +28,7 @@ static constexpr uint32_t PC_BAUD = 115200;
 static constexpr uint32_t CAM_BAUD = 115200;
 static constexpr uint32_t SENSOR_I2C_HZ = 400000;
 static constexpr uint32_t OLED_I2C_HZ = 400000;
-static constexpr uint32_t LINK_TIMEOUT_MS = 490;
+static constexpr uint32_t LINK_TIMEOUT_MS = carerover::tuning::CameraSafetyMs;
 static constexpr uint32_t HEALTH_REPORT_MS = 1000;
 static constexpr uint32_t SENSOR_RETRY_MS = 3000;
 
