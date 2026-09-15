@@ -4,10 +4,10 @@
 
 ## 当前交接点
 
-- 当前阶段：W0 Windows 环境与 compile-only 构建复现（PASS）；W1 已开始，主控 identity 已由只读串口日志确认，待 CAM identity 与实板配置核对
-- 最近完成：主控三组、CAM 两组 compile-only 构建、本机浏览器 Mock 场景均 PASS；COM6 只读捕获确认当前运行的是主控跟随固件；未烧录
-- 下一步：保持舵机电源断开/车轮架空，重新枚举并核对 CAM 串口与两板 FQBN/Flash/PSRAM；身份完全匹配且用户明确授权后，先做整片 Flash/NVS 备份，再进入 W2
-- 阻塞/待用户提供：COM6 可读到主控日志，但 CAM 尚未在本轮识别；不能据历史资料猜测 CAM 端口、FQBN 或直接烧录。W1 备份需用户确认现场安全状态和目标板
+- 当前阶段：W0 Windows 环境与 compile-only 构建复现（PASS）；W1 只读 identity 已确认主控 COM6、CAM COM3，待实板 FQBN/Flash/PSRAM 核对与备份
+- 最近完成：主控三组、CAM 两组 compile-only 构建、本机浏览器 Mock 场景均 PASS；COM6/COM3 均完成 115200 只读捕获；未烧录
+- 下一步：保持舵机电源断开/车轮架空，分别读取两板 Flash ID 并核对 FQBN/Flash/PSRAM；身份完全匹配且用户明确授权后，先做整片 Flash/NVS 备份，再进入 W2
+- 阻塞/待用户提供：当前尚未执行会触发 bootloader 的 `flash-id` 或备份；W1 备份需用户确认现场安全状态和目标板，不能据模板猜测配置
 - 版本同步：本地提交 `922ed6d` 已生成；推送到 GitHub 因本机 Git Credential Manager 无可用凭据而被拒绝，待用户在本机完成 GitHub 登录后重试，未使用强制推送
 - 最近修改及原因：仅补充本轮 Windows 可复现证据；尚未修改产品源码
 - 下一条命令或人工操作：在舵机 5 V 断开、车轮架空条件下连接主控和 CAM USB；只做端口/identity 盘点，不立即烧录
@@ -20,7 +20,7 @@
 | Arduino CLI / Core / 库 / FQBN | Arduino IDE bundled CLI 1.5.1；esp32:esp32 3.3.10；ArduinoJson 7.4.2 等见 `build/environment-report.json`；当前只有 compile-only FQBN，实板 FQBN 待核对 |
 | ESP-IDF / ESP-DL 版本及 commit | ESP-IDF v5.3.4 / `1b459d9c4950395dec12ce19256c73f9a41e306f`；ESP-DL v3.3.11 / `5d9c36063dddbe98b5387828c831d6bbadb1370f`；两者工作树 clean；IDF 自带 CMake 3.30.2、Ninja 1.12.1 |
 | 主控型号、Flash、PSRAM、串口 | 初步确认 COM6 为主控：115200 只读日志含 `wireless_status`（`stage:5`、`backend:tracking`、`ap:true`、`firmware:fffc41be9b0db516-s5-follow`）、`imu_status`、`health`、`gesture`、`person`；Flash/PSRAM/FQBN 尚未用 esptool 读取 |
-| CAM 型号、Flash、PSRAM、串口 | NOT RUN；本轮未捕获到可归属 CAM 的串口日志（COM3 曾短暂显示为 CH340 但打开时已消失，未据此归属） |
+| CAM 型号、Flash、PSRAM、串口 | 初步确认 COM3 为 CAM：115200 只读日志含 CRC 正确的 `@G/@P` 帧和 `cam_metrics`（gesture/face/JPEG 约 2.4–3 FPS，gesture 约 248–249 ms，face 约 37–40 ms，Wi-Fi=true）；Flash/PSRAM/FQBN 尚未用 esptool 读取 |
 | 主控 / CAM profile 路径（不写密码） | 新仓库 local profile 均缺失；旧现场目录存在 `wifi_secrets.h`、`board.local.json`、`cam-board.local.json`，尚未复制，待核对确为同一两块板 |
 | Flash 与 NVS 备份路径、大小、SHA-256 | 待填写 |
 | 接线 / 电源 / 架空状态 | 仅确认 COM6 有主控运行日志；未从串口推断供电/舵机/车轮状态，未操作复位、烧录或运动；现场安全状态仍待用户确认 |
@@ -30,7 +30,7 @@
 | 阶段 | 状态 | 构建版本 | 原始证据路径 | 问题与下一步 |
 |---|---|---|---|---|
 | W0 接收/环境/构建 | PASS | `a7d1f4135c88a114d85a697e994ae9c8dee7ed04` | `build/environment-report.json`；`output/windows/0915-replay.json`；五个 `build/*-check` / `build/cam-*-compile_only` 包；localhost Mock 浏览器记录 | Python/Node/C++/清单/回放、主控三组、CAM 两组及 Mock PASS；全部软件/模拟结果，不能代替实物验收 |
-| W1 设备核对/备份 | PARTIAL | 主控 COM6 已识别；未执行 flash-id、整片 Flash/NVS 备份 | `build/windows/com6-probe.jsonl`（本地产物，未入库） | 等待 CAM 端口/身份和用户现场安全确认；确认后才允许备份，不自动烧录 |
+| W1 设备核对/备份 | PARTIAL | 主控 COM6、CAM COM3 已通过只读协议识别；未执行 flash-id、整片 Flash/NVS 备份 | `build/windows/com6-probe.jsonl`、`build/windows/com3-probe.jsonl`（本地产物，未入库） | 等待用户确认现场安全状态后再做容量核对和备份，不自动烧录 |
 | W2 CAM | NOT RUN | — | — | — |
 | W3 observe | NOT RUN | — | — | — |
 | W4 校准 | NOT RUN | — | — | — |
@@ -65,6 +65,12 @@
 - 该捕获仅证明串口身份和运行状态：没有读取 Flash ID、没有整片备份、没有烧录、没有证明实物运动/人物框或无线网页验收。`health` 当时为 `no_finger`、`person found=false` 属于现场输入状态，不判为产品故障。
 - COM6 捕获摘要仍保留工具给出的 `hardware_acceptance=NOT EVALUATED`；下一步是现场确认 CAM 单独端口和板型，再在舵机断电/车轮架空条件下执行 W1 备份。
 - 版本同步：尝试 `git push origin feat/main-wireless` 返回“unable to get password from user”；提交仍安全保存在本地，远端尚未包含 `922ed6d`。
+
+### 2026-09-15 W1 只读串口身份核对（CAM）
+
+- CAM 重新接入后，Windows PnP 同时显示 `USB-SERIAL CH340 (COM3)` 与主控 `COM6`；COM3 状态为 OK，未再依据端口号猜测，而是读取协议内容确认归属。
+- 在不触发 reset、不开启 DTR/RTS 脉冲、不写入串口的前提下，以 115200 波特率只读 COM3 5 秒，捕获 31 行，其中 28 个 CRC 正确的 `@G/@P` 帧和 3 个 `cam_metrics`。指标显示 gesture 约 2.50–2.86 FPS、face/JPEG 约 2.38–2.99 FPS、gesture 推理约 248–249 ms、face 推理约 37–40 ms、`jpeg_drops=0`、`capture_drops=0`、`wifi=true`，可确认 COM3 为 CAM。
+- 当次画面为空背景：`person_found=0`、`max_person_gap_ms=438`，不能作为人物识别或跟随验收；这次捕获只完成串口身份/链路健康检查。
 
 ## 2026-09-12 超声波集成增量
 
