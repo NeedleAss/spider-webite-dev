@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"><title>CareRover · 从感知到行动</title>
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{"imports":{"three":"./vendor/three/three.module.js"}}</script>
+</head>
+<body>
+<header><a class="brand" href="./" aria-label="CareRover 首页"><span class="mark" aria-hidden="true">c</span>CareRover</a><span class="edition">结构与原理展示 <span class="dot"></span> 离线可用</span></header>
+<main>
+<section class="intro"><p class="eyebrow">SENSE. MOVE. CARE.</p><h1>从感知，到行动。</h1><p class="lede">拆开看，每个零件都有自己的任务。<br>组合在一起，是我们设计的移动健康机器人。</p></section>
+<section class="explorer" aria-label="机器人结构探索">
+<div class="stage-wrap">
+  <div id="stage" class="stage" aria-label="机器人三维模型，可拖动旋转和滚轮缩放">
+    <img id="fallback" src="assets/cad/assembly.png" alt="SolidWorks 保存的机器人装配预览">
+    <span class="stage-note" id="loadStatus" role="status">正在载入真实装配…</span>
+  </div>
+  <div class="stage-caption"><span id="viewLabel">01 / 完整装配</span><span id="rotateHint">拖动旋转 · 滚动缩放</span></div>
+  <div class="toolbar" aria-label="模型控制"><button id="explode" type="button" aria-pressed="false">拆解模型</button><button id="assemble" type="button">完整装配</button><button id="reset" type="button">重置视角</button><label><input id="motion" type="checkbox" checked>原理动画</label></div>
+</div>
+<aside class="detail" aria-live="polite">
+  <div class="detail-top"><span class="eyebrow" id="partCategory">THE WHOLE PICTURE</span><button id="close" aria-label="关闭零件说明" hidden>×</button></div>
+  <span class="part-number" id="partNumber">01 — 15</span><h2 id="partTitle">小小机身，<br>协同运作。</h2>
+  <p id="partDescription">将鼠标移入模型，展开内部结构。点击一个零件，了解它如何参与感知、控制与行动。</p>
+  <div class="principle" id="principle"><span class="signal" aria-hidden="true"></span><div><strong id="principleTitle">真实设计，逐层呈现</strong><p id="principleText">几何与位置来自你们的 SolidWorks 文件。功能动画是原理示意，不代表实时传感器数据。</p></div></div>
+  <p class="detail-hint" id="detailHint">也可以从下方的零件目录开始。</p>
+</aside>
+</section>
+<section class="catalog" aria-labelledby="catalogTitle"><div class="section-title"><div><p class="eyebrow">EXPLORE THE DETAILS</p><h2 id="catalogTitle">每一部分，都有意义。</h2></div><span>15 类零件 · 真实 CAD 网格</span></div><div id="parts" class="parts"></div></section>
+<section class="story" aria-label="系统工作流程"><article><span>01 / 感知</span><h3>看见、测距、测量。</h3><p>相机提供人脸位置与手势结果；超声模块检测前方距离；健康传感器读取接触式光学信号。</p></article><article><span>02 / 判断</span><h3>新鲜的数据，才有依据。</h3><p>主控结合控制模式、有效观测、姿态与停止条件决定输出。失去依据后，运动目标必须归零。</p></article><article><span>03 / 行动</span><h3>让结构完成协作。</h3><p>底盘、舵机与全向轮实现运动；屏幕与网页反馈状态。各功能的实体表现需以现场验收为准。</p></article></section>
+</main>
+<footer><strong>CareRover</strong><p>硬件课程设计 · 结构演示不连接机器人，也不发送运动指令。</p><a href="assets/cad/cad-manifest.json">模型来源与校验清单 ↗</a><p class="cad-note">按保存的装配可见性呈现 20 个实例；第 4 个舵机在源装配中隐藏。颜色为展示配色，尺寸单位为米；原生 CAD 引用与配合仍待核验。</p></footer>
+<noscript>请启用 JavaScript 以探索 3D 模型。上方仍显示原装配预览。</noscript>
+<script type="module" src="app.js"></script>
+</body></html>

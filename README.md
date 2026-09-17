@@ -1,5 +1,7 @@
 > Windows 接手：见 [资源、命令和可复制提示词](docs/WINDOWS_ULTRASONIC_HANDOFF.md)。
 
+> **2026-09-17 最终候选**：停止/失效边界、控制台和真实 CAD 离线展示已更新。先读 [候选与现场验收](docs/FINAL_ACCEPTANCE.md)、[验证记录](docs/FINAL_RESULTS.json)。展示启动见 [presentation/README.md](presentation/README.md)；运动实物验收尚未通过。
+
 > **0915 更新：** 已合并现场修复并加入可选 Demo 优化。先读 [0915 开发与验收记录](docs/0915-demo-development.md)。根目录为当前开发源，原包保持归档；新代码未做本轮实物验收。以下 0912 说明保留为历史环境与联调流程。
 
 > 新增 HC-SR04 前方保护与固定向右单障碍演示绕行：见 [接线、标定门禁与模拟演示](docs/ultrasonic-development.md)。实物引脚和机械参数尚未标定，默认未接入；真实保护与绕行分别验证后启用。

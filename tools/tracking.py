@@ -236,7 +236,7 @@ def capture(args):
 
 def release(args):
     out=Path(args.output).resolve();out.parent.mkdir(parents=True,exist_ok=True)
-    allowed=['firmware','js','css','assets','config','docs','tests','tools','mock','hardware','.github']
+    allowed=['firmware','js','css','assets','config','docs','tests','tools','mock','hardware','.github','presentation']
     files=[ROOT/'index.html',ROOT/'README.md',ROOT/'package.json']
     for name in ['WINDOWS_START_HERE.md','AGENTS.md']:
         if (ROOT/name).exists():files.append(ROOT/name)
