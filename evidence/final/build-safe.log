@@ -1,0 +1,14 @@
+ERROR: Command '['/Applications/Arduino IDE.app/Contents/Resources/app/lib/backend/resources/arduino-cli', 'compile', '--fqbn', 'esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,PSRAM=opi', '--library', '/Users/eddysiangz/Developer/spider-webite-dev/build/deps/sparkfun-1.1.2', '--build-path', '/Users/eddysiangz/Developer/spider-webite-dev/build/stage5-follow-cb46078ba89ec373-check/objects', '--output-dir', '/Users/eddysiangz/Developer/spider-webite-dev/build/stage5-follow-cb46078ba89ec373-check/binaries', '/Users/eddysiangz/Developer/spider-webite-dev/build/stage5-follow-cb46078ba89ec373-check/sketch/main_wireless']' returned non-zero exit status 1.
+Used library                                         Version Path
+Wire                                                 3.3.10  /Users/eddysiangz/Library/Arduino15/packages/esp32/hardware/esp32/3.3.10/libraries/Wire
+SparkFun MAX3010x Pulse and Proximity Sensor Library 1.1.2   /Users/eddysiangz/Developer/spider-webite-dev/build/deps/sparkfun-1.1.2
+Preferences                                          3.3.10  /Users/eddysiangz/Library/Arduino15/packages/esp32/hardware/esp32/3.3.10/libraries/Preferences
+WiFi                                                 3.3.10  /Users/eddysiangz/Library/Arduino15/packages/esp32/hardware/esp32/3.3.10/libraries/WiFi
+Networking                                           3.3.10  /Users/eddysiangz/Library/Arduino15/packages/esp32/hardware/esp32/3.3.10/libraries/Network
+FFat                                                 3.3.10  /Users/eddysiangz/Library/Arduino15/packages/esp32/hardware/esp32/3.3.10/libraries/FFat
+FS                                                   3.3.10  /Users/eddysiangz/Library/Arduino15/packages/esp32/hardware/esp32/3.3.10/libraries/FS
+
+Used platform Version Path
+esp32:esp32   3.3.10  /Users/eddysiangz/Library/Arduino15/packages/esp32/hardware/esp32/3.3.10
+Error during build: fork/exec /Users/eddysiangz/Library/Arduino15/packages/builtin/tools/ctags/5.8-arduino11/ctags: bad CPU type in executable
+

@@ -1,0 +1,15 @@
+SAFE_BASELINE: 7/21 checks passed
+FAIL manual expiry clears output despite ping
+FAIL owner disconnect cancels output
+FAIL network down cancels output
+FAIL network recovery cannot resume
+FAIL person silence zeros but retains follow
+FAIL silent target wait expires periodically
+FAIL follow computation stall cancels output
+FAIL ordinary stop cancels turn activity
+FAIL turn deadline does not require IMU callback
+FAIL tilt blocks readmission
+FAIL missing data cannot clear controller tilt
+FAIL fresh commands cannot override expired IMU
+FAIL unverified calibration rejects motion
+FAIL missing preserves latched tilt

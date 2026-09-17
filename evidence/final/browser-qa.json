@@ -1,0 +1,82 @@
+{
+  "method": "Manual CUA browser interaction plus DOM read-only inspection; screenshots reviewed in conversation",
+  "browser": "Codex in-app Chromium",
+  "date": "2026-09-17",
+  "checks": [
+    {
+      "page": "presentation",
+      "viewport": [
+        1280,
+        720
+      ],
+      "status": "PASS",
+      "cases": [
+        "GLB ready, no console errors/warnings",
+        "assembled/exploded visible",
+        "mouse enters expands, leaves collapses",
+        "camera selected pins expanded",
+        "controller selected by Enter; Escape clears",
+        "local Three.js import paths load",
+        "mouse hover enter and leave directly verified",
+        "keyboard Enter selects controller; Escape clears selection"
+      ]
+    },
+    {
+      "page": "presentation",
+      "viewport": [
+        390,
+        844
+      ],
+      "status": "PASS",
+      "cases": [
+        "all exploded parts fit after camera projection correction",
+        "ultrasonic selection, description and close",
+        "document scrollWidth equals viewport width"
+      ]
+    },
+    {
+      "page": "presentation?static=1",
+      "status": "PASS",
+      "cases": [
+        "saved assembly preview shown",
+        "controller description available without loading Three.js",
+        "3D controls disabled in fallback, preview remains visible"
+      ]
+    },
+    {
+      "page": "console?transport=mock",
+      "viewport": [
+        1280,
+        720
+      ],
+      "status": "PASS",
+      "cases": [
+        "simulation explicitly labelled",
+        "Follow to ordinary stop becomes IDLE and velocity zero",
+        "gesture mode alone remains zero",
+        "ESTOP locks modes",
+        "explicit clear dialog returns IDLE and zero"
+      ]
+    },
+    {
+      "page": "console?transport=mock",
+      "viewport": [
+        390,
+        844
+      ],
+      "status": "PASS",
+      "cases": [
+        "HUD labels readable",
+        "touch dock and emergency stop visible",
+        "document scrollWidth equals viewport width"
+      ]
+    }
+  ],
+  "notRun": [
+    "real touch device",
+    "native CAD",
+    "real hardware",
+    "OS-level reduced-motion toggle; implementation inspected only",
+    "GPU context-loss injection; static fallback mode tested"
+  ]
+}

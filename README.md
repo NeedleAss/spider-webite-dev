@@ -1,4 +1,4 @@
-> Windows 接手：见 [资源、命令和可复制提示词](docs/WINDOWS_ULTRASONIC_HANDOFF.md)。
+> Windows 接手：见 [最终交接入口](WINDOWS_START_HERE.md) 和 [可复制 AI 提示词](docs/FINAL_WINDOWS_AI_PROMPT.md)。复审见 [提示词](docs/FINAL_REVIEW_PROMPT.md)，交付包见 [deliverables](deliverables/)。
 
 > **2026-09-17 最终候选**：停止/失效边界、控制台和真实 CAD 离线展示已更新。先读 [候选与现场验收](docs/FINAL_ACCEPTANCE.md)、[验证记录](docs/FINAL_RESULTS.json)。展示启动见 [presentation/README.md](presentation/README.md)；运动实物验收尚未通过。
 
