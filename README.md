@@ -1,3 +1,5 @@
+> **2026-09-18 V4 产品展示候选**：七章滚动叙事、自制器件外观、正确传感器方向、四舵机目标装配、离线海报和控制台确认语义。先看 [V4 验收/现场表](docs/V4_ACCEPTANCE.md)、[截图录像](evidence/visual-v4/README.md)、[展示启动](presentation/README.md)、[V4 复审提示词](docs/V4_REVIEW_PROMPT.md)。实物门槛仍为 NOT RUN。
+
 > Windows 接手：见 [最终交接入口](WINDOWS_START_HERE.md) 和 [可复制 AI 提示词](docs/FINAL_WINDOWS_AI_PROMPT.md)。复审见 [提示词](docs/FINAL_REVIEW_PROMPT.md)，交付包见 [deliverables](deliverables/)。
 
 > **2026-09-17 最终候选**：停止/失效边界、控制台和真实 CAD 离线展示已更新。先读 [候选与现场验收](docs/FINAL_ACCEPTANCE.md)、[验证记录](docs/FINAL_RESULTS.json)。展示启动见 [presentation/README.md](presentation/README.md)；运动实物验收尚未通过。

@@ -1,3 +1,5 @@
+> **V4 更新入口（2026-09-18）**：本文保留上一轮记录；当前展示、控制台收尾、证据与现场表见 [V4 验收](V4_ACCEPTANCE.md)，复审用 [V4 提示词](V4_REVIEW_PROMPT.md)，实物端用 [V4 Windows 提示词](V4_WINDOWS_AI_PROMPT.md)。原安全门槛继续有效。
+
 # 最终候选版本与现场验收 — 2026-09-17
 
 本候选基于 `feat/main-wireless@058ce89bd1aa5b5da0dbf89101f4625df70ca6df`，在 `codex/final-polish` 开发。保留现有机器人、+X 竖直安装 IMU、2G:1P 调度、DEMO_BALANCED 转向/前后解耦、有限绕障与校准体系。未新增机器人功能，未烧录或控制实物。

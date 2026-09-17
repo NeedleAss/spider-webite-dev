@@ -246,7 +246,7 @@ def release(args):
         for p in (ROOT/directory).rglob('*'):
             if not p.is_file():continue
             if any(x in p.parts for x in ['managed_components','__pycache__','build','.venv']):continue
-            if p.name in {'wifi_secrets.h','front_config.local.h','sdkconfig','sdkconfig.old','build_version.h'} or p.name.endswith('.local.json') or p.suffix in {'.log','.pyc'}:continue
+            if p.name in {'wifi_secrets.h','front_config.local.h','sdkconfig','sdkconfig.old','build_version.h','dependencies.lock'} or p.name.endswith('.local.json') or p.suffix in {'.log','.pyc'}:continue
             files.append(p)
     files=sorted(set(files))
     evidence_root=Path(getattr(args,'evidence_dir',None) or ROOT/'output/evidence').resolve()

@@ -1,0 +1,70 @@
+{
+  "note": "User supplied V3/V4 inputs. PDFs and merchant reference images are retained locally, not redistributed. Embedded source links may refer to attachments unavailable in this repository. No starter math examples were supplied or claimed as rerun.",
+  "files": [
+    {
+      "name": "CareRover_Production_Brief_v4.md",
+      "sha256": "b4cb495a97f51e5bd10cc105ef74b099f6cc51742bcbd31d3afae04ec159e4df",
+      "bytes": 34033
+    },
+    {
+      "name": "CareRover_Production_Brief_v4.pdf",
+      "sha256": "73a1128a36c4b7acb369b27c48db9a27700630e9d90addbfdf5f586870d9d3ea",
+      "bytes": 2496784
+    },
+    {
+      "name": "CareRover_Review_v3.md",
+      "sha256": "b741f5e8c0b45c44171df8f7a80e77af8a647c94501de5d06fac1fdc98e8ec30",
+      "bytes": 49294
+    },
+    {
+      "name": "CareRover_Review_v3.pdf",
+      "sha256": "1e6c76c327bdaf2410a140d5bcf4fca7a7c9419289e1b6ea731eeb74a403c269",
+      "bytes": 2130690
+    },
+    {
+      "name": "CODEX_NEXT_GOAL.md",
+      "sha256": "45c4982faedf7b07e65ce4e80cb406063e932f535c662c18d7e0859257e03ab0",
+      "bytes": 7770
+    },
+    {
+      "name": "CODEX_VISUAL_REWORK.md",
+      "sha256": "75540df610bca6a9f1bb96106b9b945733f27f524ccea0955685cd40e41c0438",
+      "bytes": 8259
+    },
+    {
+      "name": "PHOTO_ASSET_BRIEF.md",
+      "sha256": "f864395331f0c400de5591e28592771be6c96f8a716a43cde673a9e153f02c24",
+      "bytes": 3573
+    },
+    {
+      "name": "ASSET_CONTRACT.json",
+      "sha256": "f258105b5bdc07bd7a52d47e78b0a306e5ba576c6ed92c5f4e406fc8b953a309",
+      "bytes": 7338
+    },
+    {
+      "name": "CABLE_CONTRACT.json",
+      "sha256": "6e59664878f3086543db4281fb2405886b95c55a9dda9a40dab78af96ce40d1c",
+      "bytes": 3587
+    },
+    {
+      "name": "STORYBOARD.json",
+      "sha256": "f6f7f1b85d5e0a156e91f8e5a63dfdd33bf3ea938137fe5719afa9b438fa651f",
+      "bytes": 2849
+    },
+    {
+      "name": "hidden-servo-restoration.json",
+      "sha256": "1fdbba1fac74eb0bbaebf2ae13a80b4bc3be38cad638a45cfc1191854466fee0",
+      "bytes": 655
+    },
+    {
+      "name": "cad_audit.json",
+      "sha256": "93573966ec70ba29061a60f606a856841ee2742c12a8516689a39d18b6ac6943",
+      "bytes": 2455
+    },
+    {
+      "name": "dark-design-tokens.css",
+      "sha256": "3b17a3fb25f1856cc52d6b6dd995bd69f63d7714715c5e88e051faf5348f2dbd",
+      "bytes": 2230
+    }
+  ]
+}

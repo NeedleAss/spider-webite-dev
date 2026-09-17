@@ -1,33 +1,66 @@
-# CareRover 离线结构展示
+# CareRover V4 产品展示
 
-这是独立电脑端展示页，不连接机器人、不请求 WebSocket、不发送任何控制命令，也不进入 ESP32 FFat 网页包。所有模型、预览、字体回退和 Three.js 都在本目录内，不依赖 CDN。
+七章深色滚动叙事，沿用真实 CAD 装配，增加按团队照片与器件说明制作的外观。独立电脑端网页，不连接机器人、不发 WebSocket 或运动命令，也不进入 ESP32 FFat 网页包。
 
-从仓库根目录运行：
+## 启动与展示
+
+在仓库根目录运行：
 
 ```sh
 python3 -m http.server 8765 --bind 127.0.0.1
 ```
 
-打开 `http://127.0.0.1:8765/presentation/`。Windows 可使用 `py -m http.server 8765 --bind 127.0.0.1`。不直接双击 HTML（模块与 GLB 需要 HTTP）。断开互联网后仍可使用；本机 HTTP 服务需要保持运行。
+Windows 用 `py -m http.server 8765 --bind 127.0.0.1`。打开 <http://127.0.0.1:8765/presentation/>，不要直接双击 HTML。所需 Three.js、模型、海报、材质和字体回退均本地提供，启动后不依赖互联网。本机 HTTP 服务应保持运行。
 
-默认完整装配，桌面鼠标移入拆解、移出收拢；选中零件后固定展开，关闭说明或完整装配解除。目录按钮可键盘访问；手机使用显式拆解按钮、目录与拖动旋转。Escape 关闭说明。系统减少动态效果偏好生效时，拆解直接切换、原理动画静止；也可取消「原理动画」。
+- 默认 Story：原生向下滚动，或章节圆点、上下箭头、PageDown / PageUp。画布中央允许手机上下翻页。
+- 摄像头章继续向下滚动，从传感器近景转入整车回应；健康章继续滚动，转入顶部屏幕近景。
+- `Ⅱ` 暂停小动画，`↺` 重播。摄像头和整车运动演示结束后停住，不突然跳回起点。
+- “自由探索”才启用拖动旋转与滚轮缩放。按钮或模型可选择具体实例，重复点轮组/舵机按钮切换实例。Escape / 关闭恢复原章与进度。
+- 系统“减少动态效果”使用静态构图。`?static=1` 主动切换章节海报；模型、WebGL 或 Three.js 加载失败也自动降级，DOM 文字仍可读。
+- 页面结尾可查看团队自己的未完成装配照片。它不代表成品或实物验收通过。
 
-相机视锥/检测框、超声往返回波、主控信息流均为**示意动画**，不是标定结果或实时传感器数据。当前没有身份识别、自动搜人、侧后方测距、编码器轮速或真实电池低压测量。加载失败时保留保存的装配预览和说明；`?static=1` 可主动使用静态版。
+没有身份识别、全向避障、群控、实测轮速、真实健康读数或真实电量演示。检测视域、超声波束、人物/手指和车辆轨迹均为原理示意。OLED 只显示 DEMO/原型状态。
 
-## 真实资产与可复现性
+## 资产与单位
 
-输入是用户提供的 15 个 `.SLDPRT` 与 `小车.SLDASM`。原件未修改，未上传第三方。导出命令：
+原始 `assets/cad/carerover.glb` 未修改，SHA-256：
 
-```sh
-python3 tools/export_cad.py /path/to/3D建模 --output presentation/assets/cad
+```text
+2310e2bd46a6940497349d1acf00ef70bd8279881a637424b2764c136229d61b
 ```
 
-`export_cad.py` 独立读取 CRC 校验通过的容器流、完整保存的显示网格表及装配矩阵。支持范围限于已验证的这套现代 SolidWorks 保存格式；不是通用 CAD/B-rep 转换器。文件格式参考 [cadmpeg 的 sldprt 文档](https://github.com/cadmpeg/cadmpeg/blob/main/docs/formats/sldprt.md)（CC BY 4.0，格式说明作者 cadmpeg contributors）；本项目没有复制其转换器代码。
+它来自 15 个 SLDPRT 与一个 SLDASM 的保存显示网格：20 个可见实例，另一个舵机在原装配中隐藏。V4 衍生展示按用户确认的四舵机目标，恢复其保存的 reference 7 矩阵；原 CAD、原 GLB 及原 hidden 记录保留。实际安装仍待现场核对。
 
-`assets/cad/cad-manifest.json` 固定输入 SHA-256、每种零件顶点/三角形数量/包围盒、实例变换、隐藏实例与输出 SHA-256。GLB 有 15 类网格、20 个可见实例、15,110 个唯一网格三角形，约 0.70 MB。源装配有 21 个引用，其中第 4 个舵机隐藏；因此显示 4 个轮子、3 个舵机。未补造隐藏实例。中性配色是展示材料，位置、比例、原始姿态来自保存的装配数据。
+结构网格、安装矩阵、外观和效果分层。所有坐标以米为单位，没有旧根节点的 1000 倍缩放；整机正面为当前保存 CAD 的 −X，上方 +Y。摄像头、超声局部 +Z 对应世界 −X。每次状态从 immutable rest 推导，滚动不累加变换。
 
-Khronos glTF Validator `2.0.0-dev.3.10`：0 errors / 0 warnings / 0 hints（有一个恒等矩阵信息提示）。原生 SolidWorks 中的引用、配合、配置和加工正确性：**NOT RUN**。保存网格可能落后于参数模型；现场团队应打开原装配核对最新状态。
+九类器件外观由 `scene/appearance.js` 自行生成：四个八滚子轮及白联轴器、四舵机、双 USB 主板、镜筒/相机板、HC-SR04、OLED、健康板、IMU 与电源。不是扫描资产，也没有宣称交付新的完整写实 GLB。细小元件、标签与被遮挡部分是简化外观，不能当作尺寸测量或电路图。
 
-Three.js 固定 `0.180.0`（MIT），只包含核心、GLTFLoader、OrbitControls、BufferGeometryUtils 及 LICENSE。`vendor/three` 从官方 npm `three@0.180.0` 原样复制，未修改源码。GLB 不使用 Draco/纹理/外部 buffer，因此无需解码器或远端资源。
+主板外观按语义整体替换，因此原件内两条杜邦线代理长块不会渲染；不按三角形高度盲删。有限长度彩色线束表达模块级连接关系，拆开距离过大时省略，未知 GPIO 没有补造。摄像头板面在外观层沿局部 Z 留 0.5 mm 防共面闪烁间隙，OLED 外观沿局部 Y 抬高 2.5 mm 避免埋入顶盖；这两项为显示处理，不改变保存的安装矩阵，不是实测安装调整。镜头锚点同步至新外观端面。
 
-浏览器验收与设备验收界限见 `docs/FINAL_ACCEPTANCE.md`。
+`assets/appearance/manifest.json` 绑定实现、海报、参考照片、原 GLB 和传感器锚点的 SHA-256。更新后运行：
+
+```sh
+python3 tools/appearance_manifest.py
+python3 tools/appearance_manifest.py --check
+```
+
+结构导出仍可用 `python3 tools/export_cad.py /path/to/3D建模 --output /path/to/new-output`，不要为重建外观覆盖原 GLB。该工具只解析本项目已验证格式的保存显示网格，不是通用 SolidWorks/B-rep 转换器。原格式参考 [cadmpeg 文档](https://github.com/cadmpeg/cadmpeg/blob/main/docs/formats/sldprt.md)，CC BY 4.0；没有复制其转换器源码。原生 SolidWorks 配合/配置核查 NOT RUN。
+
+## 来源与许可
+
+Three.js 固定 0.180.0，MIT，`vendor/three` 为官方分发原文件及 LICENSE。没有 CDN、第三方模型或商家图片贴图。所有标签、OLED、材质噪声和环境光面板均自行生成。团队正面/内部参考照片取自用户提供的 V4 PDF；公开内部图已是裁掉背景个人卡片的版本。未发布原 PDF、商家图或原始 CAD。
+
+制作规范与原始配置见 [V4 来源资料](../docs/visual-v4/source-briefs/CareRover_Production_Brief_v4.md)、[资产合同](../docs/visual-v4/source-contracts/ASSET_CONTRACT.json)。实现取舍、测量与未验项见 [V4 验收报告](../docs/V4_ACCEPTANCE.md)。
+
+## 运行时与测试
+
+`story/timeline.js` 负责可逆章节姿态、正交轮系数学；`scene/robot.js` 负责保存安装矩阵和线束；`scene/appearance.js` 负责外观；`effects/sensors.js` 负责端面锚点和示意情节；`app.js` 负责原生滚动、摄影机、微动画时钟、Inspect 和故障恢复。
+
+静止整机、暂停与减少动态效果不持续绘制；隐藏标签页停止绘制。WebGL 恢复重建环境资源，保留章节；尺寸变化和刷新保留进度。诊断 `window.__careRover` 只提供快照及 WebGL 故障测试，不引用机器人传输层。
+
+```sh
+npm test
+python3 tools/appearance_manifest.py --check
+```
+
+浏览器脚本见 `tests/browser/check_story*.js` 与 `check_display_semantics.js`，使用 Playwright CLI 0.1.20 的 `run-code` 执行；复现入口见 [验收报告](../docs/V4_ACCEPTANCE.md)。手机视口/触控模拟不等同于真机 Safari 或 Android。G01（安全任务停摆后的独立 PWM 撤销）仍为实物发布阻断项，网页展示通过不会关闭它。

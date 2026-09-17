@@ -1,0 +1,7 @@
+PASS: check_story.js
+PASS: check_story_resilience.js
+PASS: check_display_semantics.js
+PASS: check_motion_framing.js
+PASS: capture_story.js
+PASS: capture_story_milestones.js
+fb152eb848ac34b05305f19605e30491933b3add23905fb569be0463c4ae5ace

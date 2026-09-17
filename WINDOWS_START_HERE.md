@@ -1,4 +1,14 @@
-# Windows 最终候选接手入口
+# Windows V4 候选接手入口
+
+当前下一轮候选为 `codex/final-polish` 的 V4 更新。请先读 [V4 实施与验收](docs/V4_ACCEPTANCE.md)，把 [V4 Windows AI 提示词](docs/V4_WINDOWS_AI_PROMPT.md) 交给实物端 AI。复审使用 [V4 提示词](docs/V4_REVIEW_PROMPT.md)。
+
+展示无需烧录：从仓库启动本地 HTTP 后打开 `/presentation/`，详见 [启动说明](presentation/README.md)。控制台 JS 有更新，实物端须按实际配置重建 FFat。现场验收、私有配置、完整备份与 G01 门槛继续有效。
+
+最新 V4 ZIP、冻结源码提交和完整性校验见 [交付说明](docs/V4_DELIVERY.md)。源码包不含私有配置或可直接烧录的二进制。下面保留上一版交接记录，旧冻结包不能替代 V4。
+
+---
+
+# 上一版冻结候选记录
 
 本轮接手 `codex/final-polish`，冻结候选为 `1246b016e59d9fef02f342994ec24f8b53d0dc64`，审查基线为 `058ce89bd1aa5b5da0dbf89101f4625df70ca6df`。分支后续提交补充交接与证据，不改变冻结包。
 

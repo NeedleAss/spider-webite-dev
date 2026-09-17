@@ -1,3 +1,5 @@
+> **V4 更新入口（2026-09-18）**：本文保留上一轮记录；当前展示、控制台收尾、证据与现场表见 [V4 验收](V4_ACCEPTANCE.md)，复审用 [V4 提示词](V4_REVIEW_PROMPT.md)，实物端用 [V4 Windows 提示词](V4_WINDOWS_AI_PROMPT.md)。原安全门槛继续有效。
+
 # 可复制给复审模型的提示词
 
 请对 CareRover 最终候选做独立、只读、基于证据的代码审查。附件 `CareRover_Final_Candidate_20260917.zip` 是源码和验证证据，不是设备烧录包。仓库为 https://github.com/NeedleAss/spider-webite-dev；如通过 GitHub 阅读，请明确选择 `codex/final-polish`，不要只读默认 main。

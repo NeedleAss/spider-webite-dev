@@ -1,90 +1,190 @@
+let T,OrbitControls,loadRobot;
 import {parts} from './parts.js';
-const $=id=>document.getElementById(id), byId=new Map(parts.map(p=>[p.id,p]));
-let selected=null, pinned=false, hovering=false, forceClosed=false, ready=false, api=null;
-const reduce=matchMedia('(prefers-reduced-motion: reduce)');
-$('motion').checked=!reduce.matches;
-function expanded(){return !!selected||pinned||(hovering&&!forceClosed);}
-function update(){
-  const open=expanded();$('explode').setAttribute('aria-pressed',String(open));
-  $('viewLabel').textContent=selected?'03 / '+byId.get(selected).name:open?'02 / 拆解结构':'01 / 完整装配';
-  if(document.body.dataset.viewer==='fallback'){$('viewLabel').textContent='CAD / 保存的装配预览';$('explode').setAttribute('aria-pressed','false');$('detailHint').textContent='当前为静态预览 · 零件目录与说明仍可使用';}
-  document.querySelectorAll('.part').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.part===selected)));
-  $('close').hidden=!selected;api?.highlight(selected);
+import {chapters,storyState,clamp,motionPose,wheelAngles} from './story/timeline.js';
+
+const $=id=>document.getElementById(id), sections=[...document.querySelectorAll('.chapter')];
+const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+let renderer,scene,camera,controls,robot,observer,scheduled=false,ready=false,mode='story';
+let index=0,progress=0,paused=reduced.matches,clock=0,lastTime=0,lastChapter=-1,lastPose='',selected=null;
+let lost=false,restoring=false,draws=0,lastInfo=null,savedScroll=0;
+let lastBeat='';
+document.body.dataset.enhanced='true';
+const stage=$('stage'),poster=$('poster'),links=[...document.querySelectorAll('#chapterLinks a')];
+const captions=['CAD 装配 · 实物外观重建','目标装配 · 连接关系示意','人脸检测原理 · 非实时图像','前方测距原理 · 非标定波束','运动学演示 · 无实测轮速','接触式健康原型 · OLED 演示状态','团队实物记录 · 尚未完成装配'];
+function request(){if(!scheduled&&!document.hidden){scheduled=true;requestAnimationFrame(frame);}}
+function measure(){
+  if(mode==='inspect')return;
+  const y=scrollY+2;index=sections.reduce((a,s,i)=>y>=s.offsetTop?i:a,0);
+  progress=clamp((y-sections[index].offsetTop)/(sections[index].offsetHeight));
+  document.body.dataset.chapter=chapters[index];
+  if(index!==lastChapter){clock=0;lastChapter=index;lastPose='';}
+  sections.forEach((s,i)=>s.toggleAttribute('data-active',i===index));
+  links.forEach((a,i)=>i===index?a.setAttribute('aria-current','step'):a.removeAttribute('aria-current'));
+  $('previous').disabled=index===0;$('next').disabled=index===6;$('sceneCaption').textContent=captions[index];
+  if(!ready)showPoster();request();
 }
-function select(id){
- selected=id;forceClosed=false;
- const p=byId.get(id),index=parts.indexOf(p)+1;
- $('partCategory').textContent=p.category;$('partNumber').textContent=String(index).padStart(2,'0')+' / 15';
- $('partTitle').textContent=p.name;$('partDescription').textContent=p.description;
- $('principleTitle').textContent=p.principle;$('principleText').textContent=p.detail;
- $('detailHint').textContent='已固定展开 · 关闭说明或点击「完整装配」收拢';update();
+function go(i,behavior=reduced.matches?'instant':'smooth'){i=clamp(i,0,6);const s=sections[i];window.scrollTo({top:s.offsetTop+(i?s.offsetHeight*.34:0),behavior});history.replaceState(null,'',`#${chapters[i]}`);}
+links.forEach((a,i)=>a.addEventListener('click',e=>{e.preventDefault();go(i);}));
+function showPoster(){const suffix=innerWidth<=850&&innerHeight>520?'-mobile':'';poster.src=`assets/appearance/${chapters[index]}${suffix}.png`;poster.hidden=false;}
+function fallback(message){ready=false;document.body.dataset.viewer='fallback';if(renderer)renderer.domElement.hidden=true;showPoster();$('loadStatus').hidden=false;$('loadStatus').textContent=message;$('inspect').disabled=true;request();}
+function setPaused(value){paused=value;$('pause').setAttribute('aria-pressed',String(paused));$('pause').setAttribute('aria-label',paused?'播放原理动画':'暂停原理动画');$('pause').textContent=paused?'▷':'Ⅱ';lastTime=0;request();}
+$('pause').addEventListener('click',()=>setPaused(!paused));$('previous').addEventListener('click',()=>go(index-1));$('next').addEventListener('click',()=>go(index+1));
+$('restart').addEventListener('click',()=>{clock=0;lastTime=0;setPaused(false);request();});
+$('showPhoto').addEventListener('click',()=>$('photoDialog').showModal());$('closePhoto').addEventListener('click',()=>$('photoDialog').close());
+$('photoDialog').addEventListener('close',()=>{lastTime=0;request();});
+$('photoDialog').addEventListener('click',e=>{if(e.target===$('photoDialog')){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close();}});
+window.addEventListener('scroll',measure,{passive:true});
+window.addEventListener('resize',()=>{
+  // Viewport height changes chapter pixel lengths; preserve the semantic position.
+  const y=Math.max(0,sections[index].offsetTop+progress*sections[index].offsetHeight-2);
+  if(mode==='inspect')savedScroll=y;else window.scrollTo({top:y,behavior:'instant'});
+  resize();measure();
+});
+document.addEventListener('visibilitychange',()=>{lastTime=0;if(!document.hidden)request();});
+reduced.addEventListener('change',()=>{setPaused(reduced.matches);lastPose='';measure();});
+window.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&mode==='inspect'){leaveInspect();return;}
+  if(mode!=='story'||$('photoDialog').open||e.target.closest('button,a,input,select,textarea'))return;
+  if(e.key==='PageDown'||e.key==='ArrowRight'){e.preventDefault();go(index+1);}
+  if(e.key==='PageUp'||e.key==='ArrowLeft'){e.preventDefault();go(index-1);}
+});
+function environment(){
+  const env=new T.Scene();env.background=new T.Color('#242a33');
+  for(const [pos,scale,power] of [[[-2,3,1],[2,3,2],7],[[1,2,-2],[1,4,2],4],[[0,4,0],[4,.1,4],3]]){
+    const panel=new T.Mesh(new T.BoxGeometry(...scale),new T.MeshBasicMaterial({color:new T.Color(power,power,power)}));panel.position.fromArray(pos);env.add(panel);
+  }
+  const pmrem=new T.PMREMGenerator(renderer);const map=pmrem.fromScene(env,.025);scene.userData.environmentTarget?.dispose();scene.userData.environmentTarget=map;scene.environment=map.texture;scene.environmentIntensity=.5;pmrem.dispose();
+  env.traverse(o=>{o.geometry?.dispose();o.material?.dispose();});
 }
-function clear(){
- selected=null;pinned=false;forceClosed=true;
- $('partCategory').textContent='THE WHOLE PICTURE';$('partNumber').textContent='01 — 15';
- $('partTitle').textContent='小小机身，协同运作。';$('partDescription').textContent='将鼠标移入模型，展开内部结构。点击一个零件，了解它如何参与感知、控制与行动。';
- $('principleTitle').textContent='真实设计，逐层呈现';$('principleText').textContent='几何与位置来自你们的 SolidWorks 文件。功能动画是原理示意，不代表实时传感器数据。';
- $('detailHint').textContent='也可以从下方的零件目录开始。';update();
+function lighting(){
+  scene.add(new T.HemisphereLight(0xb8d8ff,0x12161d,1.5));
+  const key=new T.DirectionalLight(0xfff4e6,3.4);key.position.set(-.3,.45,.25);key.castShadow=true;
+  key.shadow.mapSize.set(1024,1024);Object.assign(key.shadow.camera,{left:-.25,right:.25,top:.30,bottom:-.15,near:.01,far:1});key.shadow.bias=-.00006;key.shadow.normalBias=.0005;key.shadow.radius=4;scene.add(key);
+  const rim=new T.DirectionalLight(0xb5d8ff,2.8);rim.position.set(.18,.3,-.3);scene.add(rim);
+  const fill=new T.DirectionalLight(0xffffff,.7);fill.position.set(-.1,.05,-.3);scene.add(fill);
+  const ground=new T.Mesh(new T.PlaneGeometry(2,2),new T.ShadowMaterial({color:0,opacity:.28}));ground.rotation.x=-Math.PI/2;ground.position.y=-.0212;ground.receiveShadow=true;scene.add(ground);
+  const c=document.createElement('canvas');c.width=c.height=128;const ctx=c.getContext('2d'),grad=ctx.createRadialGradient(64,64,8,64,64,64);grad.addColorStop(0,'rgba(0,0,0,.72)');grad.addColorStop(.5,'rgba(0,0,0,.35)');grad.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=grad;ctx.fillRect(0,0,128,128);
+  const shadow=new T.Mesh(new T.PlaneGeometry(.22,.18),new T.MeshBasicMaterial({map:new T.CanvasTexture(c),transparent:true,depthWrite:false}));shadow.rotation.x=-Math.PI/2;shadow.position.y=-.021;scene.add(shadow);scene.userData.contactShadow=shadow;
+  const person=new T.Group(),personMaterial=new T.MeshStandardMaterial({color:0xa5cbd4,roughness:.65});
+  const head=new T.Mesh(new T.SphereGeometry(.005,20,12),personMaterial);head.position.y=.036;person.add(head);
+  const body=new T.Mesh(new T.CapsuleGeometry(.0055,.012,4,16),personMaterial);body.position.y=.017;person.add(body);
+  for(const x of [-.003,.003]){const leg=new T.Mesh(new T.CapsuleGeometry(.002,.010,4,12),personMaterial);leg.position.set(x,.002,0);person.add(leg);}
+  person.position.set(-.14,-.016,.035);person.visible=false;scene.add(person);scene.userData.person=person;
 }
-for(const p of parts){const b=document.createElement('button');b.type='button';b.className='part';b.dataset.part=p.id;b.setAttribute('aria-pressed','false');
- const img=document.createElement('img');img.src=`assets/cad/${p.id}.png`;img.alt='';img.loading='lazy';
- const label=document.createElement('span');label.textContent=p.name;const small=document.createElement('small');small.textContent=p.en;label.append(small);b.append(img,label);b.addEventListener('click',()=>{select(p.id);document.querySelector('.explorer').scrollIntoView({behavior:reduce.matches?'instant':'smooth',block:'start'});});$('parts').append(b);}
-$('explode').addEventListener('click',()=>{if(expanded())clear();else{pinned=true;forceClosed=false;update();}});
-$('assemble').addEventListener('click',clear);$('close').addEventListener('click',clear);$('reset').addEventListener('click',()=>api?.reset());
-$('stage').addEventListener('pointerenter',e=>{if(e.pointerType==='mouse'&&matchMedia('(hover:hover)').matches){hovering=true;forceClosed=false;update();}});
-$('stage').addEventListener('pointerleave',()=>{hovering=false;forceClosed=false;update();});
-addEventListener('keydown',e=>{if(e.key==='Escape')clear();});
-reduce.addEventListener('change',()=>{$('motion').checked=!reduce.matches;});
-function fail(message){ready=false;$('fallback').hidden=false;$('loadStatus').hidden=false;$('loadStatus').textContent=message;document.body.dataset.viewer='fallback';$('explode').disabled=true;$('reset').disabled=true;$('motion').disabled=true;$('motion').checked=false;$('assemble').textContent='返回概览';$('rotateHint').textContent='静态装配预览';$('stage').setAttribute('aria-label','保存的 CAD 装配预览');$('stage').querySelector('canvas')?.setAttribute('hidden','');update();}
+function resize(){
+  if(!renderer)return;const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;
+  camera.fov=camera.aspect<.8?39:32;camera.updateProjectionMatrix();lastPose='';request();
+}
+function positionCamera(state){camera.position.fromArray(state.eye);controls.target.fromArray(state.target);camera.lookAt(controls.target);}
+function updateMotion(time,state){
+  robot.root.position.set(0,0,0);robot.root.rotation.y=0;scene.userData.contactShadow.position.x=0;scene.userData.contactShadow.position.z=0;
+  for(const item of robot.instances){const rotor=item.appearance.userData.rotor;if(rotor)rotor.rotation.z=0;}
+  scene.userData.person.visible=state.chapter==='vision'&&state.response===1;
+  if(scene.userData.person.visible){
+    const phase=Math.min(time,8), turn=clamp((phase-1)/1.5)*.20, travel=clamp((phase-3)/2)*.026;
+    scene.userData.person.visible=phase<6.6;
+    scene.userData.person.position.z=.035+Math.max(0,1-phase)*.04;
+    robot.root.rotation.y=turn;robot.root.position.set(-travel*Math.cos(turn),0,travel*Math.sin(turn));
+    const angles=wheelAngles(travel,0,-turn);for(const item of robot.instances){if(item.appearance.userData.rotor)item.appearance.userData.rotor.rotation.z=angles[item.node.name];}
+    scene.userData.contactShadow.position.copy(robot.root.position);scene.userData.contactShadow.position.y=-.021;
+  }
+  if(state.chapter!=='motion'||!state.effect)return;
+  const pose=motionPose(time);robot.root.position.fromArray(pose.position);robot.root.rotation.y=pose.yaw;
+  scene.userData.contactShadow.position.x=pose.position[0];scene.userData.contactShadow.position.z=pose.position[2];
+  document.querySelectorAll('[data-move]').forEach(el=>el.toggleAttribute('data-active',Number(el.dataset.move)===pose.phase));
+  // Integral wheel angles for the two straight segments; rotation uses each axle's geometric sign.
+  const forward=pose.phase===0?pose.distance:pose.phase===3?.060*(1-pose.distance):.060;
+  const lateral=pose.phase===1?pose.distance:pose.phase>=2?.060*(pose.phase===3?1-pose.distance:1):0;
+  const angles=wheelAngles(forward,lateral,-pose.yaw);
+  for(const item of robot.instances){
+    const rotor=item.appearance.userData.rotor;if(!rotor)continue;
+    rotor.rotation.z=angles[item.node.name];
+    for(const roller of item.appearance.userData.rollers)roller.rotation.y=(pose.phase===0?forward:lateral)/.0028;
+  }
+}
+function frame(ms){
+  scheduled=false;if(document.hidden)return;
+  const dt=lastTime?Math.min((ms-lastTime)/1000,.05):0;lastTime=ms;
+  const state=storyState(index,progress,reduced.matches);
+  const beat=`${index}/${state.response===1?'response':'close'}/${state.screen===1?'screen':'body'}`;
+  if(beat!==lastBeat){clock=0;lastBeat=beat;}
+  const finished=state.chapter==='vision'&&clock>=8||state.chapter==='motion'&&clock>=16;
+  const animating=ready&&mode==='story'&&state.effect&&['vision','range','motion','care'].includes(state.chapter)&&!paused&&!reduced.matches&&!$('photoDialog').open&&!finished&&!(state.chapter==='care'&&state.screen===1);
+  if(animating)clock+=dt;
+  if(ready){
+    if(mode==='story'){
+      const key=`${index}/${progress.toFixed(5)}/${reduced.matches}/${camera.aspect}`;
+      if(key!==lastPose){robot.apply(state);positionCamera(state);lastPose=key;}
+      const t=reduced.matches?2:clock;
+      robot.effects.camera.update(t,state.chapter==='vision'&&state.effect);
+      if(state.response===1)robot.effects.camera.content.visible=false;
+      robot.effects.ultrasonic.update(t,state.chapter==='range'&&state.effect);
+      robot.effects.health.update(t,state.chapter==='care'&&state.effect&&state.focus==='health');
+      updateMotion(t,state);
+      if(state.chapter==='vision')$('visionStatus').textContent=t<1?'目标进入视域':t<3?'检测到目标位置':t<6.6?'位置有效 · 先朝向，再跟随':'目标离开 · 停止等待';
+      if(state.chapter==='range')$('sonarStatus').textContent=t%4<2?'声波向前 · 遇到障碍':'回波返回 · 形成距离依据';
+    }else controls.update();
+    renderer.render(scene,camera);draws++;lastInfo={calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures};
+  }
+  if(animating)request();
+}
+function selectPart(id,instanceId){
+  const matches=robot.instances.filter(n=>n.id===id);let item=matches.find(n=>n.node.name===instanceId)||matches[0];if(!item)return;
+  if(!instanceId&&selected?.id===id){const old=matches.findIndex(n=>n.node.name===selected.instanceId);item=matches[(old+1)%matches.length];}
+  selected={id,instanceId:item.node.name};robot.select(item.node.name);
+  const p=parts.find(p=>p.id===id);$('partTitle').textContent=p.name;$('partDescription').textContent=p.description;$('instanceLabel').textContent=`${item.node.name} · ${matches.length>1?'再次点击切换实例':'独立实例'}`;
+  document.querySelectorAll('[data-part]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.part===id)));
+  const bounds=new T.Box3().setFromObject(item.appearance),center=bounds.getCenter(new T.Vector3()),size=bounds.getSize(new T.Vector3()).length();
+  controls.target.copy(center);const direction=new T.Vector3(-1,.5,.55).normalize();camera.position.copy(center).addScaledVector(direction,Math.max(.055,size*2.3));controls.update();request();
+}
+for(const p of parts){const b=document.createElement('button');b.type='button';b.textContent=p.name;b.dataset.part=p.id;b.setAttribute('aria-pressed','false');b.addEventListener('click',()=>selectPart(p.id));$('parts').append(b);}
+function inspectReset(){for(const item of robot.instances){if(item.appearance.userData.rotor)item.appearance.userData.rotor.rotation.z=0;}scene.userData.contactShadow.position.set(0,-.021,0);robot.root.position.set(0,0,0);robot.root.rotation.set(0,0,0);robot.apply(storyState(1,.6,true));robot.select(null);selected=null;positionCamera(storyState(1,.6,true));controls.update();$('partTitle').textContent='选择一个部件';$('partDescription').textContent='原 CAD 安装位置，实物参考外观。';$('instanceLabel').textContent='';document.querySelectorAll('[data-part]').forEach(b=>b.setAttribute('aria-pressed','false'));request();}
+function enterInspect(){if(!ready)return;mode='inspect';savedScroll=scrollY;document.body.dataset.mode=mode;document.body.style.overflow='hidden';controls.enabled=true;$('inspectDialog').show();for(const effect of Object.values(robot.effects))effect.content.visible=false;scene.userData.person.visible=false;resize();inspectReset();$('leaveInspect').focus();}
+function leaveInspect(){mode='story';document.body.dataset.mode=mode;document.body.style.overflow='';controls.enabled=false;$('inspectDialog').close();window.scrollTo({top:savedScroll,behavior:'instant'});lastPose='';resize();measure();$('inspect').focus();}
+$('inspect').addEventListener('click',enterInspect);$('leaveInspect').addEventListener('click',leaveInspect);$('inspectReset').addEventListener('click',inspectReset);
+function picking(){
+  const canvas=renderer.domElement,ray=new T.Raycaster(),pointer=new T.Vector2(),active=new Set();let down=null;
+  canvas.addEventListener('pointerdown',e=>{active.add(e.pointerId);down=active.size===1?{id:e.pointerId,x:e.clientX,y:e.clientY}:null;});
+  canvas.addEventListener('pointercancel',e=>{active.delete(e.pointerId);down=null;});
+  canvas.addEventListener('pointerup',e=>{
+    active.delete(e.pointerId);if(mode!=='inspect'||!down||down.id!==e.pointerId||Math.hypot(e.clientX-down.x,e.clientY-down.y)>5){down=null;return;}down=null;
+    const r=canvas.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(pointer,camera);
+    const targets=[];for(const item of robot.instances)if(item.node.visible)item.appearance.traverse(n=>{if(n.isMesh&&n.visible)targets.push(n);});
+    const hit=ray.intersectObjects(targets,false)[0];if(hit)selectPart(hit.object.userData.partId,hit.object.userData.instanceId);
+  });
+}
+function projectedRobotBounds(){
+  const box=new T.Box3();for(const item of robot.instances)if(item.node.visible)box.union(new T.Box3().setFromObject(item.appearance));
+  const min=[Infinity,Infinity],max=[-Infinity,-Infinity];
+  for(const x of [box.min.x,box.max.x])for(const y of [box.min.y,box.max.y])for(const z of [box.min.z,box.max.z]){
+    const v=new T.Vector3(x,y,z).project(camera);min[0]=Math.min(min[0],v.x);min[1]=Math.min(min[1],v.y);max[0]=Math.max(max[0],v.x);max[1]=Math.max(max[1],v.y);
+  }
+  return {min,max};
+}
 async function boot(){
- try {
- const [THREE,{GLTFLoader},{OrbitControls}]=await Promise.all([import('three'),import('./vendor/three/examples/jsm/loaders/GLTFLoader.js'),import('./vendor/three/examples/jsm/controls/OrbitControls.js')]);
- const stage=$('stage'),renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});
- renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));renderer.setClearColor(0,0);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;stage.append(renderer.domElement);
- const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(34,1,1,2200);
- const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.08;controls.enablePan=false;controls.minDistance=250;controls.maxDistance=1100;controls.maxPolarAngle=Math.PI*.88;
- scene.add(new THREE.HemisphereLight(0xffffff,0x536553,1.8));const key=new THREE.DirectionalLight(0xffffff,2.6);key.position.set(200,300,200);scene.add(key);const rim=new THREE.DirectionalLight(0xe5efff,1.5);rim.position.set(-200,100,-100);scene.add(rim);
- const gltf=await new GLTFLoader().loadAsync('assets/cad/carerover.glb');const model=gltf.scene;model.scale.setScalar(1000);scene.add(model);model.updateMatrixWorld(true);
- const meshes=[],instances=[];
- for(const node of model.children){
-  node.matrixAutoUpdate=true;node.matrix.decompose(node.position,node.quaternion,node.scale);
-  const id=node.userData.partId,p=byId.get(id);if(!p)throw Error('Unknown part');
-  const base=node.position.clone(),offset=new THREE.Vector3(...p.offset).multiplyScalar(.001);
-  if(id==='wheel'||id==='servo'){const center=new THREE.Box3().setFromObject(node).getCenter(new THREE.Vector3());offset.x=(center.x<0?-1:1)*(id==='wheel'?.065:.038);offset.z=(center.z<0?-1:1)*(id==='wheel'?.065:.038);}
-  node.traverse(mesh=>{if(!mesh.isMesh)return;mesh.material=mesh.material.clone();mesh.material.transparent=true;mesh.material.depthWrite=true;mesh.userData.partId=id;mesh.userData.baseColor=mesh.material.color.clone();meshes.push(mesh);});
-  instances.push({node,base,offset,id});
- }
- const effects=new THREE.Group();scene.add(effects);
- const color=0x477f65,lineMat=new THREE.LineBasicMaterial({color,transparent:true,opacity:.65});
- const poly=pts=>new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts.map(p=>new THREE.Vector3(...p))),lineMat.clone());
- const vision=new THREE.Group(),sonar=new THREE.Group(),flow=new THREE.Group();effects.add(vision,sonar,flow);
- const corners=[[-28,-20,65],[28,-20,65],[28,20,65],[-28,20,65]];
- for(const c of corners)vision.add(poly([[0,0,0],c]));vision.add(poly([...corners,corners[0]]));
- const frame=poly([[-10,-13,66],[10,-13,66],[10,13,66],[-10,13,66],[-10,-13,66]]);vision.add(frame);
- const rings=[];for(let i=0;i<3;i++){const r=new THREE.Mesh(new THREE.RingGeometry(12,12.45,64),new THREE.MeshBasicMaterial({color,side:THREE.DoubleSide,transparent:true,opacity:.65,depthWrite:false}));sonar.add(r);rings.push(r);}
- const wall=poly([[-20,-20,75],[20,-20,75],[20,20,75],[-20,20,75],[-20,-20,75]]);sonar.add(wall);
- const flows=[];for(let i=0;i<3;i++){const end=new THREE.Vector3((i-1)*35,45,i===1?40:10);const start=new THREE.Vector3();flow.add(poly([[0,0,0],end.toArray()]));const dot=new THREE.Mesh(new THREE.SphereGeometry(1.7,10,8),new THREE.MeshBasicMaterial({color}));flow.add(dot);flows.push({dot,start,end});}
- const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();let down=null,amount=0,last=0;
- renderer.domElement.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY};});
- renderer.domElement.addEventListener('pointercancel',()=>{down=null;});
- renderer.domElement.addEventListener('pointerup',e=>{if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>6){down=null;return;}down=null;const r=stage.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(pointer,camera);const hits=ray.intersectObjects(meshes,false);if(hits[0])select(hits[0].object.userData.partId);});
- function reset(){camera.position.set(290,185,340);controls.target.set(0,44,0);controls.update();}reset();
- api={reset,highlight(id){for(const mesh of meshes){const match=!id||mesh.userData.partId===id;mesh.material.opacity=match?1:.22;mesh.material.depthWrite=match;mesh.material.color.copy(mesh.userData.baseColor);if(id&&match)mesh.material.color.lerp(new THREE.Color(0x78a887),.2);}}};
- const resize=()=>{const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=THREE.MathUtils.radToDeg(2*Math.atan(Math.tan(THREE.MathUtils.degToRad(17))*Math.max(1,1.6/camera.aspect)));camera.updateProjectionMatrix();};new ResizeObserver(resize).observe(stage);resize();
- renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();fail('3D 显示已中断 · 保留装配预览和零件说明');});
- renderer.domElement.addEventListener('webglcontextrestored',()=>location.reload());
- ready=true;document.body.dataset.viewer='ready';$('fallback').hidden=true;$('loadStatus').hidden=true;update();
- function render(ms){requestAnimationFrame(render);if(document.hidden||!ready){last=ms;return;}const dt=Math.min((ms-last)/1000,.1);last=ms;const goal=expanded()?1:0;amount=reduce.matches?goal:amount+(goal-amount)*(1-Math.exp(-dt*6));if(Math.abs(amount-goal)<.0001)amount=goal;
- model.position.y=-22*amount;camera.zoom=1-.16*amount;camera.updateProjectionMatrix();
- for(const {node,base,offset} of instances)node.position.copy(base).addScaledVector(offset,amount);
- const kind=byId.get(selected)?.effect;vision.visible=kind==='vision';sonar.visible=kind==='sonar';flow.visible=kind==='flow';effects.visible=!!kind;
- if(kind){model.updateMatrixWorld(true);const item=instances.find(n=>n.id===selected);effects.position.copy(new THREE.Box3().setFromObject(item.node).getCenter(new THREE.Vector3()));const t=$('motion').checked&&!reduce.matches?ms/1000:1;
- frame.position.x=Math.sin(t*.9)*6;
- for(let i=0;i<rings.length;i++){const phase=(t*.45+i/3)%1;const z=phase<.5?phase*150:(1-phase)*150;rings[i].position.z=z;rings[i].scale.setScalar(.4+z/70);rings[i].material.opacity=.2+.5*(1-z/90);}
- for(let i=0;i<flows.length;i++){const f=flows[i];f.dot.position.lerpVectors(f.start,f.end,(t*.5+i/3)%1);}}
- controls.update();renderer.render(scene,camera);
- }
- requestAnimationFrame(render);
- }catch(error){console.error('CAD viewer:',error);fail('当前无法显示 3D · 可继续查看真实装配预览和零件说明');}
+  try{
+    [T,{OrbitControls},{loadRobot}]=await Promise.all([import('three'),import('./vendor/three/examples/jsm/controls/OrbitControls.js'),import('./scene/robot.js')]);
+    renderer=new T.WebGLRenderer({alpha:true,antialias:true,powerPreference:'high-performance'});
+    renderer.setPixelRatio(Math.min(devicePixelRatio,matchMedia('(max-width:850px)').matches?1.5:1.75));renderer.setClearColor(0,0);
+    renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
+    stage.append(renderer.domElement);scene=new T.Scene();camera=new T.PerspectiveCamera(32,1,.001,5);
+    controls=new OrbitControls(camera,renderer.domElement);controls.enabled=false;controls.enableDamping=false;controls.enablePan=false;controls.minDistance=.025;controls.maxDistance=.9;controls.maxPolarAngle=Math.PI*.88;controls.addEventListener('change',request);
+    environment();lighting();robot=await loadRobot();scene.add(robot.root);picking();
+    renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();lost=true;if(mode==='inspect')leaveInspect();fallback('3D 暂时中断 · 继续浏览章节海报');});
+    renderer.domElement.addEventListener('webglcontextrestored',()=>{environment();lost=false;ready=true;restoring=true;document.body.dataset.viewer='ready';renderer.domElement.hidden=false;poster.hidden=true;$('loadStatus').hidden=true;$('inspect').disabled=false;lastPose='';request();});
+    ready=true;$('inspect').disabled=false;document.body.dataset.viewer='ready';document.body.dataset.mode='story';poster.hidden=true;$('loadStatus').hidden=true;
+    observer=new ResizeObserver(resize);observer.observe(stage);resize();measure();
+    // Read-only diagnostic surface for reproducible evidence; never references robot transport.
+    window.__careRover={snapshot:()=>({index,progress,mode,paused,clock,ready,lost,restoring,draws,render:lastInfo,
+      camera:camera.position.toArray(),target:controls.target.toArray(),projectedRobotBounds:projectedRobotBounds(),
+      instances:robot.instances.map(n=>({id:n.id,instanceId:n.node.name,position:n.node.position.toArray(),rotation:n.node.quaternion.toArray(),visible:n.node.visible})),
+      sensors:Object.fromEntries(Object.entries(robot.effects).filter(([,e])=>e.anchor).map(([k,e])=>[k,{position:e.anchor.getWorldPosition(new T.Vector3()).toArray(),forward:new T.Vector3(0,0,1).transformDirection(e.anchor.matrixWorld).toArray()}]))}),
+      loseContext:()=>renderer.forceContextLoss(),restoreContext:()=>renderer.forceContextRestore()};
+  }catch(error){console.error('CareRover presentation:',error);fallback('3D 未能载入 · 继续浏览章节海报');}
 }
-if(new URLSearchParams(location.search).get('static')==='1')fail('静态展示模式 · 保存的 CAD 装配预览');else boot();
+setPaused(paused);measure();
+// Initial deep links select a composed shot; reload/back preserve the browser's exact scroll restoration.
+const navigationType=performance.getEntriesByType('navigation')[0]?.type;
+if(navigationType==='navigate'&&location.hash&&chapters.includes(location.hash.slice(1)))go(chapters.indexOf(location.hash.slice(1)),'instant');
+window.addEventListener('pageshow',()=>requestAnimationFrame(measure));
+if(new URLSearchParams(location.search).get('static')==='1')fallback('静态展示 · 章节海报与文字');else boot();

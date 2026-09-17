@@ -1,0 +1,189 @@
+{
+  "version": "v4.1",
+  "baselineCommit": "72ee475bd76b7a46f2c3bd6477dcd2f45b76ac69",
+  "originalGLBSha256": "2310e2bd46a6940497349d1acf00ef70bd8279881a637424b2764c136229d61b",
+  "units": "metres; no legacy 1000 scale",
+  "geometry": "Original CAD structural meshes and saved installation transforms; authored runtime appearance for nine hardware classes. Not a calibrated scan.",
+  "targetAssembly": {
+    "wheels": 4,
+    "servos": 4,
+    "servo7": "Original saved hidden placement restored in derivative only",
+    "display": "Top lid"
+  },
+  "references": {
+    "robot-front.jpg": "Team photograph embedded in V4 PDF, extracted unchanged; unfinished assembly",
+    "robot-open.jpg": "Team photograph crop embedded in V4 PDF, extracted unchanged; background personal card already excluded"
+  },
+  "publicTextures": "Procedurally authored silk-screen, OLED, material grain, and environment. No merchant photos used as textures.",
+  "uncertainties": [
+    "Final sonar installation depth and TX/RX",
+    "Exact camera optical FOV",
+    "Board revision and hidden details",
+    "Cable endpoints, pin mapping and lengths",
+    "Physical confirmation of fourth servo installation"
+  ],
+  "cables": "Illustrative module-level routes; fade/omit when fixed illustrative slack is exceeded; not an electrical wiring diagram.",
+  "proxyReplacement": "Complete semantic controller appearance replaced; source CAD/GLB untouched; two wire blocks are absent from the new controller.",
+  "animation": "Independent educational simulation. No robot WebSocket or motion commands.",
+  "files": [
+    {
+      "path": "app.js",
+      "bytes": 18841,
+      "sha256": "d4a4f97bb527baa5ac20d0834eea21245233e909f71e797254f42c11e3b113bc"
+    },
+    {
+      "path": "assets/appearance/care-mobile.png",
+      "bytes": 43174,
+      "sha256": "6ce78bccf9f70d049a1306de2fb6e8a6941c5e031c9574b245b1214d5333c3b4"
+    },
+    {
+      "path": "assets/appearance/care.png",
+      "bytes": 145192,
+      "sha256": "8272f428fb4e385268c767ec77ebd554728127fb4b2d245d7b960d7fa4f13f3d"
+    },
+    {
+      "path": "assets/appearance/inside-mobile.png",
+      "bytes": 64415,
+      "sha256": "0d4e0ba8ab82d0b3fdb9c232ce61b69407f88495a68e521e2f647f6098f6b72d"
+    },
+    {
+      "path": "assets/appearance/inside.png",
+      "bytes": 217986,
+      "sha256": "87435a16b57f3a623604c65d65fe23b7a0ece15838d8e5c70f4f87cf7291ac33"
+    },
+    {
+      "path": "assets/appearance/meet-mobile.png",
+      "bytes": 59790,
+      "sha256": "07981f5a8e6fb970d0becd14ed0e5a0198bee3a48c38ff37897558ca95ea0c7e"
+    },
+    {
+      "path": "assets/appearance/meet.png",
+      "bytes": 178922,
+      "sha256": "12ec9422fd1ed12742bd9db0d942ec72c51001256762db047107053f60c85c54"
+    },
+    {
+      "path": "assets/appearance/motion-mobile.png",
+      "bytes": 44632,
+      "sha256": "9245d8fd55611561349ca5b1693ea43ced5c8ac28640b747459e1eb3129ae4e8"
+    },
+    {
+      "path": "assets/appearance/motion.png",
+      "bytes": 162193,
+      "sha256": "ba9b0f58bba97f2f3d6b39b9908abf7b2921cb240252f056ba2489a7f5378727"
+    },
+    {
+      "path": "assets/appearance/range-mobile.png",
+      "bytes": 46084,
+      "sha256": "3c59a1adfce204fa3ac8e3e97cb4e4b361342155ab2a18ce5d75a8cd02ad5d6c"
+    },
+    {
+      "path": "assets/appearance/range.png",
+      "bytes": 153220,
+      "sha256": "ed79b43d43a9d4988059b34b26a9a30fcf4b2be77c9981782442d09e3b6b5ff5"
+    },
+    {
+      "path": "assets/appearance/vision-mobile.png",
+      "bytes": 46533,
+      "sha256": "e15f75282455d8c3532aca4d9adfb7ffefeb22267cbeed2237fb8fe46632822e"
+    },
+    {
+      "path": "assets/appearance/vision.png",
+      "bytes": 141096,
+      "sha256": "208864e419ba8f051f8db7c6fc7ec9b6abad32f200f4acec3a784a90563f2919"
+    },
+    {
+      "path": "assets/appearance/whole-mobile.png",
+      "bytes": 49251,
+      "sha256": "9b739dff827bc6e38f056118900776f388f86ae41549dd9dd59da031905e8e0a"
+    },
+    {
+      "path": "assets/appearance/whole.png",
+      "bytes": 178956,
+      "sha256": "c9768fe29341433ff26cf2d9879a4d98de654047b75cccf0c499a89052ae2915"
+    },
+    {
+      "path": "assets/cad/carerover.glb",
+      "bytes": 701560,
+      "sha256": "2310e2bd46a6940497349d1acf00ef70bd8279881a637424b2764c136229d61b"
+    },
+    {
+      "path": "assets/reference/robot-front.jpg",
+      "bytes": 242889,
+      "sha256": "68696a887309c1239566faf6fd72966ae2fbd98b09a600d71dda8e686bfc5147"
+    },
+    {
+      "path": "assets/reference/robot-open.jpg",
+      "bytes": 557312,
+      "sha256": "ee36d6129265207044fe78db7f3fe49e0c0db7fc0449b12fc9d93ab7770e2382"
+    },
+    {
+      "path": "effects/sensors.js",
+      "bytes": 4798,
+      "sha256": "0ac6e9ad373314d4c0f3a7240d4f9f80dde2c4b767b796039c7c11e64c34d68b"
+    },
+    {
+      "path": "index.html",
+      "bytes": 8182,
+      "sha256": "ede7028c0bf65ac53a275c3c84b4c726bd5682f34d16943b2bb0efc0039b2f8c"
+    },
+    {
+      "path": "parts.js",
+      "bytes": 5460,
+      "sha256": "0dbdf7e69e8123b0c404d5438bab193526d81e3b151351eb8fe56f1a0cf6d4b8"
+    },
+    {
+      "path": "scene/appearance.js",
+      "bytes": 12377,
+      "sha256": "73690a3d56567d0d8d34ac4a167586dd60cb0e45967b2a2671b1a81e445d8e15"
+    },
+    {
+      "path": "scene/robot.js",
+      "bytes": 5233,
+      "sha256": "6328c8de7bf143ef3b33ad74f84cd87cbeab630c4f2f8bb1a3d88ed86a714078"
+    },
+    {
+      "path": "story/timeline.js",
+      "bytes": 4523,
+      "sha256": "5202031d5906559e8e66e2a8cd5371e1729080d89a1915d676cb4f6fcd7e0569"
+    },
+    {
+      "path": "style.css",
+      "bytes": 10970,
+      "sha256": "deb36b05691688c2848ffc4a6e13c298f42cb9038f7f8724f3fc8423fb829048"
+    }
+  ],
+  "appearanceClearanceMetres": {
+    "camera_local_z": 0.0005,
+    "display_local_y": 0.0025
+  },
+  "appearanceClearanceNote": "Display-only clearance from coplanar CAD surfaces, not measured installation changes. Saved instance rest transforms remain unchanged.",
+  "sensorAnchors": {
+    "coordinateSpace": "instance local metres; tied to assetHash in this manifest",
+    "camera": {
+      "origin": [
+        -0.011,
+        0,
+        0.0213
+      ],
+      "forward": [
+        0,
+        0,
+        1
+      ]
+    },
+    "ultrasonic": {
+      "origin": [
+        0,
+        0,
+        0.0133
+      ],
+      "forward": [
+        0,
+        0,
+        1
+      ]
+    }
+  },
+  "deliverable": "Procedurally authored geometry in scene/appearance.js plus original structural GLB. No standalone new photoreal/scanned GLB is claimed.",
+  "assetHash": "349c3d4422ee7e641d2fd2823f37e311e8a4751bb30829d538333a991327b74b"
+}

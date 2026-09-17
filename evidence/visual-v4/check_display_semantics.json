@@ -1,0 +1,54 @@
+[
+  {
+    "name": "sent stop is locally locked and awaiting device, never physical confirmation",
+    "status": "PASS",
+    "detail": "本地已锁定 · 等待设备确认"
+  },
+  {
+    "name": "fresh device telemetry is labelled device-reported",
+    "status": "PASS",
+    "detail": "设备已上报急停"
+  },
+  {
+    "name": "stale telemetry loses device-confirmed wording",
+    "status": "PASS",
+    "detail": "本地已锁定 · 等待设备确认"
+  },
+  {
+    "name": "failed send retains local latch and says unconfirmed",
+    "status": "PASS",
+    "detail": "本地已锁定 · 设备未确认"
+  },
+  {
+    "name": "live PPG preserves source time through network delay",
+    "status": "PASS",
+    "detail": {
+      "basis": "source-batch",
+      "latency": 800,
+      "latch": true
+    }
+  },
+  {
+    "name": "replay title wins over disconnected transport and recorded ESTOP",
+    "status": "PASS",
+    "detail": "会话回放"
+  },
+  {
+    "name": "replay preserves source-time gap and sends no commands",
+    "status": "PASS",
+    "detail": {
+      "replaying": true,
+      "basis": "source-batch",
+      "gap": 540,
+      "messages": 16
+    }
+  },
+  {
+    "name": "console has no mobile horizontal overflow",
+    "status": "PASS"
+  },
+  {
+    "name": "return to live preserves original emergency latch",
+    "status": "PASS"
+  }
+]

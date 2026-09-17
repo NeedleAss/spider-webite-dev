@@ -1,0 +1,130 @@
+{
+  "date": "2026-09-18",
+  "method": "Re-exported original uploaded CAD using the v3 verified exporter. Saved display meshes only, not native B-rep regeneration.",
+  "glbSha256": "2310e2bd46a6940497349d1acf00ef70bd8279881a637424b2764c136229d61b",
+  "matches_previous_glb": true,
+  "glbBytes": 701560,
+  "partClasses": 15,
+  "visibleInstances": 20,
+  "savedReferenceCount": 21,
+  "hiddenInstances": [
+    {
+      "sourceName": "舵机",
+      "referenceNumber": "7",
+      "matrix": [
+        1.0,
+        1.224646799147353e-16,
+        1.04744440165294e-14,
+        0.0,
+        1.04744440165294e-14,
+        1.224646799147353e-16,
+        -1.0,
+        0.0,
+        -1.224646799147366e-16,
+        1.0,
+        1.22464679914734e-16,
+        0.0,
+        0.005100000000000156,
+        -0.002999999999999997,
+        -0.01499999999999992,
+        1.0
+      ],
+      "sourceVisibility": "hidden",
+      "plannedVisibility": "visible per user quantity-four declaration",
+      "approval": "restore exact saved placement only; do not invent a mirrored placement; final installation still to confirm"
+    }
+  ],
+  "bounds_note": "All bounds below are saved local CAD display AABB extents, including possible modeling proxies. They are not physical measurements or board dimensions.",
+  "localDisplayBoundsMm": {
+    "chassis": [
+      85.0,
+      14.8,
+      85.0
+    ],
+    "battery": [
+      51.6,
+      35.0,
+      46.8
+    ],
+    "servo": [
+      32.2,
+      31.2,
+      11.8
+    ],
+    "wheel": [
+      23.3,
+      23.254,
+      18.4
+    ],
+    "controller": [
+      63.611,
+      23.7,
+      27.94
+    ],
+    "board-mount": [
+      54.1,
+      8.5,
+      64.0
+    ],
+    "camera": [
+      63.0,
+      28.6,
+      21.7
+    ],
+    "camera-mount": [
+      79.0,
+      27.5,
+      25.0
+    ],
+    "imu": [
+      20.3,
+      8.3,
+      33.6
+    ],
+    "health": [
+      35.8,
+      9.2,
+      45.8
+    ],
+    "lid": [
+      85.0,
+      15.0,
+      85.0
+    ],
+    "display": [
+      25.9,
+      22.7,
+      25.9
+    ],
+    "board-frame": [
+      85.0,
+      106.0,
+      12.5
+    ],
+    "shell": [
+      85.0,
+      106.0,
+      72.5
+    ],
+    "ultrasonic": [
+      45.0,
+      45.0,
+      19.3
+    ]
+  },
+  "sensorWorldForward": {
+    "camera": [
+      -1.0,
+      -0.0,
+      -0.0
+    ],
+    "ultrasonic": [
+      -1.0,
+      -0.0,
+      -0.0
+    ]
+  },
+  "nativeCad": "NOT RUN",
+  "newPhotorealGLB": "NOT PRODUCED",
+  "newFullWebGLSite": "NOT PRODUCED"
+}
