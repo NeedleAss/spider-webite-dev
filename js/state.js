@@ -72,7 +72,8 @@ const state = {
   ppg: {
     ring: new PpgRing(CONFIG.PPG_RING_CAPACITY),
     sampleRateHz: CONFIG.PPG_EXPECTED_RATE_HZ,
-    lastTs: 0
+    lastTs: 0,
+    receivedTs: 0, sourceTs: null, timeBasis: 'arrival-estimate'
   },
   ui: {
     transportName: 'mock',
@@ -257,6 +258,7 @@ export function resetForDisconnect() {
   state.vision.lastPersonTs = 0;
   state.vision.lastGestureTs = 0;
   state.ppg.ring.clear();
+  state.ppg.lastTs=0;state.ppg.receivedTs=0;state.ppg.sourceTs=null;state.ppg.timeBasis='arrival-estimate';
   state.robot.vx = 0; state.robot.vy = 0; state.robot.wz = 0;
   state.ui.joystick.vx = 0; state.ui.joystick.vy = 0;
   state.ui.rotate = 0;

@@ -105,7 +105,7 @@ export function decode(raw) {
 
   switch (o.type) {
     case 'telemetry': return { ok: true, msg: { ...normalizeTelemetry(o), ts } };
-    case 'ppg':       return num(o.value) === undefined ? { ok: false, error: 'invalid PPG sample' } : { ok: true, msg: { type: 'ppg', ts, value: o.value } };
+    case 'ppg':       return num(o.value) === undefined ? { ok: false, error: 'invalid PPG sample' } : { ok: true, msg: { type: 'ppg', ts, sourceTs:num(o.ts), value: o.value } };
     case 'ppg_batch': return { ok: true, msg: normalizePpgBatch(o, ts) };
     case 'ack':       return { ok: true, msg: {
                           type: 'ack', ts,
@@ -238,6 +238,7 @@ function normalizePpgBatch(o, ts) {
   return {
     type: 'ppg_batch',
     ts,
+    sourceTs:num(o.ts),
     sample_rate_hz: (rate !== undefined && rate > 0 && rate <= 2000) ? rate : undefined,
     samples
   };
