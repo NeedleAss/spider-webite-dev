@@ -18,7 +18,7 @@ except ImportError:
 
 ROOT = Path(__file__).resolve().parent.parent
 MODES = ('IDLE', 'MANUAL', 'PERSON_FOLLOW', 'GESTURE_CONTROL', 'HEALTH_CHECK')
-GESTURES = ('NONE', 'PALM', 'FIST', 'THUMB_UP', 'VICTORY', 'POINT_LEFT', 'POINT_RIGHT')
+GESTURES = ('NONE', 'LIKE', 'DISLIKE', 'TWO', 'THREE', 'OK')
 
 def stamp():
     return int(time.time() * 1000)
@@ -40,6 +40,8 @@ class RobotSim:
         self.phase = 0.
         self.hr, self.spo2, self.sqi = 74, 98, .94
         self.person = {'found': True, 'x': 124, 'y': 32, 'w': 76, 'h': 176, 'confidence': .94}
+        self.wait_since = None
+        self.person_override = None
         self.gesture = 'NONE'
         self.finger = True
         self.health_state = 'VALID'
@@ -80,7 +82,8 @@ class RobotSim:
             self.target = v
             self.last_command = now
             if not any(v):
-                self.stop(idle=self.mode=='PERSON_FOLLOW')
+                self.front.reason='release'
+                self.stop(idle=self.mode in ('PERSON_FOLLOW','GESTURE_CONTROL'),reason='release')
             return []
         if kind == 'set_mode':
             if msg.get('mode') not in MODES:
@@ -91,6 +94,7 @@ class RobotSim:
             self.stop()
             self.front.cancel('mode_changed')
             self.mode = msg['mode']
+            self.wait_since = None
             if self.mode=='PERSON_FOLLOW': self.last_ping=now
             return [ack]
         if kind == 'estop':
@@ -100,7 +104,7 @@ class RobotSim:
             return [ack]
         if kind == 'clear_estop':
             self.estop = False
-            self.stop(idle=True)
+            self.stop(idle=True,reason='estop_cleared')
             return [ack]
         if kind == 'ping':
             self.last_ping=now
@@ -110,15 +114,19 @@ class RobotSim:
     def step(self, dt, now=None):
         now = time.monotonic() if now is None else now
         self.t += dt
-        if self.estop or (self.mode == 'MANUAL' and now - self.last_command > .250):
+        if self.estop or (self.mode == 'MANUAL' and now - self.last_command >= .300):
             self.stop()
-        if self.mode=='PERSON_FOLLOW' and (not self.person['found'] or now-self.last_ping>=.240): self.stop(idle=True,reason='target_lost' if not self.person['found'] else 'owner_watchdog')
+        if self.mode=='PERSON_FOLLOW':
+            if now-self.last_ping>=.300: self.stop(idle=True,reason='owner_watchdog')
+            elif not self.person['found']:
+                if self.wait_since is None: self.wait_since=now
+                self.stop(idle=self.front.phase!='NONE' or now-self.wait_since>=30,reason='target_lost')
+            else: self.wait_since=None
         target = self.target[:] if self.mode == 'MANUAL' else [0., 0., 0.]
         if not self.estop and self.mode == 'PERSON_FOLLOW' and self.person['found']:
-            target = [.15, 0., math.sin(self.t * .42) * .3]
-        elif not self.estop and self.mode == 'GESTURE_CONTROL':
-            target = {'THUMB_UP': [.4, 0., 0.], 'FIST': [-.3, 0., 0.],
-                      'POINT_LEFT': [0., -.4, 0.], 'POINT_RIGHT': [0., .4, 0.]}.get(self.gesture, [0., 0., 0.])
+            offset = math.sin(self.t * .42) * .3
+            target = [0., 0., max(-.20, min(.20, offset))] if abs(offset) >= .04 else [.15, 0., 0.]
+        # Synthetic gesture display labels never authorize an action.
         if self.mode!='PERSON_FOLLOW' and self.front.enabled: self.front.cancel('mode_exit')
         protected,abort=self.front.step(self.t,target,self.mode=='PERSON_FOLLOW')
         if self.mode in ('MANUAL','PERSON_FOLLOW','GESTURE_CONTROL'):
@@ -134,6 +142,7 @@ class RobotSim:
                        'x': int(max(0, min(320-w, 160 + math.sin(self.t * .42) * 85 - w/2))),
                        'y': int(max(0, min(240-h, 129 + math.sin(self.t * .7) * 10 - h/2))),
                        'w': w, 'h': h, 'confidence': round(.91 + math.sin(self.t) * .05, 2)}
+        if self.person_override is not None: self.person['found']=self.person_override
         self.gesture = GESTURES[int(self.t / 3.4) % len(GESTURES)]
         self.hr = round(74 + math.sin(self.t * .13) * 5)
         self.spo2 = round(98 + math.sin(self.t * .07))
@@ -146,7 +155,7 @@ class RobotSim:
         moving = any(abs(v) > .02 for v in self.velocity)
         status = 'ESTOP' if self.estop else 'DRIVING' if moving else 'READY' if self.mode == 'MANUAL' else 'IDLE'
         if not self.estop and self.mode == 'PERSON_FOLLOW':
-            status = 'TRACKING' if self.person['found'] else 'SEARCHING'
+            status = 'TRACKING' if self.person['found'] else 'WAIT_TARGET'
         if not self.estop and self.mode == 'HEALTH_CHECK':
             status = 'MEASURING'
         return {'type': 'telemetry', 'ts': stamp(), 'front':self.front.telemetry(self.t), 'connection': {'camera': True, 'main_mcu': True, 'simulated': True},
@@ -154,7 +163,7 @@ class RobotSim:
                           'battery_pct': max(5, round(87 - self.t * .004)), **dict(zip(('vx', 'vy', 'wz'), (round(v, 3) for v in self.velocity)))},
                 'imu': {'yaw_deg': round(self.yaw, 1), 'pitch_deg': round(math.sin(self.t) * .4, 1), 'roll_deg': round(math.cos(self.t) * .3, 1)},
                 'vision': {'image_width': 320, 'image_height': 240, 'ai_fps': round(5.8 + math.sin(self.t) * .5, 1),
-                           'person': self.person, 'gesture': {'label': self.gesture, 'confidence': .91, 'stable': True}},
+                           'person': self.person, 'gesture': {'label': self.gesture, 'confidence': .91 if self.gesture!='NONE' else 0, 'stable': self.gesture!='NONE'}},
                 'health': {'hr_bpm': self.hr, 'spo2_pct': self.spo2, 'sqi': round(self.sqi, 2), 'finger_detected': self.finger, 'state': self.health_state}}
 
     def ppg(self):

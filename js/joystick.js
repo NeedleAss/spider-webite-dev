@@ -17,7 +17,7 @@ export class MotionInput {
     const on = (el, event, fn) => el.addEventListener(event, fn, { signal: this.abort.signal });
     on(pad, 'pointerdown', e => {
       if (!enabled() || e.button !== 0 || this.pointer !== null) return;
-      e.preventDefault(); this.keys.clear(); this.pointer = e.pointerId;
+      e.preventDefault(); this.takePointerControl(); this.pointer = e.pointerId;
       pad.setPointerCapture(e.pointerId); pad.dataset.active = 'true'; this.move(e);
     });
     on(pad, 'pointermove', e => { if (e.pointerId === this.pointer) this.move(e); });
@@ -27,7 +27,7 @@ export class MotionInput {
     for (const [button, value] of [[left, -1], [right, 1]]) {
       on(button, 'pointerdown', e => {
         if (!enabled() || e.button !== 0 || this.rotationPointer !== null) return;
-        e.preventDefault(); this.keys.clear(); this.rotationPointer = e.pointerId;
+        e.preventDefault(); this.takePointerControl(); this.rotationPointer = e.pointerId;
         button.setPointerCapture(e.pointerId); button.dataset.held = 'true';
         this.wz = value; this.publish();
       });
@@ -44,6 +44,9 @@ export class MotionInput {
       if (this.editing(e.target) || e.metaKey || e.ctrlKey || e.altKey || !enabled()) return;
       const key = e.key.toLowerCase();
       if (!'wasdqe'.includes(key) || key.length !== 1) return;
+      // Pointer gestures own all motion until released. Stop/Escape above
+      // remain available and can always cancel that ownership.
+      if (this.pointer !== null || this.rotationPointer !== null) { e.preventDefault(); return; }
       e.preventDefault(); if (e.repeat) return;
       this.keys.add(key); this.keyboard();
     });
@@ -52,6 +55,12 @@ export class MotionInput {
     });
   }
   editing(target) { return target.closest('input, select, textarea, dialog, [contenteditable="true"]'); }
+  takePointerControl() {
+    if (this.keys.size) {
+      this.keys.clear(); this.vector = { vx: 0, vy: 0 }; this.wz = 0;
+      this.knob.style.transform = ''; this.pad.dataset.active = 'false';
+    }
+  }
   move(e) {
     if (!this.enabled()) { this.reset(true); return; }
     const box = this.pad.getBoundingClientRect();

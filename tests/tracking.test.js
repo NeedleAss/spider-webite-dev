@@ -28,3 +28,14 @@ test('tracking capabilities, IMU validity and explicit null survive decoding',()
   store.applyTelemetry(msg);assert.equal(store.getState().video.stream_url,'http://192.168.4.2/stream');
   store.resetForDisconnect();assert.deepEqual(store.getState().video,{});assert.equal(store.getState().imu.valid,false);
 });
+test('held gesture and IMU age come from the source, not aggregate arrival',()=>{
+  const realNow=Date.now;let clock=10000;Date.now=()=>clock;
+  try{
+    store.resetForDisconnect();
+    store.applyTelemetry(telemetry({vision:{gesture:{label:'LIKE',confidence:.9,stable:true,held:true,age_ms:2500}},imu:{valid:true,calibrated:true,age_ms:700,yaw_deg:0}}));
+    assert.equal(store.getState().vision.lastGestureTs,7500);assert.equal(store.getState().lastImuTs,9300);
+    assert.equal(store.isGestureStale(),false);clock+=100;assert.equal(store.isGestureStale(),true);
+    store.applyTelemetry(telemetry({vision:{gesture:{label:'LIKE',confidence:.9,stable:true,held:true,age_ms:2600}}}));
+    assert.equal(store.isGestureStale(),true);
+  }finally{Date.now=realNow;}
+});

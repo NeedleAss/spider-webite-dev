@@ -59,8 +59,7 @@ int main(){
     if(fault==5)controller.disconnect(1,now+1);
     if(fault==6)controller.fault(true,now+1);
     const auto stopped=controller.snapshot(checkNow);
-    if(fault==1||fault==5) assert(stopped.mode==Mode::Follow); // network/disconnect no longer drop follow (fault==3 stops via front staleness)
-    else assert(stopped.mode==Mode::Idle&&!stopped.target.vx&&!stopped.target.vy&&!stopped.target.wz&&!stopped.front.demoEnabled);
+    assert(stopped.mode==Mode::Idle&&!stopped.target.vx&&!stopped.target.vy&&!stopped.target.wz&&!stopped.front.demoEnabled);
   }
   std::cout<<"Demo display votes, action freshness, timed metric hold and gesture arbitration passed\n";
 }

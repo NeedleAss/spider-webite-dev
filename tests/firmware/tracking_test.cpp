@@ -55,19 +55,19 @@ void safetyTests() {
   for(int i=2;i<=4;++i){auto p=face(i,10+(i-1)*100);s.cameraPacket(p.receivedMs);s.heartbeat(1,p.receivedMs);s.person(p);s.computeFollow(p.receivedMs);}
   assert(s.followingReady());
   s.heartbeat(2,500);s.computeFollow(549);assert(s.snapshot(549).mode==Mode::Follow);
-  s.computeFollow(700);assert(s.snapshot(700).mode==Mode::Follow); // Follow no longer drops on stale owner heartbeat.
-  s=followReady();s.heartbeat(1,200);s.tick(510);assert(s.snapshot(510).mode==Mode::Follow); // Ping does not drop follow.
-  s=followReady();for(int t=110;t<900;t+=100){s.cameraPacket(t);s.heartbeat(1,t);s.computeFollow(t);}s.tick(2100);assert(s.snapshot(2100).mode==Mode::Follow); // person timeout no longer drops follow.
+  s.computeFollow(700);assert(s.snapshot(700).mode==Mode::Idle); // Observer heartbeat cannot retain ownership.
+  s=followReady();s.heartbeat(1,200);s.tick(510);assert(s.snapshot(510).mode==Mode::Idle);
+  s=followReady();for(int t=110;t<=2110;t+=100){s.cameraPacket(t);s.heartbeat(1,t);s.computeFollow(t);}assert(s.snapshot(2110).mode==Mode::Follow&&s.snapshot(2110).waitingTarget);
   s=followReady();assert(s.velocity(1,.1,0,0,20));s.velocity(1,0,0,0,21);assert(s.snapshot(21).mode==Mode::Idle);
   s=followReady();s.emergency(20);assert(s.snapshot(20).estop);s.clear(1,21);assert(s.snapshot(21).mode==Mode::Idle);
-  s=followReady();s.configureHardware(true,true);s.imu(true,true,false,20);s.tick(250);assert(s.snapshot(250).mode==Mode::Follow);s.tick(320);assert(s.snapshot(320).mode==Mode::Follow); // IMU timeout no longer drops follow.
+  s=followReady();s.configureHardware(true,true);s.imu(true,true,false,20);s.heartbeat(1,250);s.tick(250);assert(s.snapshot(250).mode==Mode::Follow);s.heartbeat(1,770);s.tick(770);assert(s.snapshot(770).mode==Mode::Idle);
   { // Person leaving the frame holds follow still; a 30 s re-identify grace applies.
     auto g=followReady();
-    for(int i=2;i<=4;++i){auto p=face(i,10+(i-1)*100);g.cameraPacket(p.receivedMs);g.person(p);}
+    for(int i=2;i<=4;++i){auto p=face(i,10+(i-1)*100);g.cameraPacket(p.receivedMs);g.heartbeat(1,p.receivedMs);g.person(p);g.computeFollow(p.receivedMs);}
     assert(g.followingReady());
-    for(uint64_t t=400;t<2000;t+=100){VisionPacket no;no.seq=uint32_t(t);no.receivedMs=t;no.found=false;g.cameraPacket(t);g.person(no);}
+    for(uint64_t t=400;t<2000;t+=100){VisionPacket no;no.seq=uint32_t(t);no.receivedMs=t;no.found=false;g.cameraPacket(t);g.heartbeat(1,t);g.person(no);g.tick(t);}
     assert(g.snapshot(1990).mode==Mode::Follow); // lost target holds follow, does not exit
-    for(uint64_t t=2000;t<=34000;t+=100){VisionPacket no;no.seq=uint32_t(t);no.receivedMs=t;no.found=false;g.cameraPacket(t);g.person(no);}
+    for(uint64_t t=2000;t<=34000;t+=100){VisionPacket no;no.seq=uint32_t(t);no.receivedMs=t;no.found=false;g.cameraPacket(t);g.heartbeat(1,t);g.person(no);g.tick(t);}
     assert(g.snapshot(34000).mode==Mode::Idle); // 30 s re-identify grace expired
   }
 }

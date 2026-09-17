@@ -3,9 +3,9 @@
 #include "demo_tuning.h"
 #include <algorithm>
 namespace carerover {
-// Constant-velocity Kalman tracking for display and association only.  The
-// filtered box is never used as a motion source; wheel commands still require
-// a fresh accepted detector measurement.
+// Constant-velocity Kalman tracking for display, association and bounded
+// lookahead on accepted follow measurements. Prediction never renews the
+// last real sequence/time; SafetyController independently expires motion.
 struct ScalarKalman {
   bool initialized = false;
   float x = 0, v = 0;

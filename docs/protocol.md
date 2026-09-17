@@ -2,6 +2,25 @@
 
 最终整机中，浏览器只连接主 ESP32-S3 的 `/ws`。所有消息是 JSON 文本，含 `type` 和 `ts`（Unix 毫秒）。视频不进入 WebSocket。USB 串口桥仅用于开发诊断。
 
+## 当前候选契约（2026-09-17）
+
+本节及下方安全契约对应 `codex/final-polish`，基线 `058ce89bd1aa5b5da0dbf89101f4625df70ca6df`。历史阶段记录不代表当前行为或真机通过。详细验收见 [FINAL_ACCEPTANCE.md](FINAL_ACCEPTANCE.md)。
+
+| 事件 / 来源 | 时限与结果 |
+|---|---|
+| MANUAL 有效速度指令 | ≥300 ms 撤销目标，保留 MANUAL；ping 不续期 |
+| 控制所有者 WS 断开 / 网络断开 | 取消动作、回 IDLE、释放所有权；观察者断开不影响控制者 |
+| Follow 网页所有者心跳 / 跟随计算 | 各自 ≥300 ms 取消动作回 IDLE；手势启动的 owner=0 跟随无网页心跳依赖 |
+| 人物 / 相机来源 | ≥1200 ms 撤销跟随目标，保持 `WAIT_TARGET`；新接受的实测可恢复 |
+| 新人物结果 `found=false` / 低分 / 匹配失败 | 立即零输出并开始等待；30 s 由周期任务退出。绕障中失效立即取消整个动作 |
+| IMU | ≥750 ms 禁止运动；运动准入要求校准、有效且新鲜，硬件 NVS 参数须 verified |
+| 普通零速度 | 遵守原所有权规则；取消 Follow 和 Gesture 动作；下一传感器回调不得恢复旧动作 |
+| 手势旋转 | 12 s 总期限在周期任务执行；不依赖 IMU 回调触发期限检查 |
+| 倾倒 | 保留 +X 安装解释、55°/400 ms 确认、42°/1 s 恢复；缺失/拒绝帧不清除危险计时和故障锁存 |
+| 展示数据 | 人物框 1400 ms、手势 2600 ms；均按来源年龄，不以重复聚合续期 |
+
+这些是软件裁决期限，实际撤销延迟还包含任务调度；不是实体停止时间保证。底层 240 ms drive lease 的检查与安全任务在同一执行路径，安全任务自身停摆的 PWM/实体行为尚待独立验证。
+
 ## Browser → Robot
 
 | type | 字段 | 语义 |
@@ -35,7 +54,7 @@
   "vision":{
     "image_width":320,"image_height":240,"ai_fps":5.8,
     "person":{"found":true,"x":124,"y":32,"w":76,"h":176,"confidence":0.94},
-    "gesture":{"label":"PALM","confidence":0.91,"stable":true}
+    "gesture":{"label":"LIKE","confidence":0.91,"stable":true}
   },
   "health":{"hr_bpm":74,"spo2_pct":98,"sqi":0.94,"finger_detected":true,"state":"VALID"}
 }
@@ -47,10 +66,10 @@ Mock 额外上报 `connection.simulated: true`，用于将 WebSocket 模拟设�
 
 - 请求模式：`IDLE`, `MANUAL`, `PERSON_FOLLOW`, `GESTURE_CONTROL`, `HEALTH_CHECK`。
 - 系统模式：`ESTOP`, `FAULT`，不可通过 set_mode 请求。
-- 状态：`IDLE`, `READY`, `DRIVING`, `TRACKING`, `SEARCHING`, `MEASURING`, `ESTOP`, `FAULT`。
+- 状态：`IDLE`, `READY`, `DRIVING`, `TRACKING`, `WAIT_TARGET`, `REACQUIRE`, `TURNING`, `SEARCHING`（仅兼容旧消息，不表示自动搜人）, `MEASURING`, `ESTOP`, `FAULT`。
 - 手势：`NONE`, `PALM`, `FIST`, `THUMB_UP`, `VICTORY`, `POINT_LEFT`, `POINT_RIGHT`, `ONE`, `TWO`, `THREE`, `FOUR`, `FIVE`, `OK`, `CALL`, `LIKE`, `DISLIKE`, `UNKNOWN`。显示置信度和更新时间；stable 且 confidence ≥ 0.75 显示“已稳定”，网页不会据此自行发运动命令。
 - 健康状态：`NO_FINGER`, `ACQUIRING`, `MEASURING`, `VALID`, `LOW_QUALITY`, `ERROR`。无手指、无效、低质量或过期时不显示为有效 HR / SpO₂。
-- person 500 ms 未更新隐藏；gesture 2 秒未更新失效。两个时间戳各自维护。
+- person 达到 1400 ms 来源年龄隐藏；gesture 达到 2600 ms 来源年龄失效。人物/手势时间戳独立；`age_ms` 计入本地年龄，预测/保持不能续期。
 
 ## PPG
 
@@ -82,10 +101,10 @@ set_mode 等待一致 telemetry 才选中模式；1.5 秒未确认提示失败�
 ## 安全与连接契约
 
 1. 主控最高优先级为 ESTOP，其次 FAULT，再进行模式仲裁。
-2. 主控 **>250 ms 未收到有效 MANUAL cmd_vel 必须独立归零**。浏览器断电、系统冻结、网络丢包时仍然成立。
+2. 主控在有效 MANUAL cmd_vel 年龄 **≥300 ms** 时由周期安全任务归零，保留 MANUAL；该期限不由浏览器或 ping 续期。任务自身停摆的独立撤销能力列入真机门槛。
 3. 断开控制所有者时停止并回 IDLE。急停锁跨连接持续存在。重连不恢复旧输入。
 4. Mock 服务由第一个成功 set_mode / 非零运动 / clear_estop 客户端持有控制权；其他客户端只读，可随时急停。所有者断开释放控制权。固件必须实现等价仲裁。
-5. WebSocket 重连退避 0.5 / 1 / 2 / 4 / 5 秒，上限 5 秒；握手超过 5 秒关闭后重试。ping 每 2 秒；超过 4 秒未回 pong 后重连。
+5. WebSocket 重连退避 0.5 / 1 / 2 / 4 / 5 秒，上限 5 秒；握手超过 5 秒关闭后重试。普通 ping 每 2 秒；网页拥有 Follow 时每 100 ms 尝试心跳（等待上一 pong 时不叠加）；超过 4 秒未回 pong 后重连。主控心跳 300 ms 门槛可先行停车。
 6. 本地急停在连接断开期间也锁定 UI，并在重连时补发 estop。离线时不能宣称机器人已经收到急停，机器人端 watchdog 是必要兜底。
 7. 入站单帧上限 64 KiB；非法 JSON 不进入状态。WS 发送积压超过 64 KiB 关闭链路，防止排队的旧运动命令。
 8. 回放完全隔离命令发送，恢复实时仍等待新的机器人状态。
@@ -93,7 +112,7 @@ set_mode 等待一致 telemetry 才选中模式；1.5 秒未确认提示失败�
 本协议不定义 ESP-DL 推理、UART 帧、轮子运动学或 PWM 校准。
 
 
-## 主控无线测试后端扩展
+## 主控无线测试后端扩展（历史阶段说明）
 
 完整部署说明见 `wireless-development.md`。新增可选字段均兼容原网页协议：
 
@@ -105,7 +124,7 @@ set_mode 等待一致 telemetry 才选中模式；1.5 秒未确认提示失败�
 
 主控首次 ping 建立每个会话的 Unix 时间估计，之前不发布传感器遥测；未校时的错误/急停 ACK 使用 ts=0 表示未建立时间基准。浏览器连接立即 ping。所有安全时限和来源新鲜度使用设备单调时钟。
 
-本轮只实现 IDLE/MANUAL/HEALTH_CHECK；自主模式拒绝。MANUAL 在 CAM 超时、所有者断开、网络断开或有效非零命令过期时清零并回 IDLE，需重新申请模式。实际过期阈值 240 ms，周期任务 5 ms，为 250 ms 上限保留余量。未安装输出在所有 stage 中均不可开启。
+早期阶段只实现 IDLE/MANUAL/HEALTH_CHECK；当时自主模式拒绝。以下 240/250 ms 和退出模式行为仅是历史说明，当前以顶部候选契约为准。MANUAL 在 CAM 超时、所有者断开、网络断开或有效非零命令过期时清零并回 IDLE，需重新申请模式。实际过期阈值 240 ms，周期任务 5 ms，为 250 ms 上限保留余量。未安装输出在所有 stage 中均不可开启。
 
 健康结果中的 null 明确清除对应旧值；省略字段仍保留旧值。健康网页新鲜度为 2500 ms；机器人许可仍为 1000 ms。固件健康有效性另外要求采样仍在推进。传感器块只在新结果或失效变化时发送，不用 10 Hz 重发旧块延长有效期。
 

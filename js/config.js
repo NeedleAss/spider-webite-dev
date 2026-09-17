@@ -7,6 +7,8 @@ export const CONFIG = {
   TELEMETRY_STALE_MS: 1000,   // 超过此时间没收到 telemetry → 判定遥测中断
   HEALTH_STALE_MS: 2500,     // 健康结果约 1 Hz，单独维护新鲜度
   VISION_STALE_MS: 1400,      // 覆盖 2G:1P 调度间隔，避免单帧漏检导致画框闪烁
+  GESTURE_STALE_MS: 2600,
+  IMU_STALE_MS: 750,
   PING_INTERVAL_MS: 2000,     // ping 周期（用于测 RTT）
   PING_TIMEOUT_MS: 4000,      // 超过此时间没有 pong → 延迟显示为 --
 
@@ -21,7 +23,7 @@ export const CONFIG = {
    * 与机器人端的安全契约：主控若超过该时间未收到有效手动 cmd_vel，必须自动停车。
    * 网页侧只是复述这个约定并在 UI 中显示，真正的兜底必须在主 ESP32-S3 上实现。
    */
-  DEADMAN_TIMEOUT_MS: 250,
+   DEADMAN_TIMEOUT_MS: 300,
 
   /* ── PPG ───────────────────────────────────────────────────────────── */
   PPG_WINDOW_SECONDS: 8,      // 波形窗口长度

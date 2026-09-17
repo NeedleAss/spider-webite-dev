@@ -148,7 +148,7 @@ export function applyTelemetry(msg) {
       state.vision.person = v.person;
       state.vision.lastPersonTs = same ? Math.min(state.vision.lastPersonTs, sourceTs) : sourceTs;
     }
-    if (v.gesture) { state.vision.gesture = v.gesture; state.vision.lastGestureTs = t; }
+    if (v.gesture) { state.vision.gesture = v.gesture; state.vision.lastGestureTs = t - Math.max(0,v.gesture.age_ms || 0); }
   }
 
   if (msg.health) {
@@ -223,8 +223,7 @@ export function isPersonStale(nowMs = Date.now()) {
 }
 
 export function isGestureStale(nowMs = Date.now()) {
-  // 手势更新频率低（2–4 Hz），过期阈值放宽到 bbox 的 4 倍
-  return (nowMs - state.vision.lastGestureTs) > 2200;
+  return (nowMs - state.vision.lastGestureTs) >= CONFIG.GESTURE_STALE_MS;
 }
 
 /**

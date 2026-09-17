@@ -7,6 +7,15 @@ export function frontView(front, now = Date.now(), telemetryStale = false) {
     status: telemetryStale ? 'UNKNOWN' : !front?.enabled ? 'DISABLED' : !front.ready ? 'UNCONFIGURED' : !valid ? 'UNKNOWN' : front.status };
 }
 const labels = {
+  target_wait:['目标暂不可用，已停车等待','Target unavailable; stopped and waiting'],
+  target_lost_timeout:['等待目标到期，已回待机','Target wait expired; idle'],
+  controller_timeout:['跟随计算超时，已停车','Follow computation expired; stopped'],
+  gesture_turn_timeout:['手势旋转到期','Gesture turn timed out'],
+  gesture_turn_complete:['手势旋转完成','Gesture turn complete'],
+  gesture_like:['手势请求跟随','Gesture requested follow'],
+  gesture_two:['手势请求右转','Gesture requested right turn'],
+  gesture_ok:['手势请求左转','Gesture requested left turn'],
+  gesture_dislike:['手势请求停止','Gesture requested stop'],
   boot:['启动待机','Boot idle'], mode_changed:['模式已切换','Mode changed'], release:['操作已释放','Controls released'],
   front_obstacle:['前方障碍停车','Stopped for front obstacle'], front_unknown:['测距失效停车','Stopped: range unavailable'],
   front_unconfigured:['测距尚未标定','Range calibration required'], bypass_timeout:['横移超时停车','Lateral motion timed out'],

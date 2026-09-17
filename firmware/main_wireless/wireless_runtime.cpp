@@ -313,7 +313,7 @@ void publish(void*) {
     auto* robot=cJSON_AddObjectToObject(j,"robot");
     const char* mode=state.estop?"ESTOP":state.fault?"FAULT":modeName(state.mode);
     cJSON_AddStringToObject(robot,"mode",mode);
-    cJSON_AddStringToObject(robot,"state",state.estop?"ESTOP":state.fault?"FAULT":state.mode==Mode::Manual?(state.target.vx||state.target.vy||state.target.wz?"DRIVING":"READY"):state.mode==Mode::Health?"MEASURING":state.mode==Mode::Follow?"TRACKING":state.mode==Mode::Gesture?(state.target.wz?"TURNING":"READY"):"IDLE");
+    cJSON_AddStringToObject(robot,"state",state.estop?"ESTOP":state.fault?"FAULT":state.mode==Mode::Manual?(state.target.vx||state.target.vy||state.target.wz?"DRIVING":"READY"):state.mode==Mode::Health?"MEASURING":state.mode==Mode::Follow?(state.waitingTarget?"WAIT_TARGET":state.front.phase==BypassPhase::Reacquire?"REACQUIRE":"TRACKING"):state.mode==Mode::Gesture?(state.target.wz?"TURNING":"READY"):"IDLE");
     cJSON_AddBoolToObject(robot,"estop",state.estop);
     cJSON_AddBoolToObject(robot,"motion_output_installed",driveReady.load());
     cJSON_AddBoolToObject(robot,"calibration_ready",calibrationReady);
@@ -501,7 +501,7 @@ void wirelessGesture(const char* label,float score,bool accepted,bool actionElig
     memcpy(sources.displayLabel,upper,n+1);
     sources.displayScore=score;
     sources.displayAccepted=true;
-    sources.displayGestureMs=now;
+    sources.displayGestureMs=now>=ageMs?now-ageMs:0;
   } else if(sources.displayAccepted && now>=sources.displayGestureMs &&
             now-sources.displayGestureMs>=tuning::GestureDisplayHoldMs) {
     sources.displayAccepted=false;

@@ -151,7 +151,7 @@ function render() {
   text('mLatency', Date.now() - state.connection.lastPongTs < CONFIG.PING_TIMEOUT_MS ? value(state.connection.latencyMs, 0, ' ms') : '—');
   text('mTransport', state.ui.replaying ? 'REPLAY' : state.ui.transportName === 'mock' ? tr('模拟', 'DEMO') : sourceKind === 'usb' ? tr('USB桥接', 'USB BRIDGE') : 'Wi-Fi');
   text('langToggle', getLang() === 'zh' ? 'EN' : '中');
-  text('sessionTitle', locked ? tr('急停已锁定', 'Emergency stop engaged') : stale ? tr('等待机器人连接', 'Waiting for your robot') : tr('一切，尽在掌控。', 'Everything. Under control.'));
+  text('sessionTitle', locked ? tr('急停已锁定', 'Emergency stop engaged') : stale ? tr('等待机器人连接', 'Waiting for your robot') : state.ui.replaying ? tr('会话回放', 'Session replay') : state.ui.transportName === 'mock' || state.connection.simulated ? tr('模拟控制台', 'Simulation console') : tr('机器人已连接', 'Robot connected'));
   text('sessionDescription', locked ? tr('控制已锁定。确认环境安全后，可解除急停并回到待机。', 'Controls are locked. Clear the stop to return to idle.') : state.ui.replaying ? tr('正在查看录制数据，运动控制已关闭。', 'Recorded session. Motion controls are disabled.') : state.ui.transportName === 'mock' || state.connection.simulated ? tr('模拟环境已准备就绪。选一个模式，开始探索。', 'Your simulated environment is ready. Choose a mode to begin.') : state.robot.motion_output_installed === false ? tr('运动输出未接入 · 速度仅为测试目标值，手势和健康数据来自真机。', 'Motion output not installed · Velocities are test targets; gesture and health data are live.') : tr('实时连接设备。所有运动由机器人确认执行。', 'Connected to your device. Motion is confirmed by the robot.'));
   const visionStale = store.isPersonStale() || (stale && !state.ui.replaying);
   $('visionStale').hidden = !visionStale;
@@ -161,8 +161,8 @@ function render() {
   const g = state.vision.gesture, gestureStale = store.isGestureStale() || (stale && !state.ui.replaying);
   const gestureLabel = gestureStale ? tr('等待手势', 'Waiting for gesture') : `${t(`g.${g.label}`)}${g.label === 'NONE' ? '' : ' · ' + value(g.confidence * 100, 0, '%')}`;
   text('hudGesture', gestureLabel);
-  $('hudGesture').dataset.stable = String(!gestureStale && g.stable);
-  text('gestureDetail', gestureStale ? '—' : `${g.held ? tr('保持', 'Held') : g.stable ? tr('已稳定', 'Stable') : tr('待确认', 'Unconfirmed')} · ${value(((g.age_ms || 0) + Date.now() - state.vision.lastGestureTs) / 1000, 1, ' s')}`);
+  $('hudGesture').dataset.stable = String(!gestureStale && g.label !== 'NONE' && g.stable);
+  text('gestureDetail', gestureStale || g.label === 'NONE' ? '—' : `${g.held ? tr('保持', 'Held') : g.stable ? tr('已稳定', 'Stable') : tr('待确认', 'Unconfirmed')} · ${value((Date.now() - state.vision.lastGestureTs) / 1000, 1, ' s')}`);
   text('sceneLabel', video?.kind === 'canvas' ? tr('模拟视野', 'SIMULATED VIEW') : video?.kind === 'file' ? tr('本地视频 · 识别数据独立', 'LOCAL VIDEO · SEPARATE METADATA') : state.connection.simulated ? tr('模拟摄像头', 'SIMULATED CAMERA') : tr('摄像头视频', 'CAMERA STREAM'));
   $('videoError').hidden = video?.kind === 'canvas' || video?.ready;
   const confirmed = !stale || state.ui.replaying;
@@ -170,7 +170,7 @@ function render() {
   text('sMode', locked ? t('mode.ESTOP') : confirmed ? t(`mode.${state.robot.mode}`) : '—');
   text('sState', confirmed ? t(`state.${state.robot.state}`) : '—');
   $('sMode').dataset.tone = locked ? 'bad' : 'idle';
-  const imuFresh = confirmed && state.imu.valid !== false && Date.now() - state.lastImuTs < 500;
+  const imuFresh = confirmed && state.imu.valid !== false && Date.now() - state.lastImuTs < CONFIG.IMU_STALE_MS;
   text('sImuStatus', state.imu.tilt_fault ? tr('倾角故障', 'Tilt fault') : !imuFresh ? tr('不可用', 'Unavailable') : state.imu.calibrated === false ? tr('静置校准中', 'Calibrating') : tr('可用 · 相对航向', 'Ready · relative heading'));
   text('sYaw', imuFresh ? value(state.imu.yaw_deg, 1, '°') : '—');
   text('sPitchRoll', imuFresh ? `${value(state.imu.pitch_deg, 1)}° / ${value(state.imu.roll_deg, 1)}°` : '—');

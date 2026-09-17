@@ -229,3 +229,30 @@ input[type='range'] { width: 100%; height: 16px; margin: 0; accent-color: #c1c9d
 .front-toggle { display:flex; align-items:center; gap:8px; min-height:44px; font-size:13px; }
 .front-toggle input { width:20px; height:20px; flex-shrink:0; }
 .front-hint { opacity:.75; line-height:1.5; }
+
+/* Final presentation pass: readable telemetry and reliable touch targets. */
+:root { --text-3:#a0a6af; }
+.panel__title { font-size:14px; }
+.statrow__k,.speed__row { font-size:12px; }
+.statrow__v { font-size:13px; line-height:1.65; overflow-wrap:anywhere; }
+.statrow__v--hero { font-size:19px; }
+.tag,.hintkeys,.disclaimer,.ppg__meta,.debug__summary,.foot { font-size:11px; }
+.gesture-result__label { font-size:11px; letter-spacing:.06em; }
+#gestureDetail { font-size:11px; }
+.ghostbtn,.select,.rotbtn,.modebtn,.estop,.clearbtn { min-height:44px; }
+.select { font-size:12px; }
+.hudchip { font-size:10px; }
+.panel--health { align-self:start; }
+.front-hint { opacity:1; color:var(--text-3); }
+@media(max-width:600px){
+  .app { padding-bottom:calc(176px + env(safe-area-inset-bottom)); }
+  #sessionDescription { font-size:12px; line-height:1.7; }
+  .video-hud__row { flex-wrap:wrap; }
+  .video-hud { padding:12px; }
+  .hudchip { font-size:10px; }
+  .gesture-result { column-gap:10px; max-width:100%; }
+  .foot { flex-wrap:wrap; font-size:11px; }
+  .modebtn { font-size:11px; min-height:44px; }
+  .statrow__k { font-size:12px; }
+  .statrow__v { font-size:13px; }
+}

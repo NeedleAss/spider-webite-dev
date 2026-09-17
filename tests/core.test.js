@@ -54,10 +54,10 @@ test('PPG storage stays bounded through 5 minutes at 50 Hz', () => {
   assert.equal(state.ppg.ring.values.byteLength,CONFIG.PPG_RING_CAPACITY*4);
   let count=0;state.ppg.ring.each(state.ppg.lastTs-8000,()=>count++);assert.ok(count<=401);
 });
-test('simulator enforces mode arbitration, hard ESTOP, explicit recovery and 250 ms watchdog', () => {
+test('simulator enforces mode arbitration, hard ESTOP, explicit recovery and configured watchdog', () => {
   const sim=new RobotSim(); assert.equal(sim.handleCommand(p.cmdVel(1,0,0))[0].code,'NOT_IN_MANUAL');
   sim.handleCommand(p.setMode('MANUAL')); sim.handleCommand(p.cmdVel(.6,.4,0)); sim.step(.1);
-  assert.ok(sim.vel.vx>0); sim.step(.151); assert.deepEqual(sim.vel,{vx:0,vy:0,wz:0});
+  assert.ok(sim.vel.vx>0); sim.step(CONFIG.DEADMAN_TIMEOUT_MS/1000); assert.deepEqual(sim.vel,{vx:0,vy:0,wz:0});
   sim.handleCommand(p.cmdVel(1,0,0));sim.step(.02);sim.handleCommand(p.estop());assert.deepEqual(sim.vel,{vx:0,vy:0,wz:0});
   assert.equal(sim.handleCommand(p.cmdVel(1,0,0))[0].code,'ESTOP_ACTIVE');
   sim.handleCommand(p.clearEstop());assert.equal(sim.mode,'IDLE');assert.equal(sim.estop,false);
@@ -101,6 +101,37 @@ test('pointer capture loss, touch cancellation, blur and hidden all release targ
     event(right,'pointerdown',{pointerId:3,button:0});assert.equal(target.wz,1);event(right,'pointercancel',{pointerId:3});stopped();
     event(window,'keydown',{key:'w',code:'KeyW'});assert.equal(target.vx,1);
     event(window,'keyup',{key:'w',code:'KeyW'});stopped();
+    // Abandoning keyboard ownership must clear every keyboard-produced axis.
+    event(window,'keydown',{key:'w',code:'KeyW'});
+    event(right,'pointerdown',{pointerId:3,button:0});
+    event(window,'keyup',{key:'w',code:'KeyW'});
+    assert.deepEqual(target,{vx:0,vy:0,wz:1});
+    event(window,'keydown',{key:'a',code:'KeyA'});
+    assert.deepEqual(target,{vx:0,vy:0,wz:1},'keyboard cannot overwrite held pointer');
+    input.reset(true);
+    event(window,'keydown',{key:'e',code:'KeyE'});down();
+    event(window,'keyup',{key:'e',code:'KeyE'});
+    assert.ok(target.vx>0&&target.vy>0);assert.equal(target.wz,0);
+    // Two pointer controls may combine, but release of either stops all axes.
+    event(right,'pointerdown',{pointerId:3,button:0});assert.equal(target.wz,1);
+    event(pad,'pointerup',{pointerId:1});stopped();
+    event(right,'pointermove',{pointerId:3});stopped();
     enabled=false;down();stopped();event(window,'keydown',{key:'Escape',code:'Escape'});assert.equal(estops,1);
   } finally {input.destroy();delete globalThis.window;delete globalThis.document;}
+});
+
+test('simulated lost target waits at zero, expires independently and reentry resets wait',()=>{
+  const sim=new RobotSim();sim.handleCommand(p.setMode('PERSON_FOLLOW'));
+  sim.trackingScenario='low-confidence';
+  for(let i=0;i<300;i++){sim.handleCommand(p.ping(i));sim.step(.1);assert.deepEqual(sim.vel,{vx:0,vy:0,wz:0});}
+  assert.equal(sim._stateName(),'WAIT_TARGET');
+  sim.handleCommand(p.ping(301));sim.step(.2);assert.equal(sim.mode,'IDLE');
+  sim.handleCommand(p.setMode('PERSON_FOLLOW'));assert.equal(sim.waitSince,null);
+  sim.handleCommand(p.cmdVel(0,0,0));assert.equal(sim.mode,'IDLE');
+});
+test('gesture display alone cannot start simulated motion and stop exits gesture mode',()=>{
+  const sim=new RobotSim();sim.handleCommand(p.setMode('GESTURE_CONTROL'));
+  for(let i=0;i<100;i++)sim.step(.1);
+  assert.deepEqual(sim.vel,{vx:0,vy:0,wz:0});
+  sim.handleCommand(p.cmdVel(0,0,0));assert.equal(sim.mode,'IDLE');
 });
