@@ -114,9 +114,23 @@ CAM USB-C ─────── 电脑（COM3）或独立 5 V 供电
 
 若主控不再连接电脑而改用电源模块独立供电，仍保持主控与 CAM 的 UART 线和公共 GND；网页改由连接 `CareRover-EE68` 热点的手机/电脑访问。任何改线后先断开舵机 5 V，再做 I²C 扫描和串口验证。
 
-## 6. 当前未纳入本表的接口
+## 6. HC-SR04 超声波（推荐接线，引脚待现场确认）
 
-- HC-SR04 超声波的 Trig/Echo GPIO 尚未完成现场确认，不能按示例值接线。
+HC-SR04 尚未现场实测，以下是推荐接线与硬性约束；**必须先核对具体开发板是否引出/占用，再按实际引脚接线**，不能直接照抄示例值。
+
+| HC-SR04 引脚 | 连接 | 说明 |
+|---|---|---|
+| VCC | 5 V | HC-SR04 需 5 V 供电（可用外部 5 V 或 USB 5 V） |
+| GND | 主控 GND | 必须与主控、传感器共地 |
+| Trig | 允许 GPIO 之一，推荐 `GPIO14` | 输出，3.3 V 触发电平（至少 10 µs）；需确认模块对 3.3 V 触发有响应 |
+| Echo | 允许 GPIO 之一，推荐 `GPIO15` | 输入；**Echo 是 5 V 电平，必须经分压（如 1 kΩ/2 kΩ）或电平转换降到 3.3 V，禁止直连 3.3 V GPIO** |
+
+软件允许的 Trig/Echo GPIO 为 `1 / 2 / 14 / 15 / 16 / 21 / 38–42`；禁止占用：CAM UART 17/18、OLED 4/5、IMU 6/7、MAX30102 8/9、舵机 10–13、USB 19/20、启动/Flash/PSRAM 引脚。
+
+接入步骤：复制 `firmware/main_wireless/front_config.example.h` 为 `front_config.local.h`，填 `trig`/`echo` 与 `control.enabled=true`，阈值按实测填写 `stopCm < slowCm <= warnCm <= 400`、`slowCm < releaseCm <= 400` 及绕障参数；`verified` 待实测后再置真。该私有文件不提交 Git。
+
+## 7. 当前未纳入本表的接口
+
 - 舵机没有编码器反馈，网页速度是控制量，不是实际轮速。
 - CAM 与主控的 USB 可以只保留供电/调试用途；无线演示时不要求 CAM USB 连接电脑，但 UART 共地和 CAM 独立供电仍需保留。
 

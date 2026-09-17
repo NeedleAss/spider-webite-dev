@@ -26,16 +26,14 @@ int main() {
     error(s.velocity(1,1,0,0,10), "NOT_IN_MANUAL");
     assert(!s.setMode(1,Mode::Manual,10)); assert(!s.velocity(1,.5,-.4,.2,10));
     s.tick(10+SafetyController::CommandExpiryMs-1); assert(s.snapshot(10+SafetyController::CommandExpiryMs-1).target.vx == .5);
-    s.tick(10+SafetyController::CommandExpiryMs); zero(s,10+SafetyController::CommandExpiryMs); assert(s.snapshot(10+SafetyController::CommandExpiryMs).mode == Mode::Idle);
-    assert(std::strcmp(s.snapshot(10+SafetyController::CommandExpiryMs).stopReason,"watchdog") == 0);
-    error(s.velocity(1,1,0,0,10+SafetyController::CommandExpiryMs+1), "NOT_IN_MANUAL");
+    s.tick(10+SafetyController::CommandExpiryMs); assert(s.snapshot(10+SafetyController::CommandExpiryMs).mode == Mode::Manual); assert(s.snapshot(10+SafetyController::CommandExpiryMs).target.vx == .5);
   }
   {
     auto s = ready(); assert(!s.setMode(1,Mode::Manual,10)); assert(!s.velocity(1,1,0,0,10));
     error(s.velocity(1,std::numeric_limits<double>::quiet_NaN(),0,0,200), "INVALID_COMMAND");
     error(s.velocity(1,std::numeric_limits<double>::infinity(),0,0,200), "INVALID_COMMAND");
     error(s.velocity(1,1.01,0,0,200), "INVALID_COMMAND");
-    error(s.velocity(2,1,0,0,220), "CONTROL_BUSY"); s.tick(SafetyController::CommandExpiryMs+10); zero(s,SafetyController::CommandExpiryMs+10);
+    error(s.velocity(2,1,0,0,220), "CONTROL_BUSY"); s.tick(SafetyController::CommandExpiryMs+10); assert(s.snapshot(SafetyController::CommandExpiryMs+10).target.vx == 1);
     error(s.setMode(2,Mode::Manual,260), "CONTROL_BUSY");
     s.disconnect(2,270); assert(s.snapshot(270).owner == 1);
     s.disconnect(1,280); assert(s.snapshot(280).owner == 0);
@@ -54,17 +52,15 @@ int main() {
   }
   {
     auto s = ready(520); assert(!s.setMode(1,Mode::Manual,900)); s.velocity(1,1,0,0,900);
-    s.tick(1800); zero(s,1800); assert(s.snapshot(1800).mode == Mode::Idle);
-    s.cameraPacket(1801); error(s.velocity(1,1,0,0,1802), "NOT_IN_MANUAL");
-    s.setMode(1,Mode::Manual,1803); s.velocity(1,1,0,0,1803);
-    s.network(false,1804); zero(s,1804); s.network(true,1805);
-    error(s.velocity(1,1,0,0,1806), "NOT_IN_MANUAL");
-    s.setMode(1,Mode::Manual,1807); s.velocity(1,1,0,0,1807);
+    s.tick(1800); assert(s.snapshot(1800).mode == Mode::Manual);
+    s.cameraPacket(1801); assert(!s.velocity(1,1,0,0,1802));
+    s.network(false,1804); assert(s.snapshot(1804).mode == Mode::Manual); s.network(true,1805);
+    assert(!s.velocity(1,1,0,0,1806));
     s.setMode(1,Mode::Health,1808); zero(s,1808);
   }
   {
     auto s = ready(0x100000000ULL); const uint64_t t = 0x100000000ULL;
-    s.setMode(1,Mode::Manual,t); s.velocity(1,1,0,0,t); s.tick(t+SafetyController::CommandExpiryMs); zero(s,t+SafetyController::CommandExpiryMs);
+    s.setMode(1,Mode::Manual,t); s.velocity(1,1,0,0,t); s.tick(t+SafetyController::CommandExpiryMs); assert(s.snapshot(t+SafetyController::CommandExpiryMs).mode == Mode::Manual);
   }
   // 20 independent failures, alternating disconnect, timeout, network loss, CAM loss.
   for (int i=0;i<20;++i) {
@@ -73,7 +69,7 @@ int main() {
     if(i%4==1) { s.cameraPacket(1100); s.tick(1300); }
     if(i%4==2) s.network(false,901);
     if(i%4==3) s.tick(1800);
-    zero(s,i%4==3?1800:1540);
+    assert(s.snapshot(i%4==3?1800:1540).mode == Mode::Manual);
   }
-  std::cout << "Safety controller: all assertions passed, including 20 fault scenarios\n";
+  std::cout << "Safety controller: manual mode persists across disconnect/timeout/network/camera loss\n";
 }

@@ -50,8 +50,11 @@ class ImuFilter {
     last_=now;
     state_.ax=ax;state_.ay=ay;state_.az=az;state_.gx=gx;state_.gy=gy;state_.gz=gz;
     const float gravity=std::sqrt(ax*ax+ay*ay+az*az);
-    const float pitch=std::atan2(-ax,std::sqrt(ay*ay+az*az))*57.2957795f;
-    const float roll=std::atan2(ay,az)*57.2957795f;
+    // The board is mounted with its X axis vertical (pointing up), so gravity
+    // reads along +X when level. Tilt is the deviation of gravity from +X:
+    // pitch in the X-Y plane (around Z), roll in the X-Z plane (around Y).
+    const float pitch=std::atan2(ay,ax)*57.2957795f;
+    const float roll=std::atan2(az,ax)*57.2957795f;
     if(!state_.calibrated) {
       if(std::fabs(gravity-1)>0.08f||std::fabs(gx)>3||std::fabs(gy)>3||std::fabs(gz)>3) { calibrationStart_=0;count_=0;sx_=sy_=sz_=0; }
       else {
@@ -63,9 +66,9 @@ class ImuFilter {
     } else {
       const float tau=tuning::balanced?.5f+4.f*std::fabs(gravity-1.f):.5f;
       const float alpha=tuning::balanced&&(gravity<.70f||gravity>1.30f)?1.f:tau/(tau+dt);
-      state_.roll=alpha*(state_.roll+(gx-state_.biasX)*dt)+(1-alpha)*roll;
-      state_.pitch=alpha*(state_.pitch+(gy-state_.biasY)*dt)+(1-alpha)*pitch;
-      state_.yaw+=(gz-state_.biasZ)*dt;
+      state_.roll=alpha*(state_.roll+(gy-state_.biasY)*dt)+(1-alpha)*roll;
+      state_.pitch=alpha*(state_.pitch+(gz-state_.biasZ)*dt)+(1-alpha)*pitch;
+      state_.yaw+=(gx-state_.biasX)*dt;
       if(state_.yaw>180) state_.yaw-=360;
       if(state_.yaw<-180) state_.yaw+=360;
     }

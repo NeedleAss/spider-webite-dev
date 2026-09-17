@@ -23,6 +23,9 @@ inline constexpr uint64_t GestureDisplayHoldMs=2600, GestureDisplayNoHandMs=1700
 // 0.5 s. Keep source freshness looser than the nominal frame period; the
 // command watchdog remains the independent dead-man stop.
 inline constexpr uint64_t CameraSafetyMs=1200, PersonSafetyMs=1200, ImuSafetyMs=750, CommandSafetyMs=300;
+// A person leaving the frame must not immediately drop follow; hold still and
+// wait for re-identification, giving up only after this grace elapses.
+inline constexpr uint64_t FollowLostTimeoutMs=30000;
 inline constexpr uint64_t PersonDisplayMs=1400, HrDisplayHoldMs=30000, Spo2DisplayHoldMs=balanced?12000:8000;
 // A demo chassis may vibrate and briefly exceed 40 degrees in accelerometer
 // projection. Require a genuinely large, sustained tilt before stopping.

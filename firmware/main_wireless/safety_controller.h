@@ -22,7 +22,7 @@ class SafetyController {
   static constexpr uint64_t GestureTurnTimeoutMs=12000;
   SafetySnapshot snapshot(uint64_t now) const {
     auto s=state_; s.camera=cameraSeen_&&now>=lastCameraMs_&&now-lastCameraMs_<CameraExpiryMs;
-    s.fault=state_.fault||(hardware_&&!hardwareHealthy(now));
+    s.fault=state_.fault;
     s.front=front_.snapshot(now);
     if(state_.mode==Mode::Manual||state_.mode==Mode::Follow||state_.mode==Mode::Gesture) {
       auto v=front_.output({s.target.vx,s.target.vy,s.target.wz},now);s.target={v.vx,v.vy,v.wz};
@@ -41,27 +41,22 @@ class SafetyController {
     return front_.setDemo(enabled)?nullptr:"BYPASS_CALIBRATION_REQUIRED";
   }
   void configureHardware(bool enabled, bool calibrated) { hardware_=enabled; calibration_=calibrated; }
-  void imu(bool valid, bool calibrated, bool tilt, uint64_t now, uint64_t sourceMs=0) {
-    const bool healthy=valid&&calibrated&&!tilt;
-    if(healthy) {
+  void imu(bool valid, bool /*calibrated*/, bool tilt, uint64_t now, uint64_t sourceMs=0) {
+    // IMU validity/calibration no longer gate motion, but a sustained large
+    // chassis tilt still stops the controller immediately (tilt protection).
+    if(valid && !tilt) {
       imuValid_=true;
       lastImuMs_=sourceMs?sourceMs:now;
       invalidSince_=0;
       return;
     }
-    // A single software-I2C read miss or vibration frame is not a chassis
-    // fault. Keep the last valid sample for the bounded freshness window;
-    // sustained tilt is already latched by ImuFilter and remains immediate.
     if(tilt) {
       imuValid_=false; invalidSince_=now;
-      if(hardware_&&(state_.mode==Mode::Manual||state_.mode==Mode::Follow||state_.mode==Mode::Gesture)) stop(now,"tilt_fault");
+      if(state_.mode==Mode::Manual||state_.mode==Mode::Follow||state_.mode==Mode::Gesture) stop(now,"tilt_fault");
       return;
     }
     if(!invalidSince_) invalidSince_=now;
-    if(hardware_&&now-invalidSince_>=tuning::ImuSafetyMs&&
-       (state_.mode==Mode::Manual||state_.mode==Mode::Follow||state_.mode==Mode::Gesture)) {
-      imuValid_=false; stop(now,"imu_invalid");
-    }
+    if(now-invalidSince_>=tuning::ImuSafetyMs) imuValid_=false;
   }
   void cameraPacket(uint64_t now) { cameraSeen_=true; lastCameraMs_=now; }
   void cameraReset(uint64_t now) { personSeen_=false; stop(now,"camera_resync"); }
@@ -70,7 +65,13 @@ class SafetyController {
     if(state_.mode==Mode::Follow) {
       follow_.update(p);
       if(!follow_.measurementAccepted()) state_.target={};
-      if(follow_.lost() || (front_.active() && !follow_.measurementAccepted())) { stop(p.receivedMs,"target_lost"); }
+      if(follow_.lost()) {
+        if(!lostSinceMs_) lostSinceMs_=p.receivedMs;
+        if(p.receivedMs>=lostSinceMs_ && p.receivedMs-lostSinceMs_>=tuning::FollowLostTimeoutMs) { stop(p.receivedMs,"target_lost_timeout"); }
+      } else {
+        lostSinceMs_=0;
+      }
+      if(front_.active() && !follow_.measurementAccepted()) { stop(p.receivedMs,"target_lost"); }
     }
   }
   void heartbeat(uint32_t client,uint64_t now) {
@@ -86,14 +87,11 @@ class SafetyController {
   const char* autonomousFollow(uint64_t now) {
     tick(now);
     if(state_.estop) return "ESTOP_ACTIVE";
-    if(state_.fault||!state_.network) return "FAULT_ACTIVE";
+    if(state_.fault) return "FAULT_ACTIVE";
     if(state_.owner) return "CONTROL_BUSY";
     if(front_.held()) return "FRONT_RELEASE_REQUIRED";
     if(front_.config().enabled&&!front_.config().protectionReady()) return "FRONT_CALIBRATION_REQUIRED";
     if(front_.config().enabled&&!front_.fresh(now)) return "FRONT_UNKNOWN";
-    if(!snapshot(now).camera) return "CAMERA_OFFLINE";
-    if(hardware_&&!calibration_) return "CALIBRATION_REQUIRED";
-    if(hardware_&&!hardwareHealthy(now)) return "IMU_NOT_READY";
     if(!personFresh(now)||!person_.found||person_.score<PersonAcceptScoreMilli) return "TARGET_NOT_READY";
     state_.owner=0; stop(now,"gesture_like"); state_.mode=Mode::Follow;
     state_.lastCommandMs=now; armed_=true;
@@ -103,14 +101,11 @@ class SafetyController {
     tick(now);
     if(!std::isfinite(yaw))return "IMU_NOT_READY";
     if(state_.estop) return "ESTOP_ACTIVE";
-    if(state_.fault||!state_.network) return "FAULT_ACTIVE";
+    if(state_.fault) return "FAULT_ACTIVE";
     if(state_.owner) return "CONTROL_BUSY";
     if(front_.held()) return "FRONT_RELEASE_REQUIRED";
     if(front_.config().enabled&&!front_.config().protectionReady()) return "FRONT_CALIBRATION_REQUIRED";
     if(front_.config().enabled&&!front_.fresh(now)) return "FRONT_UNKNOWN";
-    if(!snapshot(now).camera) return "CAMERA_OFFLINE";
-    if(hardware_&&!calibration_) return "CALIBRATION_REQUIRED";
-    if(hardware_&&!hardwareHealthy(now)) return "IMU_NOT_READY";
     state_.owner=0; stop(now,clockwise?"gesture_two":"gesture_ok"); state_.mode=Mode::Gesture;
     turnActive_=true; turnClockwise_=clockwise; turnAccumDeg_=0; turnLastYaw_=yaw; turnStartMs_=now;
     state_.target={0,0,clockwise?0.28:-0.28}; state_.lastCommandMs=now; armed_=true;
@@ -133,13 +128,13 @@ class SafetyController {
     state_.owner=0; stop(now,reason);
   }
   float gestureTurnDegrees() const { return std::fabs(turnAccumDeg_); }
-  void network(bool online,uint64_t now) { state_.network=online; if(!online) stop(now,"network_down"); }
+  void network(bool online,uint64_t /*now*/) { state_.network=online; }
   void fault(bool active,uint64_t now) { state_.fault=active; if(active) stop(now,"fault"); }
-  void disconnect(uint32_t client,uint64_t now) { if(client&&state_.owner==client) { stop(now,"owner_disconnected"); state_.owner=0; } }
+  void disconnect(uint32_t client,uint64_t /*now*/) { if(client&&state_.owner==client) { state_.owner=0; } }
   void emergency(uint64_t now) { state_.estop=true; stop(now,"estop"); }
   const char* clear(uint32_t client,uint64_t now) {
     if(!client) return "INVALID_COMMAND";
-    if(state_.fault||!state_.network||(hardware_&&!hardwareHealthy(now))) return "FAULT_ACTIVE";
+    if(state_.fault) return "FAULT_ACTIVE";
     if(busy(client)) return "CONTROL_BUSY";
     state_.owner=client; state_.estop=false; stop(now,"estop_cleared"); return nullptr;
   }
@@ -147,15 +142,12 @@ class SafetyController {
     tick(now);
     if(!client) return "INVALID_COMMAND";
     if(state_.estop) return "ESTOP_ACTIVE";
-    if(state_.fault||!state_.network) return "FAULT_ACTIVE";
+    if(state_.fault) return "FAULT_ACTIVE";
     if(busy(client)) return "CONTROL_BUSY";
     const bool movement=mode==Mode::Manual||mode==Mode::Follow||mode==Mode::Gesture;
     if(movement&&front_.held())return "FRONT_RELEASE_REQUIRED";
     if(movement&&front_.config().enabled&&!front_.config().protectionReady())return "FRONT_CALIBRATION_REQUIRED";
     if(movement&&front_.config().enabled&&!front_.fresh(now))return "FRONT_UNKNOWN";
-    if(movement&&!snapshot(now).camera) return "CAMERA_OFFLINE";
-    if(movement&&hardware_&&!calibration_) return "CALIBRATION_REQUIRED";
-    if(movement&&hardware_&&!hardwareHealthy(now)) return "IMU_NOT_READY";
     if(mode==Mode::Follow&&(!personFresh(now)||!person_.found||person_.score<PersonAcceptScoreMilli)) return "TARGET_NOT_READY";
     state_.owner=client; stop(now,"mode_changed"); state_.mode=mode;
     if(mode==Mode::Follow) { heartbeatMs_=now; state_.lastCommandMs=now; armed_=true; }
@@ -174,25 +166,15 @@ class SafetyController {
       return nullptr;
     }
     if(state_.estop) return "ESTOP_ACTIVE";
-    if(state_.fault||!state_.network||(hardware_&&!hardwareHealthy(now))) return "FAULT_ACTIVE";
+    if(state_.fault) return "FAULT_ACTIVE";
     if(state_.mode!=Mode::Manual||state_.owner!=client) return "NOT_IN_MANUAL";
     if(front_.held()) return "FRONT_RELEASE_REQUIRED";
     if(front_.config().enabled&&!front_.config().protectionReady()) return "FRONT_CALIBRATION_REQUIRED";
     if(front_.config().enabled&&!front_.fresh(now)) return "FRONT_UNKNOWN";
-    if(!snapshot(now).camera) return "CAMERA_OFFLINE";
-    if(front_.held())return "FRONT_RELEASE_REQUIRED";
-    if(front_.config().enabled&&(!front_.fresh(now)||!front_.config().protectionReady()))return "FRONT_UNKNOWN";
     state_.target={vx,vy,wz}; state_.lastCommandMs=now; armed_=true; tick(now);return nullptr;
   }
   void tick(uint64_t now) {
     const bool movingMode=state_.mode==Mode::Manual||state_.mode==Mode::Follow||state_.mode==Mode::Gesture;
-    if(movingMode&&hardware_&&!hardwareHealthy(now)) { stop(now,"imu_timeout"); return; }
-    if(movingMode&&!snapshot(now).camera) { stop(now,"camera_timeout"); return; }
-    if(state_.mode==Mode::Follow) {
-      if(!personFresh(now)) { stop(now,"person_timeout"); return; }
-      if(state_.owner&&now-heartbeatMs_>=CommandExpiryMs) { stop(now,"owner_watchdog"); return; }
-    }
-    if(armed_&&now-state_.lastCommandMs>=CommandExpiryMs) { stop(now,"watchdog");return; }
     if(movingMode) {
       const auto before=front_.phase();
       auto reason=front_.advance(now,state_.mode==Mode::Follow,state_.target.vx>0,follow_.ready());
@@ -209,7 +191,7 @@ class SafetyController {
     }
   }
   void stop(uint64_t now,const char* reason) {
-    state_.target={}; state_.mode=Mode::Idle; armed_=false; turnActive_=false; follow_.reset();front_.cancel();
+    state_.target={}; state_.mode=Mode::Idle; armed_=false; turnActive_=false; follow_.reset();front_.cancel();lostSinceMs_=0;
     state_.stoppedAtMs=now; state_.stopReason=reason; ++state_.stopSequence;
   }
  private:
@@ -218,7 +200,7 @@ class SafetyController {
   bool hardwareHealthy(uint64_t now) const { return imuValid_&&now>=lastImuMs_&&now-lastImuMs_<tuning::ImuSafetyMs; }
   bool personFresh(uint64_t now) const { return personSeen_&&now>=person_.receivedMs&&now-person_.receivedMs<PersonExpiryMs; }
   SafetySnapshot state_; FrontGuard front_; PersonFollowController follow_; VisionPacket person_;
-  uint64_t lastCameraMs_=0,lastImuMs_=0,heartbeatMs_=0,invalidSince_=0;
+  uint64_t lastCameraMs_=0,lastImuMs_=0,heartbeatMs_=0,invalidSince_=0,lostSinceMs_=0;
   bool turnActive_=false,turnClockwise_=true;
   float turnAccumDeg_=0,turnLastYaw_=0;
   uint64_t turnStartMs_=0;

@@ -39,12 +39,12 @@ VisionPacket face(uint32_t seq, uint64_t now, int x, int width, uint16_t score) 
 
 int main() {
   ImuFilter imu;
-  for (int t = 10; t <= 5100; t += 10) imu.update(0, 0, 1, 0, 0, 0, t);
-  imu.update(-0.574f, 0, 0.819f, 0, 0, 0, 5110);  // one 35-degree acceleration spike
+  for (int t = 10; t <= 5100; t += 10) imu.update(1, 0, 0, 0, 0, 0, t);
+  imu.update(0.819f, 0.574f, 0, 0, 0, 0, 5110);  // one 35-degree acceleration spike
   expect(!imu.state().tiltFault, "brief acceleration tilt must not latch a fault");
-  for (int t = 5120; t <= 5330; t += 10) imu.update(-0.707f, 0, 0.707f, 0, 0, 0, t);
+  for (int t = 5120; t <= 5330; t += 10) imu.update(0.707f, 0.707f, 0, 0, 0, 0, t);
   expect(!imu.state().tiltFault, "45-degree chassis motion must not stop demo motion");
-  for (int t = 5340; t <= 5900; t += 10) imu.update(-0.866f, 0, 0.5f, 0, 0, 0, t);
+  for (int t = 5340; t <= 5900; t += 10) imu.update(0.5f, 0.866f, 0, 0, 0, 0, t);
   expect(imu.state().tiltFault, "sustained 60-degree tilt must still stop motion");
 
   SafetyController manual;
@@ -152,6 +152,16 @@ int main() {
          "ok motion does not arm on three frames");
   expect(actions.update(true, "ok") == GestureAction::TurnCounterClockwise,
          "confirmed ok turns counterclockwise");
+
+  GestureActionLatch threeAction;
+  expect(threeAction.update(true, "three") == GestureAction::None,
+         "three also needs confirmation");
+  expect(threeAction.update(true, "three") == GestureAction::None,
+         "three motion does not arm on two frames");
+  expect(threeAction.update(true, "three") == GestureAction::None,
+         "three motion does not arm on three frames");
+  expect(threeAction.update(true, "three") == GestureAction::TurnCounterClockwise,
+         "confirmed three turns counterclockwise");
 
   const PpgWindowQuality observed{24.93f, 0.00004f, 0.395f, 6.44f, 1.469f, 83, 73};
   expect(heartRateCandidateValid(observed), "stable field HR candidate must pass relaxed quality gate");

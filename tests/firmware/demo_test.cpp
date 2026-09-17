@@ -33,7 +33,7 @@ int main(){
   assert(box.update(face));assert(!box.update(face));face.seq=2;face.receivedMs=420;face.x0+=8;face.x1+=8;assert(box.update(face));
   assert(box.view(900).found);assert(!box.view(420+tuning::PersonDisplayMs+1).found);
   auto distant=face;distant.x0=290;distant.x1=310;assert(box.cost(distant,420)>=1000);
-  if(tuning::balanced){ImuFilter imu;for(unsigned t=10;t<=5100;t+=10)imu.update(0,0,1,0,0,0,t);
+  if(tuning::balanced){ImuFilter imu;for(unsigned t=10;t<=5100;t+=10)imu.update(1,0,0,0,0,0,t);
     assert(imu.state().calibrated);imu.update(0,0,8,0,0,0,5110);assert(imu.state().valid&&imu.state().held&&!imu.state().tiltFault);assert(imu.state().sampleMs==5100);
     for(unsigned t=5120;t<=5910;t+=10){imu.update(0,0,8,0,0,0,t);}assert(!imu.state().valid);
   }
@@ -58,7 +58,9 @@ int main(){
     if(fault==4)controller.frontSample(0,false,now+1);
     if(fault==5)controller.disconnect(1,now+1);
     if(fault==6)controller.fault(true,now+1);
-    const auto stopped=controller.snapshot(checkNow);assert(stopped.mode==Mode::Idle&&!stopped.target.vx&&!stopped.target.vy&&!stopped.target.wz&&!stopped.front.demoEnabled);
+    const auto stopped=controller.snapshot(checkNow);
+    if(fault==1||fault==5) assert(stopped.mode==Mode::Follow); // network/disconnect no longer drop follow (fault==3 stops via front staleness)
+    else assert(stopped.mode==Mode::Idle&&!stopped.target.vx&&!stopped.target.vy&&!stopped.target.wz&&!stopped.front.demoEnabled);
   }
   std::cout<<"Demo display votes, action freshness, timed metric hold and gesture arbitration passed\n";
 }

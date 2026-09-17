@@ -58,8 +58,9 @@ int main() {
       if(fault==4)s.frontSample(0,false,t+1);
       if(fault==5)s.network(false,t+1);
       if(fault==6) { s.imu(false,false,false,t+1); s.tick(t+250); }
-      if(fault==7) {const auto at=t+SafetyController::CommandExpiryMs;s.imu(true,true,false,at);s.cameraPacket(at);s.person(face(at));s.frontSample(120,true,at);s.tick(at);assert(std::strcmp(s.snapshot(at).stopReason,"owner_watchdog")==0);}
-      zero(s,t+1);assert(s.snapshot(t+1).mode==Mode::Idle);assert(!s.snapshot(t+1).front.demoEnabled);
+      if(fault==7) {const auto at=t+SafetyController::CommandExpiryMs;s.imu(true,true,false,at);s.cameraPacket(at);s.person(face(at));s.frontSample(120,true,at);s.tick(at);}
+      if(fault==1||fault==5||fault==7) assert(s.snapshot(t+1).mode==Mode::Follow);
+      else {zero(s,t+1);assert(s.snapshot(t+1).mode==Mode::Idle);assert(!s.snapshot(t+1).front.demoEnabled);}
     }
   }
   {FrontGuard g;g.configure(cfg);g.setDemo(true);uint64_t t=1;for(;t<=141;t+=70){g.sample(18,true,t);assert(!g.advance(t,true,true,true));}

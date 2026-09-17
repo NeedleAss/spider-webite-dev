@@ -67,6 +67,7 @@ class GestureActionLatch {
     if (!std::strcmp(normalized, "LIKE")) return GestureAction::StartFollow;
     if (!std::strcmp(normalized, "DISLIKE")) return GestureAction::Stop;
     if (!std::strcmp(normalized, "TWO")) return GestureAction::TurnClockwise;
+    if (!std::strcmp(normalized, "THREE")) return GestureAction::TurnCounterClockwise;
     if (!std::strcmp(normalized, "OK")) return GestureAction::TurnCounterClockwise;
     return GestureAction::None;
   }
@@ -88,6 +89,7 @@ class GestureActionLatch {
     if(like)return GestureAction::StartFollow;
     if(stop)return GestureAction::Stop;
     if(!std::strcmp(normalized,"TWO"))return GestureAction::TurnClockwise;
+    if(!std::strcmp(normalized,"THREE"))return GestureAction::TurnCounterClockwise;
     if(!std::strcmp(normalized,"OK"))return GestureAction::TurnCounterClockwise;
     return GestureAction::None;
   }

@@ -4,15 +4,15 @@
 
 ## 当前交接点
 
-- 当前阶段：W0 Windows 环境与构建复现（PASS）；W1 设备核对与完整备份（PASS）；W2 CAM 烧录/串口验收（PASS）；主控 SAFE_BASELINE 烧录完成，正在进入 W3 observe
-- 最近完成：CAM SAFE_BASELINE stream 和主控 SAFE_BASELINE stage5-follow 设备包均已写入并通过 Hash 校验；两板均完成硬复位；CAM/主控 115200 串口日志已保存
+- 当前阶段：W0 Windows 环境与构建复现（PASS）；W1 设备核对与完整备份（PASS）；W2 CAM 烧录/串口验收（PASS）；W3 observe（IN PROGRESS）；主控与 CAM 的 DEMO_BALANCED 设备包均已烧录并通过串口验收
+- 最近完成：主控 `7a160cd4dc396869-s5-follow`（stage5-follow DEMO_BALANCED）与 CAM `demo_balanced` stream 均已写入并通过 Hash 校验；两板完整备份与硬复位完成；CAM/主控 115200 串口日志已保存并核对新固件版本
 - 下一步：保持舵机 5 V 断开、车轮架空，先加入 CareRover-EE68（密码 88888888）并访问 192.168.4.1 做网页/无线 observe；随后再由现场授权进行传感器、人物框和运动验收
 - 阻塞/待用户提供：尚未进行真人入镜、手指稳定放置、舵机落地或十分钟无线实物验收；这些需要现场输入和明确的运动授权
 - 版本同步：本地提交 `922ed6d` 已生成；推送到 GitHub 因本机 Git Credential Manager 无可用凭据而被拒绝，待用户在本机完成 GitHub 登录后重试，未使用强制推送
 - 最近修改及原因：仅补充本轮 Windows 可复现证据；尚未修改产品源码
 - 下一条命令或人工操作：保持舵机 5 V 断开、车轮架空；电脑连接 `CareRover-EE68`（密码 `88888888`），打开 `http://192.168.4.1/?transport=ws&video=mjpeg`，执行网页 observe。需要运动时必须先由用户明确授权并保留急停可达。
 
-- 软件修复待部署：当前已完成一轮“手动模式/姿态/视觉显示/手势响应”改进并通过主机回归；新主控和 CAM DEMO_BALANCED 设备包需用户明确授权后再烧录，现有板上仍是上一轮 SAFE_BASELINE。
+- 软件部署：已完成一轮”手动模式/姿态/视觉显示/手势响应”改进并通过主机回归；主控 `7a160cd4dc396869-s5-follow` 与 CAM `demo_balanced` 设备包已在本机（COM6/COM3）烧录并通过串口验收（见下方 2026-09-16 记录）。
 
 ## 环境与设备
 
@@ -123,3 +123,44 @@
 - 手势：CAM 采用两帧手势后再跑一帧人脸；显示进入/保持门限为 0.30/0.14（safe 档仍为 0.35/0.18），保持 2.6 s、无手 1.7 s；动作门限 balanced 为 0.40。
 - 回归证据：`tools/check_firmware.py` 全部固件套件 PASS；`npm test` 21/21 PASS。主控包 `build/stage5-follow-7a160cd4dc396869-device`（16 MB，固件版本 `7a160cd4dc396869-s5-follow`）与 CAM 包 `build/cam-stream-demo_balanced-windows_baseline_confirmed`（8 MB，应用 `0x400e70`，约 43% 分区余量）均已 compile-only 构建；manifest 的 `source_commit=23ff6505b5cc8caf0d63654aadeee88d6ec25899`、`source_dirty=false`，命令输出 `NO DEVICE WAS FLASHED`。
 - 当前设备状态：COM6/COM3 仍运行上一轮 SAFE_BASELINE，未因本次修复自动覆盖。需现场明确授权后，才可按备份和 115200 串口步骤烧录并做真人/实车验收；本机 Wi-Fi 未切换。
+
+## 2026-09-16 DEMO_BALANCED 实物烧录与串口验收
+
+- 现场授权后，在本机 COM6（主控）/ COM3（CAM）烧录 DEMO_BALANCED 设备包：均先自动整片备份、再逐区写入并 `Hash of data verified`、RTS 硬复位，未擦除 NVS，未驱动舵机。
+- 主控：`tools/carerover.py flash build/stage5-follow-7a160cd4dc396869-device --port COM6 --baud 460800 --only all`，写入 bootloader / partitions / boot_app0 / app / ffat；整片 16 MB 备份 `build/backups/main-before-20260916-173024.bin`（16,777,216 B，SHA-256 `452d8710d368d99be4334c857b70802a59aa88ac80726b49a77463993f400e73`）。
+- CAM：`tools/tracking.py cam-flash build/cam-stream-demo_balanced-windows_baseline_confirmed --port COM3`，写入 bootloader（21,552 B @0x0）/ partition-table（3,072 B @0x8000）/ app（4,198,000 B @0x10000）；整片 8 MB 备份 `build/backups/cam-20260916-173019.bin`（8,388,608 B，SHA-256 `9dd09f7fedfc8ca5b8d3e2040f4391086c7f4a86260fcbaf5344f931c7ee5231`）。
+- 主控 115200 抓取 `build/windows/main-after-balanced.jsonl`：`firmware=7a160cd4dc396869-s5-follow`、`stage=5`、`backend=tracking`、`ap=true`；IMU `0x68 valid=true calibrated=true`；`min_heap=218132` / `min_psram=8324064`。`mode=FAULT`、`stop_reason=boot`、`tilt_fault=true`（`roll≈-67.8°`）为架空/倾斜姿态下安全控制器正确保持停车，非故障；`vision_link valid=0` 因当时 CAM 正在自行烧录未上线。
+- CAM 115200 抓取 `build/windows/cam-after-balanced.jsonl`：296 个 CRC 正确 `@G/@P`、0 坏帧；`cam_metrics` 显示 gesture≈3.14 FPS（较 SAFE 的 ~2.5–2.86 提升，印证 2G:1P 调度）、face≈1.35–1.75 FPS / 39–40 ms、JPEG≈2.69 FPS、`jpeg_drops=0`、`capture_drops=0`、`wifi=true`、`min_heap=36807` / `min_psram=2516924`。
+- 遗留：真人入镜、手指稳定放置、舵机落地、十分钟无线实物验收仍未执行；网页 observe 与运动授权仍按现场约定待办。
+
+## 2026-09-16 跟随灵敏度/步长/丢目标续跟 调整（已烧录）
+
+- 用户要求：更灵敏识别人脸移动、更小步长、框大小稳定、参考框=首次识别框、出框不退出跟随（30 s 等待）、暂不改 IMU 校准门禁（第 7 点跳过）。
+- 改动（仅主控）：`person_follow.h` 降低中心/距离死区（0.04/0.025、0.05/0.03）、增益 0.40/0.50、`maxVx=0.08`/`maxWz=0.10`、加减速限幅 0.15/0.20；参考框由"前三帧中位数"改为"首帧面积"；`demo_tuning.h` 增 `FollowLostTimeoutMs=30000`；`safety_controller.h` 的 `person()` 在 `follow_.lost()` 时不再 `stop()`，改为保持不动并 30 s 后 `target_lost_timeout`，前方绕障丢目标仍即时停。
+- 框大小稳定：沿用 `BoxTrack` 对数面积 Kalman + 跟随 EMA（0.30）；EMA 未进一步调低，避免拖慢收敛并破坏 SAFE_BASELINE 回归。
+- 回归：`tools/check_firmware.py` 8 套全 PASS（经 MSYS2 `bash -lc` 用 `CXX=g++`，规避 Git Bash 下 cygwin g++ 找不到 `<cmath>` 的挂载问题）；`tests/firmware/tracking_test.cpp` 参考框断言改为首帧、新增 30 s 续跟超时用例。
+- 构建/烧录：`build/stage5-follow-a0a4b33575a57b1a-device`（`a0a4b33575a57b1a-s5-follow`，程序 34%/动态 17%）；刷 COM6，整片备份 `build/backups/main-before-20260916-212413.bin`（SHA-256 `db7a150896d75077fd274bfed627104a983a41aeb14c0cb23add473a67a1e3b3`）。
+- 串口：`build/windows/main-after-followtune.jsonl` 确认 `firmware=a0a4b33575a57b1a-s5-follow`；`mode=FAULT`/`tilt_fault=true`（`roll≈-101°`）为架空倾斜姿态，非故障。
+- 遗留：真人入镜验证跟随灵敏度/小步/框稳定/出框续跟仍待现场；IMU 校准门禁（第 7 点）按用户要求未改。
+
+## 2026-09-16 去除全部运动限制 + IMU 竖直安装（已烧录）
+
+- 根因：现场 IMU 以矩形长边（Y 轴）竖直安装，重力落在 Y 轴上；旧代码按水平安装（重力在 Z）算倾角，`roll=atan2(ay,az)≈-101°`，瞬时锁存 `tilt_fault` → 模式退回 Idle → 下一次 `cmd_vel` 报 `NOT_IN_MANUAL`。
+- 按用户要求去除全部运动限制（`safety_controller.h`）：移除 `watchdog`、`imu_timeout`/`imu_invalid`、`tilt_fault`、`camera_timeout`、`person_timeout`、`owner_watchdog`、`network_down`、`owner_disconnected` 的 `stop()`；`velocity`/`setMode`/`autonomousFollow`/`autonomousTurn` 不再因 IMU 健康/校准/相机/网络而拒绝；`snapshot().fault` 与 `clear()` 仅保留真正硬件 `fault`。仍保留：急停 `estop`、硬件 `fault`、前方超声波绕障。
+- IMU 竖直安装（`imu_filter.h`）：`pitch=atan2(ax,ay)`、`roll=atan2(az,ay)`（Y 向上、重力沿 +Y 为水平）；互补滤波 yaw 用 gyro Y（`gy`）、pitch 用 `gz`、roll 用 `gx`。注：+Y 向上这一符号约定待真车水平时确认，若水平时 pitch/roll≈180° 需翻转符号。
+- 回归：`tools/check_firmware.py` 8 套全 PASS（`safety/tracking/front/demo/tuning` 断言改为"模式在断开/超时/断网/丢相机时保持"，IMU 用例改竖直输入）；经 MSYS2 `bash -lc` 用 `CXX=g++`（Git Bash 下 cygwin g++ 因挂载找不到 `<cmath>`）。
+- 构建/烧录：`build/stage5-follow-0baad7a2cc3f0802-device`（`0baad7a2cc3f0802-s5-follow`，程序 34%/动态 17%）；刷 COM6，整片备份 `build/backups/main-before-20260916-230338.bin`（SHA-256 `9a0f269837bcedcb7795c9e5a92bfceae1c90abbdc61c4a1b1e53768fc2a3a85`）。首次烧录因读备份时 Windows 串口 `PermissionError(13)` 中断（未写、未损坏），重试成功。
+- 串口 `build/windows/main-after-unrestricted.jsonl`：`firmware=0baad7a2cc3f0802-s5-follow`；`mode=IDLE`、`fault=false`、`estop=false`（板上倾斜时不再显示 FAULT，网页可进入手动）。
+- 卡尔曼说明：`BoxTrack`（`box_track.h`）确有常速度卡尔曼（`ScalarKalman`×3：中心 cx/cy + 对数面积 area），用于人物框显示与 DEMO_BALANCED 跟随测量（`track_.view()`）；IMU 倾角走互补滤波（陀螺+加速度 `alpha` 融合），非卡尔曼。
+- 遗留：真车水平时确认倾角符号；运动限制已全去除，急停/硬件故障/前方绕障为唯一剩余保护。
+
+## 2026-09-17 IMU 实为 X 轴竖直 + 恢复倾角保护 + 跟随解耦/预测/手势（已烧录）
+
+- IMU 实测 `accel_g≈[1.03,-0.11,-0.07]`，重力落在 +X：现场实为 **X 轴竖直**（非 Y）。`imu_filter.h` 改为 `pitch=atan2(ay,ax)`、`roll=atan2(az,ax)`；互补滤波 yaw 用 `gx`、pitch 用 `gz`、roll 用 `gy`。串口确认 `pitch≈-6°`、`roll≈-4°`、`tilt_fault=false`。
+- 按用户要求**恢复倾角保护**：`safety_controller.h::imu()` 在 `tilt` 且运动模式时恢复 `stop("tilt_fault")`（ImuFilter 55°/400ms 锁存）。其余限制仍去除。
+- 转弯只一边轮子：跟随把 `vx`+`wz` 同时输出，`RR=vx-wz≈0` 被抵消。改为**解耦**：偏离中心时纯旋转（四轮同转）、居中后才前后；并提高 `maxVx=0.15`/`maxWz=0.20`（前后跟随原 `maxVx=0.08` 几乎无效果）。
+- 人脸预测：跟随测量改用 `track_.view(now+lookaheadMs=300)`，用 BoxTrack 常速度卡尔曼预测未来 300 ms 人脸位置。
+- 手势：`TWO`→顺时针一周（已有）、新增 `THREE`→逆时针一周（原逆时针为 OK，二者并存）；`LIKE`→开跟随、`DISLIKE`→停跟随（已有，4 帧确认/3 帧释放）。
+- 回归：`tools/check_firmware.py` 8 套全 PASS；IMU 用例改 X 竖直输入；新增 THREE 手势用例。
+- 构建/烧录：`build/stage5-follow-6a29b278dd82b6f6-device`（`6a29b278dd82b6f6-s5-follow`）；刷 COM6，整片备份 `build/backups/main-before-20260917-000518.bin`（SHA-256 `327e30b9064bc99d4494bf2552e0532bd08b8410d86e0e219db4db2fd437b4b1`）。
+- 超声：`front_config.h` 定义 `FrontInstallation{trig,echo,FrontConfig}`；允许引脚 1/2/14/15/16/21/38–42；功能=前方障碍保护（stopCm/slowCm/warnCm/releaseCm）+ 自动绕障 demo bypass（lateralSpeed/forwardSpeed/settleMs/marginMs/passMs/lateralTimeoutMs）。接入需按 `front_config.example.h` 建 `front_config.local.h` 填 trig/echo 与阈值并置 `enabled`，`verified` 待实测后再置真。
