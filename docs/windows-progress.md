@@ -8,7 +8,7 @@
 
 - 当前阶段：W0 Windows 环境与构建复现（PASS）；W1 设备核对与完整备份（PASS）；W2 CAM 烧录/串口验收（PASS）；W3 observe（IN PROGRESS）；主控与 CAM 的 DEMO_BALANCED 设备包均已烧录并通过串口验收
 - 最近完成：主控 `7a160cd4dc396869-s5-follow`（stage5-follow DEMO_BALANCED）与 CAM `demo_balanced` stream 均已写入并通过 Hash 校验；两板完整备份与硬复位完成；CAM/主控 115200 串口日志已保存并核对新固件版本
-- 下一步：保持舵机 5 V 断开、车轮架空，先加入 CareRover-EE68（密码 88888888）并访问 192.168.4.1 做网页/无线 observe；随后再由现场授权进行传感器、人物框和运动验收
+- 下一步：保持舵机 5 V 断开、车轮架空，先加入 CareRover-EE68（密码由现场本地配置提供）并访问 192.168.4.1 做网页/无线 observe；随后再由现场授权进行传感器、人物框和运动验收
 - 阻塞/待用户提供：尚未进行真人入镜、手指稳定放置、舵机落地或十分钟无线实物验收；这些需要现场输入和明确的运动授权
 - 版本同步：本地提交 `922ed6d` 已生成；推送到 GitHub 因本机 Git Credential Manager 无可用凭据而被拒绝，待用户在本机完成 GitHub 登录后重试，未使用强制推送
 - 最近修改及原因：仅补充本轮 Windows 可复现证据；尚未修改产品源码
