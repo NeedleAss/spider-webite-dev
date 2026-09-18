@@ -1,3 +1,5 @@
+> **V7 展示已更新**：当前 Git 的产品影片位于 `presentation/assets/film-v7/CareRover-film.mp4`，交互仍是 `/presentation/`，手部审核 `/presentation/hand.html`。先读 `docs/V7_ACCEPTANCE.md`。本轮固件、根控制台和设备配置相对 V6 未改；不因这次展示更新要求重新烧录已验收设备。需要首次部署或现场修复时，继续按下方 V6 同版构建/标定/验收流程执行。V6 旧 ZIP 不含 V7 展示。
+
 # Windows V6 接手入口
 
 以 [V6 交付版本](docs/V6_DELIVERY.md)、[V6 验收](docs/V6_ACCEPTANCE.md) 为准。把 [V6 AI 提示词](docs/V6_WINDOWS_AI_PROMPT.md) 发给实物端 AI，填写 [现场表与答辩流程](docs/V6_FIELD_RUNBOOK.md)。默认直接手势，不需要网页先授权；主控、CAM 和 FFat 必须同版本。公开编译包为 compile_only，不可直接烧录。

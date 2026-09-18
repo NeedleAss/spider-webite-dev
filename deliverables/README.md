@@ -1,3 +1,5 @@
+> **V7 展示更新以当前 Git/PR 为准**：新影片在 `presentation/assets/film-v7/`，手部审核在 `presentation/hand.html`。本轮未重打固件交接 ZIP；下面及目录中的 V4/V6 包为各自冻结版本，不含 V7 展示。固件与操作台维持 V6。
+
 # CareRover 交付包
 
 当前 V4：

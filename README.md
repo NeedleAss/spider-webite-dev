@@ -1,3 +1,5 @@
+> **V7 展示候选**：按用户接受的三段样片统一剧情与自由探索的拆合路径，摄影棚式 112 秒影片、表面扫描/独立回波、烘焙右手与动态 OLED。查看 [V7 决策](docs/V7_DECISIONS.md)、[验收与审核](docs/V7_ACCEPTANCE.md)、[复审提示词](docs/V7_REVIEW_PROMPT.md)、[展示启动](presentation/README.md) 与 [新影片](presentation/assets/film-v7/CareRover-film.mp4)。新手部及成片待用户视觉审核；固件/操作台维持 V6，G01 与实体动力仍未放行。以下旧版说明保留为历史。
+
 > **V6 当前候选**：默认直接手势、生产操作台与实时视频失效语义、统一 Scroll/Deck/Film、完整进入的自由探索、真实尺度人物/手部与 150 秒离线发布片。先读 [V6 验收](docs/V6_ACCEPTANCE.md)、[移交/版本](docs/V6_DELIVERY.md)、[实物端 AI 提示词](docs/V6_WINDOWS_AI_PROMPT.md)、[复审提示词](docs/V6_REVIEW_PROMPT.md)。影片在 [MP4](presentation/assets/film/CareRover-film.mp4)。**软件/视觉候选，G01 与实体动力未放行。** 以下 V4/旧最终候选段落保留为历史。
 
 > **2026-09-18 V4 产品展示候选**：七章滚动叙事、自制器件外观、正确传感器方向、四舵机目标装配、离线海报和控制台确认语义。先看 [V4 验收/现场表](docs/V4_ACCEPTANCE.md)、[截图录像](evidence/visual-v4/README.md)、[展示启动](presentation/README.md)、[V4 复审提示词](docs/V4_REVIEW_PROMPT.md)。实物门槛仍为 NOT RUN。

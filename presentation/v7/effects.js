@@ -60,7 +60,7 @@ export function makeEcho(anchor){
   const g2=waveRibbon(.84,Math.PI*.18,Math.PI*1.28),m2=m.clone();m2.color.set('#e8f0ff');clipWave(m2);const back=new T.Mesh(g2,m2);root.add(back);returns.push(back);
  }
  const path=line([[0,0,.001],point.toArray()],'#91bac8',.12);root.add(path);
- function update(t){root.visible=true;const s=echoState(t,point.z);
+ function update(t){root.visible=true;root.updateMatrixWorld(true);planePoint.copy(anchor.localToWorld(point.clone()));planeNormal.set(0,0,1).applyQuaternion(wall.getWorldQuaternion(new T.Quaternion()));const s=echoState(t,point.z);
   outgoing.forEach((m,i)=>{const u=(t-1-i*.19)/2.6;m.visible=u>=0&&u<=1;m.position.set(0,0,Math.min(1,u)*point.z);m.scale.setScalar(.012+clamp(u)*.019);m.material.opacity=.62*Math.sin(Math.PI*clamp(u))**.4;});
   returns.forEach((m,i)=>{const u=(t-4.1-i*.15)/2.6;m.visible=u>=0&&u<=1;m.position.copy(point).multiplyScalar(1-clamp(u));m.scale.setScalar(.005+clamp(u)*.014);m.rotation.z=.22*i;m.material.opacity=.78*Math.sin(Math.PI*clamp(u))**.6;});
   glow.material.uniforms.strength.value=ease((t-3.6)/.25)*(1-ease((t-4.8)/1.6));return s;

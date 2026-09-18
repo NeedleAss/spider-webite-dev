@@ -1,3 +1,5 @@
+V7 当前展示入口：先读 `docs/V7_DECISIONS.md`、`docs/V7_ACCEPTANCE.md`、`presentation/README.md`。用户已接受结构/扫描/回波三段样片，明确要求自由探索沿用同一拆合方式；生产故事与 Inspect 共用 `presentation/v7/assembly.js`。V7 覆盖旧版成人/房间与平面分列布局要求。新手部和新长片仍是视觉审核候选；固件与根操作台继续使用以下 V6 交接和现场门槛。
+
 # CareRover Windows 续作
 
 V6 当前候选：先读 `docs/V6_DECISIONS.md`、`docs/V6_ACCEPTANCE.md` 和 `docs/V6_DELIVERY.md`，实物接手用 `docs/V6_WINDOWS_AI_PROMPT.md`。用户已决定默认直接手势，不需要网页先授权；旧报告中的强制网页手势准入不再适用。`V6_CONSOLE_AND_FIRMWARE.md` 是早期软件检查点；当前影片和展示证据以 V6_ACCEPTANCE 为准，不能据此放行真机动力。

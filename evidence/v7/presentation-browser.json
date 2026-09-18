@@ -1,0 +1,228 @@
+{
+  "checks": [
+    {
+      "name": "Inspect enters assembled",
+      "pass": true
+    },
+    {
+      "name": "Story and Inspect use exactly the same complete assembly pose",
+      "pass": true
+    },
+    {
+      "name": "Repeated assembly returns to exact rest",
+      "pass": true
+    },
+    {
+      "name": "Fine pointer hover opens structure",
+      "pass": true
+    },
+    {
+      "name": "Camera retains mount context",
+      "pass": true
+    },
+    {
+      "name": "Explicit isolate shows only selected instance",
+      "pass": true
+    },
+    {
+      "name": "Selected part stays pinned over panel",
+      "pass": true
+    },
+    {
+      "name": "Drag interrupts automatic camera flight",
+      "pass": true
+    },
+    {
+      "name": "Exit restores prior story time paused",
+      "pass": true
+    },
+    {
+      "name": "Deterministic assembly/rotation at 0",
+      "pass": true
+    },
+    {
+      "name": "Deterministic assembly/rotation at 9",
+      "pass": true
+    },
+    {
+      "name": "Deterministic assembly/rotation at 12",
+      "pass": true
+    },
+    {
+      "name": "Deterministic assembly/rotation at 16",
+      "pass": true
+    },
+    {
+      "name": "Deterministic assembly/rotation at 22",
+      "pass": true
+    },
+    {
+      "name": "Deterministic assembly/rotation at 24",
+      "pass": true
+    },
+    {
+      "name": "Deterministic assembly/rotation at 33",
+      "pass": true
+    },
+    {
+      "name": "Deterministic assembly/rotation at 35",
+      "pass": true
+    },
+    {
+      "name": "Deterministic assembly/rotation at 41",
+      "pass": true
+    },
+    {
+      "name": "Deterministic assembly/rotation at 48",
+      "pass": true
+    },
+    {
+      "name": "Deterministic assembly/rotation at 53",
+      "pass": true
+    },
+    {
+      "name": "Deterministic assembly/rotation at 59",
+      "pass": true
+    },
+    {
+      "name": "Deterministic assembly/rotation at 64",
+      "pass": true
+    },
+    {
+      "name": "Deterministic assembly/rotation at 69",
+      "pass": true
+    },
+    {
+      "name": "Deterministic assembly/rotation at 76",
+      "pass": true
+    },
+    {
+      "name": "Deterministic assembly/rotation at 78",
+      "pass": true
+    },
+    {
+      "name": "Deterministic assembly/rotation at 81",
+      "pass": true
+    },
+    {
+      "name": "Deterministic assembly/rotation at 85",
+      "pass": true
+    },
+    {
+      "name": "Deterministic assembly/rotation at 91",
+      "pass": true
+    },
+    {
+      "name": "Deterministic assembly/rotation at 94",
+      "pass": true
+    },
+    {
+      "name": "Deterministic assembly/rotation at 109",
+      "pass": true
+    },
+    {
+      "name": "Reverse seek reproduces rendered sensor/hand frame 22",
+      "pass": true
+    },
+    {
+      "name": "Reverse seek reproduces rendered sensor/hand frame 33",
+      "pass": true
+    },
+    {
+      "name": "Reverse seek reproduces rendered sensor/hand frame 85",
+      "pass": true
+    },
+    {
+      "name": "Reverse seek reproduces rendered sensor/hand frame 91",
+      "pass": true
+    },
+    {
+      "name": "Baked pad holds sensor surface at 83",
+      "pass": true
+    },
+    {
+      "name": "Baked pad holds sensor surface at 84.25",
+      "pass": true
+    },
+    {
+      "name": "Baked pad holds sensor surface at 87",
+      "pass": true
+    },
+    {
+      "name": "Baked pad holds sensor surface at 90",
+      "pass": true
+    },
+    {
+      "name": "Baked pad holds sensor surface at 92.9",
+      "pass": true
+    },
+    {
+      "name": "One gesture symbol at a time",
+      "pass": true
+    },
+    {
+      "name": "Deck next chapter plays correct segment",
+      "pass": true
+    },
+    {
+      "name": "Pause holds exact time",
+      "pass": true
+    },
+    {
+      "name": "Keyboard down advances from a focused transport button",
+      "pass": true
+    },
+    {
+      "name": "Production console iframe uses mock transport",
+      "pass": true
+    },
+    {
+      "name": "Embedded production console is visibly scaled",
+      "pass": true
+    },
+    {
+      "name": "Leaving console stops embedded simulation",
+      "pass": true
+    },
+    {
+      "name": "Mobile has no horizontal overflow",
+      "pass": true
+    },
+    {
+      "name": "Mobile explicit expand works",
+      "pass": true
+    },
+    {
+      "name": "Direct selection from assembled state labels collapse correctly",
+      "pass": true
+    },
+    {
+      "name": "Mobile selection gives detail priority",
+      "pass": true
+    },
+    {
+      "name": "Context failure offers new offline film",
+      "pass": true
+    },
+    {
+      "name": "Context recovers",
+      "pass": true
+    },
+    {
+      "name": "Restoration does not delete resources from old context",
+      "pass": true,
+      "detail": []
+    },
+    {
+      "name": "No legacy person / room / old film loaded",
+      "pass": true
+    },
+    {
+      "name": "No uncaught browser errors",
+      "pass": true,
+      "detail": []
+    }
+  ],
+  "total": 55,
+  "errors": []
+}

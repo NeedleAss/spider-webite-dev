@@ -1,0 +1,76 @@
+{
+  "schema": "carerover.visual-recovery.v7",
+  "date": "2026-09-18",
+  "implementationBase": "f6d7969b1e555313802a2476640f762a86d986cc",
+  "visualReferenceOnly": "7e3a091125028a68a292df645dfe2512e489d4c9",
+  "decision": "Return to robot-focused dark product storytelling on current code; not repository rollback",
+  "removeFromDefault": [
+    "full adult",
+    "room",
+    "table",
+    "chair",
+    "runtime whole-body IK dependency",
+    "planar type-grid explosion",
+    "rejected V6 film fallback"
+  ],
+  "retain": [
+    "current firmware and control semantics",
+    "MJPEG freshness protections",
+    "console",
+    "deterministic director",
+    "Scroll",
+    "Deck",
+    "Film",
+    "instance identity",
+    "full-angle inspect",
+    "smooth interruptible focus",
+    "motion and gesture demonstrations",
+    "dynamic OLED"
+  ],
+  "assemblyRules": {
+    "immutableRestTRS": true,
+    "oneHierarchyForStoryAndInspect": true,
+    "typeGridForbidden": true,
+    "pairWheelsToServosByStableInstanceID": true,
+    "coverAndOLEDGroupedByDefault": true,
+    "unverifiedExtractionAxes": null,
+    "installationSequenceEvidence": "Await user assembly diagram / native CAD check; do not invent",
+    "validation": [
+      "mesh collision distinct from AABB overlap",
+      "preserve subgroup relative transforms at group level",
+      "multi-angle review",
+      "continuous forward/reverse path review"
+    ]
+  },
+  "hand": {
+    "defaultFullActor": false,
+    "toolPlan": "Blender + complete rigged hand/forearm + inspected baked animation",
+    "assetApproval": "Required before film integration",
+    "status": "NOT PRODUCED",
+    "runtimeGenericFingerAngles": "Forbidden in release path"
+  },
+  "sampleGate": {
+    "required": [
+      "ordered_explosion_6_to_10_seconds",
+      "surface_scan_6_to_10_seconds",
+      "sonar_hit_and_return_6_to_10_seconds"
+    ],
+    "handAdditional": [
+      "neutral front/side/back stills",
+      "contact clip",
+      "gesture transitions"
+    ],
+    "longFilmBeforeSampleApproval": false
+  },
+  "scopeThisTurn": {
+    "sourceInspection": true,
+    "productionLayoutHashVerified": true,
+    "readOnlyLayoutAuditRun": true,
+    "latestFilmViewed": false,
+    "fullWebGLRun": false,
+    "visualFixImplemented": false,
+    "newFilmProduced": false,
+    "remoteChanged": false,
+    "physicalTest": false
+  }
+}
