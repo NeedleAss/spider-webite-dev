@@ -1,0 +1,15 @@
+{
+  "status": "PASS",
+  "archive": "deliverables/CareRover_V6_Candidate_20260918.zip",
+  "bytes": 43626676,
+  "sha256": "557663a73806bd6e5517dbe0903c6ea58cbf39cf352ec13d6babe74115487c09",
+  "exportInfo": {
+    "source_commit": "e5f7ebce1f056397a7015f80d30552c09886954b",
+    "source_dirty": false
+  },
+  "implementationCommit": "40fe1516abfc3b43f6f734bf489d69f04b59b152",
+  "verification": "PASS: 445 source/reference/evidence files match the exported SHA-256 manifests.\nThis verifies file integrity, not hardware acceptance.",
+  "assetManifest": "PASS: 40 files",
+  "containsFlashableBinaries": false,
+  "hardwareAcceptance": "NOT RUN"
+}
