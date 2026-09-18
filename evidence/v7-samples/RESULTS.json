@@ -1,0 +1,25 @@
+{
+  "baseline": "f6d7969b1e555313802a2476640f762a86d986cc",
+  "scope": "Three V7 visual studies for user review; no long film or hand asset",
+  "protectedFilesUnchanged": 75,
+  "browserChecks": 35,
+  "nodeTests": 51,
+  "pythonTests": 38,
+  "cppSuites": 12,
+  "clipCount": 3,
+  "eachClip": {
+    "durationSeconds": 10,
+    "frames": 300,
+    "fps": 30,
+    "size": [
+      1920,
+      1080
+    ],
+    "audio": "silent"
+  },
+  "visualReview": "20 assembly checkpoints across four directions plus encoded-film samples; user approval pending",
+  "geometryLimits": "Display extraction only. Native assembly/fastener sequence and exhaustive continuous mesh-collision validation remain unverified. AABB overlap is not treated as proof of mesh penetration.",
+  "hardware": "NOT RUN; production firmware and console unchanged",
+  "handAsset": "NOT PRODUCED; separate approval stage",
+  "defaultProductionPageReplaced": false
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "structure",
+    "ended": true,
+    "duration": 10,
+    "width": 1920,
+    "height": 1080,
+    "error": null
+  },
+  {
+    "id": "scan",
+    "ended": true,
+    "duration": 10,
+    "width": 1920,
+    "height": 1080,
+    "error": null
+  },
+  {
+    "id": "echo",
+    "ended": true,
+    "duration": 10,
+    "width": 1920,
+    "height": 1080,
+    "error": null
+  }
+]
