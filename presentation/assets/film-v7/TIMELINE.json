@@ -22,16 +22,16 @@
     {
       "id": "vision",
       "start": 18,
-      "end": 28,
+      "end": 38,
       "kicker": "A DIFFERENT WAY TO SEE",
-      "title": "看见。\n然后理解。",
-      "body": "光掠过表面。\n让感知，有迹可循。",
-      "note": "感知可视化 · 摄像头不发射可见激光"
+      "title": "看见你。\n跟得上。",
+      "body": "从看见目标，到持续跟随。\n你移动，它回应。",
+      "note": "人脸位置跟随示意 · 不识别身份 · 摄像头不发射可见激光"
     },
     {
       "id": "range",
-      "start": 28,
-      "end": 38,
+      "start": 38,
+      "end": 48,
       "kicker": "EVERY RETURN TELLS A STORY",
       "title": "距离，\n有了回响。",
       "body": "一次发出。一次回应。\n在向前之前，知道距离。",
@@ -39,8 +39,8 @@
     },
     {
       "id": "motion",
-      "start": 38,
-      "end": 56,
+      "start": 48,
+      "end": 66,
       "kicker": "MOVE YOUR WAY",
       "title": "怎么转，\n都有范。",
       "body": "前后、左右、原地旋转。\n横着走，也不必先转身。",
@@ -48,21 +48,12 @@
     },
     {
       "id": "gesture",
-      "start": 56,
-      "end": 70,
+      "start": 66,
+      "end": 80,
       "kicker": "A GESTURE IS ENOUGH",
       "title": "一个手势，\n心领神会。",
       "body": "看见，确认，再回应。\n不用先打开网页，直接比给它看。",
       "note": "识别与执行流程模拟 · 动作受标定、数据和安全条件约束"
-    },
-    {
-      "id": "follow",
-      "start": 70,
-      "end": 80,
-      "kicker": "FOLLOW WITH CARE",
-      "title": "跟得上。\n也停得住。",
-      "body": "位置有效，朝向再移动。\n目标不可用，就停下来等待。",
-      "note": "位置跟随示意 · 不识别身份，不自动搜人"
     },
     {
       "id": "care",

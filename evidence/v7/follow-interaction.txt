@@ -1,4 +1,8 @@
-async page=>{
+### Result
+{"total":22,"checks":[{"name":"Sensor chapter starts as whole robot camera","pass":true},{"name":"Continuous transparency during reveal camera","pass":true},{"name":"Focus keeps translucent installation context camera","pass":true},{"name":"Reverse seek reproduces sculpted sensor frame camera","pass":true},{"name":"Whole robot returns before next chapter camera","pass":true},{"name":"Sensor chapter starts as whole robot ultrasonic","pass":true},{"name":"Continuous transparency during reveal ultrasonic","pass":true},{"name":"Focus keeps translucent installation context ultrasonic","pass":true},{"name":"Reverse seek reproduces sculpted sensor frame ultrasonic","pass":true},{"name":"Whole robot returns before next chapter ultrasonic","pass":true},{"name":"3D gesture TWO","pass":true},{"name":"No flat card TWO","pass":true},{"name":"3D gesture DISLIKE","pass":true},{"name":"No flat card DISLIKE","pass":true},{"name":"3D gesture LIKE","pass":true},{"name":"No flat card LIKE","pass":true},{"name":"Neutral interval clears hand","pass":true},{"name":"Inspect resets transparency","pass":true},{"name":"Mobile no horizontal overflow 22","pass":true},{"name":"Mobile no horizontal overflow 42","pass":true},{"name":"Mobile no horizontal overflow 69","pass":true},{"name":"No browser errors","pass":true}],"errors":[]}
+### Ran Playwright code
+```js
+await (async page=>{
  const checks=[],errors=[];page.on('pageerror',e=>errors.push(e.message));const ok=(name,pass)=>{checks.push({name,pass});if(!pass)throw Error(name);};
  await page.setViewportSize({width:1440,height:900});await page.goto('http://127.0.0.1:8765/presentation/?revision=interaction1');await page.waitForFunction(()=>window.__careRover);
  const seek=t=>page.evaluate(t=>__careRover.seek(t),t),snap=()=>page.evaluate(()=>__careRover.snapshot());
@@ -8,3 +12,8 @@ async page=>{
  await page.evaluate(()=>__careRover.leaveInspect());await page.setViewportSize({width:390,height:844});for(const t of [22,42,69]){await seek(t);await page.screenshot({path:`output/playwright/v7/interaction-mobile-${t}.png`});ok('Mobile no horizontal overflow '+t,await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
  ok('No browser errors',errors.length===0);return {total:checks.length,checks,errors};
 }
+)(page);
+```
+### Page
+- Page URL: http://127.0.0.1:8765/presentation/?revision=interaction1
+- Page Title: CareRover · 让感知，成为行动。

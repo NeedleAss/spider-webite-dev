@@ -14,7 +14,7 @@ const $=id=>document.getElementById(id),stage=$('stage'),director=new Director()
 const params=new URLSearchParams(location.search),exporting=params.get('export')==='1';
 let renderer,scene,camera,controls,robot,hand,lighting,inspection,scan,echo,ready=false,lost=false,mode='scroll',scheduled=false,last=0,draws=0;
 let isolated=false,selected=null,inspectOpen=0,inspectPhase=0,inspectGoal=0,cameraFlight=null,hoverTimer=null,exitTimer=null,saved=null,lastIndex=-1,external=false;
-let state=evaluate(0),inspectStart=0,interaction,reveal;
+let state=evaluate(0),inspectStart=0,interaction,reveal,faceOrigin;
 document.body.dataset.mode=mode;document.body.dataset.export=String(exporting);if(exporting)$('consolePreview').src='about:blank';
 const stamp=t=>`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
 function request(){if(!scheduled&&!document.hidden){scheduled=true;requestAnimationFrame(frame);}}
@@ -28,8 +28,8 @@ function chapter(i){external=false;i=clamp(i,0,scenes.length-1);director.chapter
 function copy(){document.body.dataset.chapter=state.chapter;const s=state.copy;if(state.index!==lastIndex){lastIndex=state.index;$('kicker').textContent=s.kicker;const lines=s.title.split('\n');$('title').replaceChildren(document.createTextNode(lines[0]),document.createElement('br'));const span=document.createElement('span');span.textContent=lines[1]||'';$('title').append(span);$('description').textContent=s.body;$('chapterCount').textContent=String(state.index+1).padStart(2,'0');}
  $('sceneCaption').textContent=s.note;$('watch').hidden=state.index!==0;$('scrollCue').hidden=state.index!==0;
  let beat='';if(state.chapter==='motion')beat=state.pose.label;if(state.chapter==='gesture')beat=state.gesture.label==='NONE'?'松手 · 准备新的动作':`${state.gesture.label}  /  ${state.gesture.accepted?'指令已接受':'识别确认中'}`;
- if(state.chapter==='follow')beat=state.pose.label;
- if(state.chapter==='range'){const event=echo.update(state.t-28);beat=event.received?'回波已接收 · 前方受阻 · 保持停止':event.phase;}
+ if(state.chapter==='vision'&&state.t>=25)beat=state.follow.label;
+ if(state.chapter==='range'){const event=echo.update(state.contentTime-28);beat=event.received?'回波已接收 · 前方受阻 · 保持停止':event.phase;}
  if(state.chapter==='care')beat=state.care.hr?'72 BPM   ·   SpO₂ 98%\n模拟读数':state.care.contact?'手指接触 · 采集中':'等待接触';
  $('beat').textContent=beat;$('scrub').value=director.time;$('time').value=`${stamp(director.time)} / ${stamp(DURATION)}`;$('pause').textContent=director.playing?'Ⅱ':'▷';$('pause').setAttribute('aria-pressed',String(director.playing));$('pause').setAttribute('aria-label',director.playing?'暂停':'播放');$('previous').disabled=state.index===0;$('next').disabled=state.index===scenes.length-1;
  $('consoleShot').hidden=!state.console||mode==='inspect';
@@ -44,22 +44,26 @@ function poseScene(){
  robot.root.position.fromArray(state.pose.position);robot.root.rotation.set(0,state.pose.yaw,0);
  inspection.apply(state.open);scan.root.visible=echo.root.visible=false;
  const sensor=state.chapter==='vision'?'camera':state.chapter==='range'?'ultrasonic':null;
- const revealTime=state.t-(sensor==='camera'?18:28),revealAmount=sensor?ease(revealTime/2)*(1-ease((revealTime-8)/2)):0;
+ const revealTime=(sensor==='camera'?state.t:state.contentTime)-(sensor==='camera'?18:28),revealAmount=sensor?ease(revealTime/2)*(1-ease((revealTime-8)/2)):0;
  reveal.apply(sensor,revealAmount);
  for(const item of robot.instances){const rotor=item.appearance.userData.rotor;if(rotor)rotor.rotation.z=state.pose.wheels[item.node.name]||0;item.appearance.userData.setOLED?.(state.oled);}
  robot.root.updateMatrixWorld(true);
- if(state.chapter==='vision'){scan.root.scale.setScalar(revealAmount);robot.root.updateMatrixWorld(true);scan.update(state.t-18);}
- if(state.chapter==='range'){echo.root.scale.setScalar(revealAmount);robot.root.updateMatrixWorld(true);echo.update(state.t-28);}
+ if(state.chapter==='vision'){
+  const faceScale=ease((state.t-18)/2);scan.root.scale.setScalar(Math.max(.0001,faceScale));robot.root.updateMatrixWorld(true);
+  const world=faceOrigin.clone();world.z+=state.follow.targetZ;scan.target.position.copy(scan.root.worldToLocal(world));robot.root.updateMatrixWorld(true);
+  scan.update(state.t<28?state.t-18:1.2+4*((state.t-28)%3)/3);scan.root.visible=faceScale>0;
+ }
+ if(state.chapter==='range'){echo.root.scale.setScalar(revealAmount);robot.root.updateMatrixWorld(true);echo.update(state.contentTime-28);}
  robot.effects.health.update(state.t,state.care.contact&&state.chapter==='care');
  if(hand){hand.root.visible=state.chapter==='care';if(hand.root.visible){const n=robot.instances.find(i=>i.id==='health').node;hand.place(n);hand.sample(state.t<83?(state.t-80)/3*1.25:state.t<93?1.25+(state.t-83)/10*2.5:3.75+(state.t-93)/2*1.25);}}
- interaction.gestures.visible=state.chapter==='gesture';if(state.chapter==='gesture'){interaction.update(state.t,state.gesture.label);interaction.gestures.position.set(-.14,.13,.02);interaction.gestures.quaternion.setFromRotationMatrix(new T.Matrix4().lookAt(new T.Vector3(...state.eye),new T.Vector3(...state.target),new T.Vector3(0,1,0)));}
- $('gestureCard').hidden=true;$('followCard').hidden=state.chapter!=='follow';
+ interaction.gestures.visible=state.chapter==='gesture';if(state.chapter==='gesture'){interaction.update(state.contentTime,state.gesture.label);interaction.gestures.position.set(-.14,.13,.02);interaction.gestures.quaternion.setFromRotationMatrix(new T.Matrix4().lookAt(new T.Vector3(...state.eye),new T.Vector3(...state.target),new T.Vector3(0,1,0)));}
+ $('gestureCard').hidden=true;$('followCard').hidden=true;
  if(state.chapter==='gesture'){
   $('gestureName').textContent=state.gesture.label==='NONE'?'准备新的动作':state.gesture.label;
   $('gestureResult').textContent=state.gesture.accepted?({TWO:'原地转圈',DISLIKE:'停止',LIKE:'跟随已就绪'}[state.gesture.label]):'识别确认中';
   document.querySelectorAll('[data-gesture]').forEach(e=>e.toggleAttribute('hidden',e.dataset.gesture!==state.gesture.label));
  }
- if(state.chapter==='follow'){$('targetMarker').style.transform=`translateX(${Math.min(1,Math.max(0,(state.t-72)/5))*62}px)`;$('targetMarker').style.opacity=state.t<77?1:0;$('followStatus').textContent=state.t<77?'目标有效':'目标不可用 · 等待';}
+
 }
 
 function frame(now){scheduled=false;if(!ready||lost)return;const sec=now/1000,dt=last?Math.min(.1,sec-last):0;last=sec;
@@ -67,7 +71,7 @@ function frame(now){scheduled=false;if(!ready||lost)return;const sec=now/1000,dt
   inspectPhase=reduced.matches?inspectGoal:advanceAssembly(inspectPhase,inspectGoal,dt);inspectOpen=ease(inspectPhase);
   robot.root.position.set(0,ROBOT_Y,0);robot.root.rotation.set(0,0,0);if(hand)hand.root.visible=false;inspection.apply(inspectOpen,selected,isolated);reveal.apply(null,0);interaction.gestures.visible=false;scan.root.scale.setScalar(1);echo.root.scale.setScalar(1);for(const i of robot.instances){if(i.appearance.userData.rotor)i.appearance.userData.rotor.rotation.z=0;i.appearance.userData.setOLED?.({line1:'CARE ROVER',line2:'EXPLORE',line3:'PRODUCT DEMO'});}scan.root.visible=echo.root.visible=false;$('gestureCard').hidden=$('followCard').hidden=true;
   const item=robot.instances.find(v=>v.node.name===selected);const effectTime=reduced.matches?2:(sec-inspectStart)%8;
-  if(item?.id==='camera')scan.update(effectTime);if(item?.id==='ultrasonic')echo.update(effectTime);
+  if(item?.id==='camera'){scan.target.position.set(0,0,.108);scan.update(effectTime);}if(item?.id==='ultrasonic')echo.update(effectTime);
   $('partLabels').hidden=true;
   if(!$('partLabels').hidden)for(const b of $('partLabels').children){const members=robot.instances.filter(v=>v.id===b.dataset.part),bounds=new T.Box3();members.forEach(n=>bounds.union(new T.Box3().setFromObject(n.appearance)));const p=bounds.getCenter(new T.Vector3()).project(camera);b.style.left=`${(p.x+1)*stage.clientWidth/2}px`;b.style.top=`${(1-p.y)*stage.clientHeight/2+16}px`;}
   if(cameraFlight){const t=cameraFlight.duration?ease((sec-cameraFlight.start)/cameraFlight.duration):1;applyCamera(cameraFlight.eye.clone().lerp(cameraFlight.to,t),cameraFlight.target.clone().lerp(cameraFlight.at,t));if(t===1)cameraFlight=null;}
@@ -106,7 +110,7 @@ async function boot(){try{
  scene=new T.Scene();camera=new T.PerspectiveCamera(30,1,.001,20);controls=new OrbitControls(camera,renderer.domElement);controls.enabled=false;controls.enableDamping=false;controls.enablePan=false;controls.minDistance=.035;controls.maxDistance=3;controls.minPolarAngle=.001;controls.maxPolarAngle=Math.PI-.001;
  lighting=lightProduct(scene,renderer);robot=await loadRobot();scene.add(robot.root);inspection=makeInspection(robot);
  interaction=await loadInteraction();scene.add(interaction.gestures);interaction.gestures.visible=false;reveal=makeReveal(robot);
- inspection.apply(0);scan=makeScan(robot.effects.camera.anchor,interaction.head);echo=makeEcho(robot.effects.ultrasonic.anchor,true);robot.visualEffects={camera:scan,ultrasonic:echo};
+ inspection.apply(0);scan=makeScan(robot.effects.camera.anchor,interaction.head);echo=makeEcho(robot.effects.ultrasonic.anchor,true);robot.visualEffects={camera:scan,ultrasonic:echo};robot.root.updateMatrixWorld(true);faceOrigin=scan.target.getWorldPosition(new T.Vector3());
  robot.materials.white.roughness=.56;robot.materials.white.color.set('#d9dddf');robot.materials.silver.roughness=.25;robot.materials.rubber.color.set('#14171a');
 
  hand=await loadHand();scene.add(hand.root);hand.root.visible=false;
@@ -116,7 +120,7 @@ async function boot(){try{
  window.__careRover={seek:async(t)=>{if(mode==='inspect')leaveInspect();external=true;director.pause();director.seek(t);state=evaluate(t,{aspect:camera.aspect});poseScene();applyCamera(new T.Vector3(...state.eye),new T.Vector3(...state.target));copy();
    if(exporting&&state.console){const video=$('consoleRecording');if(video.readyState<2)await new Promise(resolve=>video.addEventListener('loadeddata',resolve,{once:true}));const target=Math.min(video.duration-.04,Math.max(0,t-96));if(Math.abs(video.currentTime-target)>.012)await new Promise(resolve=>{video.addEventListener('seeked',resolve,{once:true});video.currentTime=target;});}
    renderer.render(scene,camera);await new Promise(requestAnimationFrame);return state;},
-  snapshot:()=>({ready,mode,isolated,flight:!!cameraFlight,state:state.chapter,hand:hand?{visible:hand.root.visible,pad:hand.pad().toArray()}:null,contact:robot.instances.find(i=>i.id==='health').node.localToWorld(new T.Vector3(0,.0037,0)).toArray(),time:director.time,playing:director.playing,selected,open:inspectOpen,draws,interaction:{gesture:state.gesture.label,visible:interaction.gestures.visible,head:interaction.head.visible,reveal:reveal.snapshot()},camera:camera.position.toArray(),target:controls.target.toArray(),render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},partBounds:robot.instances.map(n=>{const box=new T.Box3().setFromObject(n.appearance),points=[];for(const x of [box.min.x,box.max.x])for(const y of [box.min.y,box.max.y])for(const z of [box.min.z,box.max.z])points.push(new T.Vector3(x,y,z).project(camera).toArray());return {id:n.node.name,visible:n.node.visible,min:box.min.toArray(),max:box.max.toArray(),projected:points};}),instances:robot.instances.map(n=>({id:n.id,instanceId:n.node.name,position:n.node.position.toArray(),rotation:n.node.quaternion.toArray(),visible:n.node.visible})),sensors:Object.fromEntries(Object.entries(robot.effects).filter(([,e])=>e.anchor).map(([k,e])=>[k,{position:e.anchor.getWorldPosition(new T.Vector3()).toArray(),forward:new T.Vector3(0,0,1).transformDirection(e.anchor.matrixWorld).toArray()}]))}),
+  snapshot:()=>({ready,mode,isolated,flight:!!cameraFlight,state:state.chapter,hand:hand?{visible:hand.root.visible,pad:hand.pad().toArray()}:null,contact:robot.instances.find(i=>i.id==='health').node.localToWorld(new T.Vector3(0,.0037,0)).toArray(),time:director.time,playing:director.playing,selected,open:inspectOpen,draws,interaction:{faceWorld:scan.target.getWorldPosition(new T.Vector3()).toArray(),robotWorld:robot.root.position.toArray(),gesture:state.gesture.label,visible:interaction.gestures.visible,head:interaction.head.visible,reveal:reveal.snapshot()},camera:camera.position.toArray(),target:controls.target.toArray(),render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},partBounds:robot.instances.map(n=>{const box=new T.Box3().setFromObject(n.appearance),points=[];for(const x of [box.min.x,box.max.x])for(const y of [box.min.y,box.max.y])for(const z of [box.min.z,box.max.z])points.push(new T.Vector3(x,y,z).project(camera).toArray());return {id:n.node.name,visible:n.node.visible,min:box.min.toArray(),max:box.max.toArray(),projected:points};}),instances:robot.instances.map(n=>({id:n.id,instanceId:n.node.name,position:n.node.position.toArray(),rotation:n.node.quaternion.toArray(),visible:n.node.visible})),sensors:Object.fromEntries(Object.entries(robot.effects).filter(([,e])=>e.anchor).map(([k,e])=>[k,{position:e.anchor.getWorldPosition(new T.Vector3()).toArray(),forward:new T.Vector3(0,0,1).transformDirection(e.anchor.matrixWorld).toArray()}]))}),
   setMode,enterInspect,leaveInspect,selectPart,expand,clearSelection, isolate:()=>{$('isolate').click();}, reset:()=>{$('inspectReset').click();},loseContext:()=>renderer.forceContextLoss(),restoreContext:()=>renderer.forceContextRestore()};
  if(exporting){mode='film';director.setMode(mode);document.body.dataset.mode=mode;external=true;await window.__careRover.seek(Number(params.get('t'))||0);}request();
  }catch(error){console.error('CareRover presentation',error);fallback('3D 未能载入 · 请使用离线影片或章节海报');}}

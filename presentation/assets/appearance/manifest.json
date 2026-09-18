@@ -28,8 +28,8 @@
   "files": [
     {
       "path": "app.js",
-      "bytes": 23431,
-      "sha256": "c587b6e7f4ed20b45c7d83b925c74e4976c32fe1529d17eeea6b8eeb518030b8"
+      "bytes": 23764,
+      "sha256": "6c289a4b2e1272ee7306c9f143a2ba561bb15361274e2bfaace584f662877043"
     },
     {
       "path": "assets/actors/BUILD_INPUTS.json",
@@ -163,28 +163,28 @@
     },
     {
       "path": "assets/film-v7/CareRover-film.mp4",
-      "bytes": 9516805,
-      "sha256": "96d44eee740edac0ee0329b62db4b2c8e030b0bda16239f55d48dc93fed8db84"
+      "bytes": 9790033,
+      "sha256": "e9b02cff21c9d5c17625a4b6cb150e72101ce019d921cc7e0da52bb488b05bb9"
     },
     {
       "path": "assets/film-v7/CareRover-film.srt",
-      "bytes": 1263,
-      "sha256": "3dbe56238a7c0aae8bcfe6f8fd537fa3d5bb64f45a4ceed98a69f1615836dbb7"
+      "bytes": 1152,
+      "sha256": "2d9bbcaaf167e90ce524871f488548b6c478f0817f5f835e0bc2d32c0e0b14da"
     },
     {
       "path": "assets/film-v7/CareRover-film.vtt",
-      "bytes": 1250,
-      "sha256": "98204c110c2095753a9b8d252f7588e1166b4f4ae5f4e3355f720356da804e9e"
+      "bytes": 1142,
+      "sha256": "927f1d8979537e7b082ee3b3713b0ad5469e8646c92a6b0e8d217920824463b1"
     },
     {
       "path": "assets/film-v7/FILM_MANIFEST.json",
       "bytes": 4076,
-      "sha256": "ba5e5d6431896001f3aeb3b9e715cd92aff65bc1526562f0851dd6df65dd42e5"
+      "sha256": "1faedc2ab05337c61c46b8478605b179350ddfa2eb2e4ae63a85bfb3aa3c64f5"
     },
     {
       "path": "assets/film-v7/TIMELINE.json",
-      "bytes": 3179,
-      "sha256": "92dc9a6f0430a42bec6ee330119be22c31a63209573c8a61f47d97d3f1589c74"
+      "bytes": 2903,
+      "sha256": "2651db7df23a4b66950653e29e8e5c57e1f56581c6382042636f5a77bd0cd873"
     },
     {
       "path": "assets/film-v7/poster.jpg",
@@ -213,8 +213,8 @@
     },
     {
       "path": "assets/hand/contact.mp4",
-      "bytes": 549533,
-      "sha256": "d0cb702471c75e50d7bf3c1b4663df610fc97f541801d339ee1fc18fa6784e8e"
+      "bytes": 564027,
+      "sha256": "c9067496358fed5dca3cee9067207aa9b52ea5bc55f654718260d0f4279e360f"
     },
     {
       "path": "assets/hand/hand_demo.glb",
@@ -283,8 +283,8 @@
     },
     {
       "path": "index.html",
-      "bytes": 5961,
-      "sha256": "ad00725aafeee2b5b6db84d04eacd4e3ead8c3c8cf67eb34c59c67623e398c7d"
+      "bytes": 5921,
+      "sha256": "12c543aac1336a85a261d28d90873e1eb92d681bed9f78616a250a23bc6b4855"
     },
     {
       "path": "parts.js",
@@ -343,13 +343,13 @@
     },
     {
       "path": "v7/director.js",
-      "bytes": 6799,
-      "sha256": "b1344421bc1a63232834ac1f9ba5989d1bb2d65afe98ce37baa5991278969fd1"
+      "bytes": 7217,
+      "sha256": "7673de8c50a59f6f251c7661668b4cdd1043505a5414411a5b01be3604a06798"
     },
     {
       "path": "v7/effects.js",
-      "bytes": 10827,
-      "sha256": "77a926c125410731815ff291f754bddbfb58e08ee1595b76d58ccca00f7cd0b2"
+      "bytes": 10834,
+      "sha256": "3c2acd94e00f263a5bed680a17fb6f03c4e8d05ad9b2bc4e54da56e3b854864a"
     },
     {
       "path": "v7/hand.js",
@@ -413,8 +413,8 @@
     },
     {
       "path": "v7.html",
-      "bytes": 2406,
-      "sha256": "43143a0ee485207de99ad64ff41e7c84a4c7e022a1cf2723d21d4c8c3debb1c3"
+      "bytes": 2371,
+      "sha256": "9fcb07612b05eae11e3d12d3d444e07177d9fa915fca695e6fcddbaa882d082e"
     }
   ],
   "appearanceClearanceMetres": {
@@ -450,7 +450,7 @@
     }
   },
   "deliverable": "Procedurally authored geometry in scene/appearance.js plus original structural GLB. No standalone new photoreal/scanned GLB is claimed.",
-  "assetHash": "da101647cc69c5697151a0e3187f798a12c3426d107ee9638033e671a79b4e0e",
+  "assetHash": "dc5c57290cbd4e60e96cc52fe8f4b695b444ce9239f7cdb1087b09dc138f4b1b",
   "film": "assets/film-v7/FILM_MANIFEST.json",
   "historicalAssets": [
     "assets/actors",

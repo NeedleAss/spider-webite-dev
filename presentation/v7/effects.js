@@ -40,7 +40,7 @@ export function makeScan(anchor,head=null){
   beam.material.uniforms.alpha.value=active?.09*Math.sin(Math.PI*u):0;frame.visible=t>=4.7&&t<8.5;frame.children.forEach(l=>l.material.opacity=.8*ease((t-4.7)/.7)*(1-ease((t-7.8)/.7)));
   return {phase:t<1.2?'目标进入视域':t<5.2?'表面扫描':t<7.8?'目标已识别':'扫描结束',scanActive:active,detected:frame.visible};
  }
- return {root,update,surface};
+ return {root,update,surface,target};
 }
 export function echoState(t,distance){
  const out=clamp((t-1.0)/2.6),back=clamp((t-4.1)/2.6);

@@ -10,7 +10,7 @@
   "codec": "h264",
   "fullAudioVideoDecode": "PASS",
   "sourceHashesVerified": 25,
-  "sha256": "96d44eee740edac0ee0329b62db4b2c8e030b0bda16239f55d48dc93fed8db84",
+  "sha256": "e9b02cff21c9d5c17625a4b6cb150e72101ce019d921cc7e0da52bb488b05bb9",
   "visualReview": "Encoded four-second sample sheets plus browser/hand close-ups; final user visual acceptance pending.",
   "hardware": "NOT RUN"
 }
