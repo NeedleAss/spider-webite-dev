@@ -1,5 +1,5 @@
 import {clamp,mix,wheelAngles} from '../story/timeline.js';
-const ease=x=>{x=clamp(x);return x*x*x*(x*(x*6-15)+10);};
+import {ease,openingAt,STRUCTURE_EYE,STRUCTURE_TARGET} from './structure.js';
 export const DURATION=112,ROBOT_Y=0;
 const ramp=(t,a,b)=>ease((t-a)/(b-a));
 const scene=(id,start,end,kicker,title,body,note)=>({id,start,end,kicker,title,body,note});
@@ -17,8 +17,8 @@ export const scenes=[
 ];
 const key=(t,eye,target)=>({t,eye,target});
 export const cameras=[
- key(0,[-.31,.195,.28],[0,.06,0]),key(6,[-.31,.195,.28],[0,.06,0]),
- key(9,[-.49,.30,.55],[.004,.125,0]),key(15,[-.49,.30,.55],[.004,.125,0]),
+ key(0,[-.31,.195,.28],[0,.06,0]),key(5,[-.31,.195,.28],[0,.06,0]),
+ key(7,STRUCTURE_EYE,STRUCTURE_TARGET),key(17,STRUCTURE_EYE,STRUCTURE_TARGET),
  key(18,[-.185,.136,.230],[-.092,.066,0]),key(27.9,[-.185,.136,.230],[-.092,.066,0]),
  key(28,[-.195,.158,.275],[-.098,.092,0]),key(35,[-.195,.158,.275],[-.098,.092,0]),key(37.9,[-.42,.30,.49],[-.055,.06,0]),
  key(38,[-.42,.30,.49],[-.025,.05,-.03]),key(56,[-.42,.30,.49],[-.025,.05,-.03]),
@@ -45,7 +45,7 @@ export function gestureEvent(t){
 export function careEvent(t){const contact=t>=83&&t<93;return {contact,approach:ramp(t,80,83)*(1-ramp(t,93,95)),phase:t<83?'approach':t<87?'acquiring':t<89?'measuring':t<93?'result':'released',hr:contact&&t>=89?72:null,spo2:contact&&t>=89?98:null,simulated:true,timeCompressed:true};}
 export function evaluate(time,{aspect=16/9,reduced=false}={}){
  const t=clamp(Number.isFinite(time)?time:0,0,DURATION),index=t===DURATION?scenes.length-1:scenes.findIndex(s=>t<s.end),s=scenes[index];
- const open=ramp(t,6,10)*(1-ramp(t,14,18));let pose={position:[0,0,0],yaw:0,wheels:wheelAngles(0,0,0),label:'就绪'};
+ const open=openingAt(t-7);let pose={position:[0,0,0],yaw:0,wheels:wheelAngles(0,0,0),label:'就绪'};
  if(t>=38&&t<56)pose=independentMotion(t-38);
  if(t>=56&&t<70){const turn=2*Math.PI*ramp(t,58,63);pose.yaw=-turn;pose.wheels=wheelAngles(0,0,turn);}
  if(t>=70&&t<80){const travel=.065*ramp(t,72,77);pose.position[0]=-travel;pose.wheels=wheelAngles(travel,0,0);pose.label=t<72?'位置有效 · 先朝向':t<77?'跟随目标':'目标不可用 · 停止等待';}

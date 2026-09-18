@@ -1,4 +1,8 @@
-async page=>{
+### Result
+[{"name":"context loss gives usable offline film link","status":"PASS"},{"name":"context restored with same semantic time","status":"PASS"},{"name":"repeated focus/reset does not accumulate CAD transforms","status":"PASS"},{"name":"repeated focus/reset keeps geometry count bounded","status":"PASS"},{"name":"unselected exit collapses after delay","status":"PASS"},{"name":"reduced motion starts without autoplay","status":"PASS"},{"name":"explicit static fallback has poster and film","status":"PASS"}]
+### Ran Playwright code
+```js
+await (async page=>{
  const result=[],check=(name,ok)=>{if(!ok)throw Error(name);result.push({name,status:'PASS'});};
  await page.setViewportSize({width:1440,height:900});await page.goto('http://127.0.0.1:8765/presentation/');await page.waitForFunction(()=>window.__careRover);
  await page.evaluate(()=>window.__careRover.seek(23));await page.evaluate(()=>window.__careRover.loseContext());await page.waitForFunction(()=>document.body.dataset.viewer==='fallback');
@@ -13,3 +17,10 @@ async page=>{
  await page.emulateMedia({reducedMotion:'no-preference'});await page.goto('http://127.0.0.1:8765/presentation/?static=1');check('explicit static fallback has poster and film',await page.locator('#poster').isVisible()&&await page.locator('#loadStatus a').isVisible());
  return result;
 }
+)(page);
+```
+### Page
+- Page URL: http://127.0.0.1:8765/presentation/?static=1
+- Page Title: CareRover · 让感知，成为行动。
+### Events
+- New console entries: .playwright-cli/console-2026-09-18T13-53-56-815Z.log#L34-L35

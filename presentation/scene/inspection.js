@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {makeAssembly,groups,wheelPairs} from '../v7/assembly.js';
+import {structureShot} from '../v7/structure.js';
 // The approved study is the only assembly path, for story and inspection.
 export function makeInspection(robot){
  const assembly=makeAssembly(robot);
@@ -20,6 +21,7 @@ export function makeInspection(robot){
  }
  function box(selected=null){const b=new T.Box3();for(const i of robot.instances)if(!selected||i.node.name===selected)b.union(new T.Box3().setFromObject(i.appearance));return b;}
  function shot(selected,aspect){
+  if(!selected){const s=structureShot(aspect);return {eye:new T.Vector3(...s.eye),target:new T.Vector3(...s.target)};}
   const b=box(selected),target=b.getCenter(new T.Vector3()),size=b.getSize(new T.Vector3());let dir=new T.Vector3(-.49,.175,.55);
   const i=robot.instances.find(v=>v.node.name===selected);
   if(i&&['camera','ultrasonic'].includes(i.id)){dir.set(-.48,.38,1);const effect=robot.visualEffects?.[i.id];if(effect){b.union(new T.Box3().setFromObject(effect.root));b.getCenter(target);b.getSize(size);}}

@@ -21,3 +21,5 @@
 所有运行依赖本地托管，无 CDN。网页需 HTTP，`file://` 不支持；`?static=1`、WebGL 失败或上下文丢失提供新海报与 V7 MP4。现场应提前在放映电脑试播 MP4。
 
 软件结果与视觉审核：`../docs/V7_ACCEPTANCE.md`。固件/操作台继续使用 V6，现场烧录/验收依据 `../docs/V6_WINDOWS_AI_PROMPT.md` 与 `../docs/V6_FIELD_RUNBOOK.md`，G01 仍待实测。
+
+2026-09-18 拆合修正：主片 7–17 秒完整复用 `v7.html` 的十秒结构样片，固定相机直到收拢完成。自由探索同一默认取景，展开与收拢各 3.6 秒，可途中反向；恢复整机也播放收拢。若仍开着旧页面，请重新进入 `/presentation/?revision=structure2`；此入口加载的变更模块带独立版本标记。

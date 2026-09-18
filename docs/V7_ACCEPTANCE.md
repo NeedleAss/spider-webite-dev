@@ -62,3 +62,17 @@ python tools/validate_film_v7.py
 ```
 
 浏览器：根目录 HTTP 8765，隔离 JPEG fixture 8767，用 Playwright CLI 创建各自会话，经 `tools/run_browser_check.py` 执行 `check_story_v7.js`、`check_story_resilience_v6.js`、`check_console_v6.js`。后三者不连接实物；控制台 fixture 会主动制造503/断帧等状态。影片重建使用 `tools/film_score_v7.py`、`tools/render_film_v7.py`，Blender 手部重建见 `tools/art/build_hand.py`。
+
+## 2026-09-18 样片 / 主片 / Inspect 画面一致性复验
+
+此前的末态姿态比较不足以证明动画观感一致。本次增加实际浏览器中三个入口的对照：在 1440×900 下，对样片 0–10 秒的 13 个时刻与主片 7–17 秒分别比较相机、目标点、画布矩形、全部实例的位置/旋转，以及包围盒角点的屏幕投影；Inspect 的完整与展开总览也使用相同比较。差异低于 1e-8。该指标验证取景与姿态，不代表整张网页像素完全相同（交互 UI 与 OLED 内容不同）。
+
+| 范围 | 本次结果 | 证据 |
+|---|---|---|
+| 样片一致性、展开速度、收拢、途中反向与退出停止渲染 | 21 项 PASS | `evidence/v7/structure-browser.txt` |
+| 展示与手机布局回归 | 55 项 PASS | `evidence/v7/structure-regression.txt` |
+| 重复选择/恢复、上下文、减少动态与降级 | 7 项 PASS | `evidence/v7/structure-resilience.txt` |
+| Node | 59 / 59 PASS | `evidence/v7/structure-node.txt` |
+| 固件/控制台/配置 | 原 75 文件哈希再次核对未变 | `evidence/v7/protected-hashes.json` |
+
+画面对照见 `evidence/v7/visual/structure-reference.png`、`structure-film.png`、`structure-inspect.png`。离线影片重新从当前生产页面导出并完整解码，哈希和抽帧证据更新在 `FILM_MANIFEST.json`、`evidence/v7/film-validation.json`。先前 Python/C++/控制台 fixture 为上一轮记录，本次没有把它们重记为重跑。用户最终视觉审核与实物门槛仍保留。

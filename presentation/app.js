@@ -7,11 +7,12 @@ import {makeScan,makeEcho} from './v7/effects.js';
 import {makeInspection} from './scene/inspection.js';
 import {parts} from './parts.js';
 import {Director,evaluate,scenes,DURATION,ROBOT_Y} from './v7/director.js';
-import {clamp,ease} from './story/timeline.js';
+import {clamp} from './story/timeline.js';
+import {ease,advanceAssembly} from './v7/structure.js';
 const $=id=>document.getElementById(id),stage=$('stage'),director=new Director(),reduced=matchMedia('(prefers-reduced-motion:reduce)');
 const params=new URLSearchParams(location.search),exporting=params.get('export')==='1';
 let renderer,scene,camera,controls,robot,hand,lighting,inspection,scan,echo,ready=false,lost=false,mode='scroll',scheduled=false,last=0,draws=0;
-let isolated=false,selected=null,inspectOpen=0,inspectGoal=0,cameraFlight=null,hoverTimer=null,exitTimer=null,saved=null,lastIndex=-1,external=false;
+let isolated=false,selected=null,inspectOpen=0,inspectPhase=0,inspectGoal=0,cameraFlight=null,hoverTimer=null,exitTimer=null,saved=null,lastIndex=-1,external=false;
 let state=evaluate(0),inspectStart=0;
 document.body.dataset.mode=mode;document.body.dataset.export=String(exporting);if(exporting)$('consolePreview').src='about:blank';
 const stamp=t=>`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
@@ -59,7 +60,7 @@ function poseScene(){
 
 function frame(now){scheduled=false;if(!ready||lost)return;const sec=now/1000,dt=last?Math.min(.1,sec-last):0;last=sec;
  if(mode==='inspect'){
-  const a=reduced.matches?1:1-Math.exp(-dt*7);inspectOpen+=(inspectGoal-inspectOpen)*a;if(Math.abs(inspectOpen-inspectGoal)<.0001)inspectOpen=inspectGoal;
+  inspectPhase=reduced.matches?inspectGoal:advanceAssembly(inspectPhase,inspectGoal,dt);inspectOpen=ease(inspectPhase);
   robot.root.position.set(0,ROBOT_Y,0);robot.root.rotation.set(0,0,0);if(hand)hand.root.visible=false;inspection.apply(inspectOpen,selected,isolated);for(const i of robot.instances){if(i.appearance.userData.rotor)i.appearance.userData.rotor.rotation.z=0;i.appearance.userData.setOLED?.({line1:'CARE ROVER',line2:'EXPLORE',line3:'PRODUCT DEMO'});}scan.root.visible=echo.root.visible=false;$('gestureCard').hidden=$('followCard').hidden=true;
   const item=robot.instances.find(v=>v.node.name===selected);const effectTime=reduced.matches?2:(sec-inspectStart)%8;
   if(item?.id==='camera')scan.update(effectTime);if(item?.id==='ultrasonic')echo.update(effectTime);
@@ -72,18 +73,18 @@ function frame(now){scheduled=false;if(!ready||lost)return;const sec=now/1000,dt
   state=evaluate(mode==='deck'&&!director.playing&&director.time===director.hold?Math.max(0,director.time-.000001):director.time,{aspect:camera.aspect,reduced:reduced.matches});poseScene();applyCamera(new T.Vector3(...state.eye),new T.Vector3(...state.target));copy();
  }
  renderer.render(scene,camera);draws++;
- if(director.playing||(mode==='inspect'&&selected&&!reduced.matches)||cameraFlight||Math.abs(inspectGoal-inspectOpen)>.0001)request();
+ if(director.playing||(mode==='inspect'&&selected&&!reduced.matches)||cameraFlight||(mode==='inspect'&&inspectPhase!==inspectGoal))request();
 }
 function resize(){if(!renderer)return;const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=30;camera.updateProjectionMatrix();const frame=$('consolePreview'),box=frame.parentElement;frame.style.transform=`scale(${box.clientWidth/1440})`;request();}
-function expand(value){clearTimeout(hoverTimer);clearTimeout(exitTimer);if(selected)return;inspectGoal=value;$('expand').textContent=value?'收拢整机':'展开结构';
- // Compute target bounds at the requested layout, then restore the current animated pose.
- inspection.apply(value);const shot=inspection.shot(null,camera.aspect);inspection.apply(inspectOpen);flight(shot);}
-function clearSelection(){clearTimeout(exitTimer);$('expand').textContent='收拢整机';$('inspectPanel').dataset.selected='false';isolated=false;$('isolate').hidden=true;selected=null;$('closePart').hidden=true;document.querySelectorAll('#parts button').forEach(b=>b.setAttribute('aria-pressed','false'));$('partTitle').textContent='选择一个部件';$('partDescription').textContent='保留装配关系，沿同一路径展开与收拢。';$('partCategory').textContent='EXPLORE THE STRUCTURE';$('instanceLabel').textContent='';inspectGoal=1;inspection.apply(1);flight(inspection.shot(null,camera.aspect));}
+function expand(value){clearTimeout(hoverTimer);clearTimeout(exitTimer);if(selected)return;value=Number(Boolean(value));if(inspectPhase===inspectGoal)last=performance.now()/1000;inspectGoal=value;$('expand').textContent=value?'收拢整机':'展开结构';
+ // Keep the approved camera still while the structure opens/closes; preserve user orbit.
+ request();}
+function clearSelection(){clearTimeout(exitTimer);$('expand').textContent='收拢整机';$('inspectPanel').dataset.selected='false';isolated=false;$('isolate').hidden=true;selected=null;$('closePart').hidden=true;document.querySelectorAll('#parts button').forEach(b=>b.setAttribute('aria-pressed','false'));$('partTitle').textContent='选择一个部件';$('partDescription').textContent='保留装配关系，沿同一路径展开与收拢。';$('partCategory').textContent='EXPLORE THE STRUCTURE';$('instanceLabel').textContent='';inspectGoal=1;inspection.apply(inspectOpen);flight(inspection.shot(null,camera.aspect));}
 function selectPart(id,instanceId){if(mode!=='inspect')return;const items=robot.instances.filter(n=>n.id===id);if(!instanceId){const current=items.findIndex(n=>n.node.name===selected);instanceId=items[(current+1)%items.length].node.name;}
  $('inspectPanel').dataset.selected='true';isolated=false;$('isolate').hidden=false;$('isolate').textContent='单独看这个部件';selected=instanceId;$('expand').textContent='收拢整机';inspectStart=performance.now()/1000;inspectGoal=1;inspection.apply(1,selected);const focused=inspection.shot(selected,camera.aspect);inspection.apply(inspectOpen,selected);flight(focused);const p=parts.find(p=>p.id===id);
  $('partTitle').textContent=p.name;$('partCategory').textContent=p.category;$('partDescription').textContent=p.description;$('instanceLabel').textContent=`${instanceId}${items.length>1?' · 再点同一按钮切换实例':''}`;$('closePart').hidden=false;
  document.querySelectorAll('#parts button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.part===id)));if(innerWidth<=900)$('partTitle').scrollIntoView({block:'nearest',behavior:reduced.matches?'instant':'smooth'});request();}
-function enterInspect(){if(!ready||mode==='inspect')return;saved={mode,time:director.time};director.pause();mode='inspect';$('inspectPanel').dataset.selected='false';isolated=false;$('isolate').hidden=true;document.body.dataset.mode=mode;$('inspectPanel').hidden=false;controls.enabled=true;selected=null;inspectOpen=inspectGoal=0;cameraFlight=null;
+function enterInspect(){if(!ready||mode==='inspect')return;saved={mode,time:director.time};director.pause();mode='inspect';$('inspectPanel').dataset.selected='false';isolated=false;$('isolate').hidden=true;document.body.dataset.mode=mode;$('inspectPanel').hidden=false;controls.enabled=true;selected=null;inspectOpen=inspectPhase=inspectGoal=0;cameraFlight=null;
  robot.root.position.set(0,ROBOT_Y,0);robot.root.rotation.set(0,0,0);inspection.apply(0);resize();const shot=inspection.shot(null,camera.aspect);applyCamera(shot.eye,shot.target);$('expand').textContent='展开结构';$('closePart').hidden=true;$('partTitle').textContent='完整，从这里开始。';$('partDescription').textContent='转动、放大，或展开后选择一个部件。';$('instanceLabel').textContent='';$('leaveInspect').focus();request();}
 function leaveInspect(){if(mode!=='inspect')return;clearTimeout(hoverTimer);clearTimeout(exitTimer);mode=saved.mode;director.setMode(mode);director.seek(saved.time);external=true;selected=null;cameraFlight=null;controls.enabled=false;$('inspectPanel').hidden=true;document.body.dataset.mode=mode;resize();if(mode==='scroll')syncScroll();lastIndex=-1;$('inspect').focus();request();}
 function picking(){const canvas=renderer.domElement,ray=new T.Raycaster(),pointer=new T.Vector2();let down=null,active=new Set();
@@ -119,7 +120,7 @@ document.querySelectorAll('.modes button').forEach(b=>b.addEventListener('click'
 $('watch').addEventListener('click',()=>{director.seek(0);setMode('film');});$('pause').addEventListener('click',()=>{external=false;if(mode==='scroll')setMode('film');else if(director.playing)director.pause();else{if(director.time===DURATION)director.seek(0);if(mode==='deck'&&director.time>=director.hold)director.chapter(Math.min(state.index+1,scenes.length-1));director.play();}request();});
 $('previous').addEventListener('click',()=>chapter(state.index-1));$('next').addEventListener('click',()=>chapter(state.index+1));$('scrub').addEventListener('input',e=>{director.pause();director.seek(Number(e.target.value));external=mode!=='scroll';if(mode==='scroll')syncScroll();request();});
 $('fullscreen').addEventListener('click',()=>{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen().catch(()=>{});});
-$('inspect').addEventListener('click',enterInspect);$('leaveInspect').addEventListener('click',leaveInspect);$('expand').addEventListener('click',()=>{if(selected)clearSelection();else expand(inspectGoal?0:1);});$('closePart').addEventListener('click',clearSelection);$('inspectReset').addEventListener('click',()=>{$('inspectPanel').dataset.selected='false';isolated=false;$('isolate').hidden=true;selected=null;inspectOpen=inspectGoal=0;inspection.apply(0);flight(inspection.shot(null,camera.aspect));$('expand').textContent='展开结构';$('closePart').hidden=true;$('partTitle').textContent='完整，从这里开始。';$('partDescription').textContent='转动、放大，或展开后选择一个部件。';$('instanceLabel').textContent='';document.querySelectorAll('#parts button').forEach(b=>b.setAttribute('aria-pressed','false'));});
+$('inspect').addEventListener('click',enterInspect);$('leaveInspect').addEventListener('click',leaveInspect);$('expand').addEventListener('click',()=>{if(selected)clearSelection();else expand(inspectGoal?0:1);});$('closePart').addEventListener('click',clearSelection);$('inspectReset').addEventListener('click',()=>{$('inspectPanel').dataset.selected='false';isolated=false;$('isolate').hidden=true;selected=null;clearTimeout(hoverTimer);clearTimeout(exitTimer);inspectGoal=0;inspection.apply(inspectOpen);flight(inspection.shot(null,camera.aspect));$('expand').textContent='展开结构';$('closePart').hidden=true;$('partTitle').textContent='完整，从这里开始。';$('partDescription').textContent='转动、放大，或展开后选择一个部件。';$('instanceLabel').textContent='';document.querySelectorAll('#parts button').forEach(b=>b.setAttribute('aria-pressed','false'));});
 $('isolate').addEventListener('click',()=>{isolated=!isolated;$('isolate').textContent=isolated?'显示安装参照':'单独看这个部件';inspection.apply(inspectOpen,selected,isolated);request();});
 for(const type of ['wheel','touchstart','pointerdown'])window.addEventListener(type,e=>{if(mode==='scroll'&&!e.target.closest('button,input,a')){external=false;request();}},{passive:true});
 window.addEventListener('scroll',()=>{if(mode==='scroll'&&!external)request();},{passive:true});window.addEventListener('resize',resize);document.addEventListener('visibilitychange',()=>{last=0;director.last=null;if(!document.hidden)request();});

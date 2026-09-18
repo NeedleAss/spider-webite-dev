@@ -1,6 +1,6 @@
 import * as T from 'three';
-export const clamp=x=>Math.max(0,Math.min(1,x));
-export const ease=x=>{x=clamp(x);return x*x*x*(x*(x*6-15)+10);};
+import {clamp,ease} from './structure.js';
+export {clamp,ease,openingAt} from './structure.js';
 const phase=(p,a,b)=>ease((p-a)/(b-a));
 // Stable CAD instance pairs, verified from the saved transforms. Not array order.
 export const wheelPairs={'wheel-1':'servo-1','wheel-5':'servo-5','wheel-6':'servo-6','wheel-7':'servo-7'};
@@ -31,4 +31,3 @@ export function makeAssembly(robot){
  function apply(progress){const p=clamp(progress);for(const i of robot.instances){const r=rest.get(i.node.name);i.node.position.copy(r.p).add(offsetFor(i,p,axes));i.node.quaternion.copy(r.q);i.node.scale.copy(r.s);i.node.visible=true;}robot.cableRoot.visible=false;Object.values(robot.effects).forEach(e=>e.content.visible=false);robot.root.updateMatrixWorld(true);}
  return {apply,rest,axes};
 }
-export function openingAt(t){if(t<.8)return 0;if(t<4.4)return ease((t-.8)/3.6);if(t<5.6)return 1;if(t<9.2)return 1-ease((t-5.6)/3.6);return 0;}

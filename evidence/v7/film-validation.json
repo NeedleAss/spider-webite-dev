@@ -9,8 +9,8 @@
   "fps": 30.0,
   "codec": "h264",
   "fullAudioVideoDecode": "PASS",
-  "sourceHashesVerified": 20,
-  "sha256": "b2524f1dca31d8ce7b0c441a113c21aa711157df686cc938a7a85b8d2bfc7779",
+  "sourceHashesVerified": 21,
+  "sha256": "c578ed805d878e2a713e49ce481c68fc9f61c10c40436e1ecdea7ce9ae1939ab",
   "visualReview": "Encoded four-second sample sheets plus browser/hand close-ups; final user visual acceptance pending.",
   "hardware": "NOT RUN"
 }

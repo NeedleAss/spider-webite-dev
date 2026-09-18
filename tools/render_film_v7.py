@@ -15,7 +15,7 @@ def hashes():
  paths=[ROOT/'presentation/app.js',ROOT/'presentation/index.html',ROOT/'presentation/style.css',*sorted((ROOT/'presentation/v7').glob('*.js')),*sorted((ROOT/'presentation/scene').glob('*.js')),*sorted((ROOT/'presentation/effects').glob('*.js')),ROOT/'presentation/story/timeline.js',ROOT/'presentation/parts.js',ROOT/'presentation/assets/cad/carerover.glb',ROOT/'presentation/assets/hand/hand_demo.glb',ROOT/'presentation/assets/film/console-demo.mp4']
  return {p.relative_to(ROOT).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
 source=hashes()
-run("async page=>{await page.setViewportSize({width:1920,height:1080});await page.goto('http://127.0.0.1:8765/presentation/?export=1');await page.waitForFunction(()=>window.__careRover);}")
+run("async page=>{await page.route('**/*',route=>route.continue());await page.setViewportSize({width:1920,height:1080});await page.goto('http://127.0.0.1:8765/presentation/?export=1');await page.waitForFunction(()=>window.__careRover);}")
 for start in range(0,3360,90):
  end=min(start+90,3360);began=time.monotonic()
  run(f'''async page=>{{for(let i={start};i<{end};i++){{await page.evaluate(t=>__careRover.seek(t),i/30);await page.screenshot({{path:`build/v7-production/frames/${{String(i).padStart(5,'0')}}.jpg`,type:'jpeg',quality:97}});}}return {{frames:{end}}};}}''')

@@ -28,8 +28,8 @@
   "files": [
     {
       "path": "app.js",
-      "bytes": 22225,
-      "sha256": "48d933177e73641acd583294166c472d1c8f9de216bdf185c4c29b33637c3b59"
+      "bytes": 22315,
+      "sha256": "a812d9d1a22381a8419527a4feec9954f15a8dcb38a279de8f6ba608ba29b939"
     },
     {
       "path": "assets/actors/BUILD_INPUTS.json",
@@ -163,8 +163,8 @@
     },
     {
       "path": "assets/film-v7/CareRover-film.mp4",
-      "bytes": 9281998,
-      "sha256": "b2524f1dca31d8ce7b0c441a113c21aa711157df686cc938a7a85b8d2bfc7779"
+      "bytes": 8634563,
+      "sha256": "c578ed805d878e2a713e49ce481c68fc9f61c10c40436e1ecdea7ce9ae1939ab"
     },
     {
       "path": "assets/film-v7/CareRover-film.srt",
@@ -178,8 +178,8 @@
     },
     {
       "path": "assets/film-v7/FILM_MANIFEST.json",
-      "bytes": 3519,
-      "sha256": "304a3d497e2604bbdd18d2f051615beb5be50622657b69b1f8ff836af734a492"
+      "bytes": 3623,
+      "sha256": "2c13bfe29bc07a95a5be0add9b04f8f92b4e5db85a2e437c0c4ffa65db392c4b"
     },
     {
       "path": "assets/film-v7/TIMELINE.json",
@@ -258,8 +258,8 @@
     },
     {
       "path": "index.html",
-      "bytes": 5581,
-      "sha256": "9be067c86b74641c9de1252012f176f84aacd8fab03e4a54fcc58681d7e8e031"
+      "bytes": 5833,
+      "sha256": "14657ef8b4376e2622fc187c52381feb1efa931c519e5de0a442589e74ac7328"
     },
     {
       "path": "parts.js",
@@ -278,8 +278,8 @@
     },
     {
       "path": "scene/inspection.js",
-      "bytes": 1993,
-      "sha256": "88c56ba563e68ff5a1bc936913e6d4c0e78d2feb3b46d93bf10a3a09b95a3b59"
+      "bytes": 2162,
+      "sha256": "5efc5bc0cf052d4949738ab9f7422375778c2574436bb6cc9e694024af2d592e"
     },
     {
       "path": "scene/robot.js",
@@ -303,23 +303,23 @@
     },
     {
       "path": "style.css",
-      "bytes": 14246,
-      "sha256": "78ebdf9743f5a65058ac1888d23819fa5dd23fa98aa119bdf067205d1ce31175"
+      "bytes": 14451,
+      "sha256": "98383fea1a3af512422b738ca5f55d5e79bdae16182362023191dbee25fe834b"
     },
     {
       "path": "v7/app.js",
-      "bytes": 7271,
-      "sha256": "301faabba93f9aca8d77b07075ae1218cc6b97cd10f85232b4af33f2032fd3ac"
+      "bytes": 7336,
+      "sha256": "6d2151aaf55f3584ae38c5e83ad1cdc96f0426e42c643582e582507dc8447847"
     },
     {
       "path": "v7/assembly.js",
-      "bytes": 2562,
-      "sha256": "20fdba8f1e183561c4939dcdfafa4ea69411fc4705d0e002664b131201ca8e70"
+      "bytes": 2400,
+      "sha256": "c9b3a8c03e521233d0860b6bb82ef3c8baac640514c2e7e32145007fe3a07737"
     },
     {
       "path": "v7/director.js",
-      "bytes": 6780,
-      "sha256": "e3cb9489d64f2904a324b895f660e3133af9d3d824394a672cf9f5440eb1e305"
+      "bytes": 6788,
+      "sha256": "467626caaed3546d4e582cdd893ab481334cf1eb6d54f5229ff85325d304c83a"
     },
     {
       "path": "v7/effects.js",
@@ -335,6 +335,11 @@
       "path": "v7/lighting.js",
       "bytes": 1102,
       "sha256": "4844ed47f58a1cde06882a1443a2dc97aea2b2cfdbe914c123118f8efe4d8080"
+    },
+    {
+      "path": "v7/structure.js",
+      "bytes": 923,
+      "sha256": "d3d4760550430cb82f34dede51b6d1f31f80cdb9ab07e35a178f609e54af3d27"
     },
     {
       "path": "v7/style.css",
@@ -378,8 +383,8 @@
     },
     {
       "path": "v7.html",
-      "bytes": 2036,
-      "sha256": "f976106fd09797269af6f5b1ef466522bba88fa861595cff60a0ecceead95b19"
+      "bytes": 2280,
+      "sha256": "360dde74e96b301ed55fc5fc8c5476c3734915bff58fd5697ae4be40c6bfdce2"
     }
   ],
   "appearanceClearanceMetres": {
@@ -415,7 +420,7 @@
     }
   },
   "deliverable": "Procedurally authored geometry in scene/appearance.js plus original structural GLB. No standalone new photoreal/scanned GLB is claimed.",
-  "assetHash": "d0e779c70a8442173b51a25e22e0bdacc80a4c51f1a64db5cf3e47acd800d561",
+  "assetHash": "e39f4e29ffaf36e265f6af0d95d7a481cf9081f9627d280f25fd84c734817dad",
   "film": "assets/film-v7/FILM_MANIFEST.json",
   "historicalAssets": [
     "assets/actors",
