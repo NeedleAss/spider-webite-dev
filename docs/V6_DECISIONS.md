@@ -27,4 +27,4 @@ V5/V6 report Markdown, V6 Goal and field runbook are preserved in `docs/v6/sourc
 ## Progress
 
 - Baseline repository clean and equal to fetched remote. Baseline Node/Python/C++ logs saved under `evidence/v6/`.
-- Production code, 150-second MP4, 51 Node / 38 Python / 12 C++ suites and 42 browser checks: PASS. Final clean-source builds, release ZIP and remote PR checks: IN PROGRESS. Field hardware, G01 and actual mobile devices: NOT RUN.
+- Production code, 150-second MP4, 51 Node / 38 Python / 12 C++ suites and 42 browser checks: PASS. Four clean-source main/CAM builds: PASS at `40fe151`. Release provenance and archive verification accompany the delivery; remote check status is authoritative on PR #1. Field hardware, G01 and actual mobile devices: NOT RUN.

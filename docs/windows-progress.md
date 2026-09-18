@@ -182,3 +182,7 @@
 ## 2026-09-18 — V6 first software checkpoint (Mac, not field acceptance)
 
 User approved V6 implementation with direct device gestures; mandatory webpage gesture authorization is superseded. Read `docs/V6_DECISIONS.md`, `docs/V6_CONSOLE_AND_FIRMWARE.md` and the current protocol extension. Production console, scoped owner release, raw-neutral rearming, action-result OLED/telemetry and robot-only freshness are implemented. Bounded direct MJPEG parsing/decode rejects stale frames; CAM error CORS remains restricted to the existing main-controller origin. Loopback browser acceptance: 16 PASS; host/compile logs remain separately identified. No serial writes or hardware movement occurred. Windows, actual mobile devices, G01 and physical measurements are NOT RUN. Film/director/Inspect work is still in progress; do not treat this checkpoint as final V6 release.
+
+## V6 软件与影片交付（2026-09-18，Mac）
+
+实现冻结 `40fe1516abfc3b43f6f734bf489d69f04b59b152`。默认直接手势、生产控制台、视频/robot 时效、150 秒 MP4 和统一展示已完成；51 Node、38 Python、12 C++ 套件和 42 浏览器检查通过。主控 follow 与 CAM stream 的 SAFE / DEMO 四次干净源码编译通过。交接版本和包内校验见 `V6_DELIVERY.md`，完整证据见 `../evidence/v6/`。未烧录、未实际运动；Windows、真实手机、PWM/实体和 G01 仍 NOT RUN。下一个现场记录必须逐项填写 `V6_FIELD_RUNBOOK.md`，不能把本段改称真机通过。
