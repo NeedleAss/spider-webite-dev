@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "decodedFrames": 4500,
+  "durationSeconds": 150.0,
+  "size": [
+    1920,
+    1080
+  ],
+  "fps": 30.0,
+  "codec": "h264",
+  "fullAudioVideoDecodeErrors": "",
+  "bytes": 14017538,
+  "sha256": "18c6873d0b87dfe09aa2b843e07a363ed3007f9dabeac00912516fbbdba2d6c2",
+  "capturedSimulation": true,
+  "visualReview": "50 encoded samples at 3-second intervals plus hand/hero/Inspect/console close-up screenshots; not a hardware recording",
+  "physicalAcceptance": "NOT RUN",
+  "runtimeSourcesVerified": 54
+}

@@ -106,6 +106,26 @@ class NetworkTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(stopped['robot']['vx'],0)
         await a.close();await b.close()
 
+    async def test_normal_release_hands_back_ownership_but_delayed_release_cannot_cancel_new_owner(self):
+        a=await self.session.ws_connect(self.server.make_url('/ws'))
+        b=await self.session.ws_connect(self.server.make_url('/ws'))
+        initial=await self.receive(b,'telemetry');self.assertFalse(initial['robot']['control_owned'])
+        await a.send_json(cmd('set_mode',mode='MANUAL'));await self.receive(a,'ack')
+        await a.send_json(cmd('cmd_vel',vx=.4,vy=0,wz=0))
+        await self.receive(a,'telemetry',lambda m:m['robot'].get('control_owned') and m['robot']['vx']>0)
+        await a.send_json(cmd('cmd_vel',vx=0,vy=0,wz=0,release_only=True))
+        await self.receive(b,'telemetry',lambda m:not m['robot']['control_occupied'])
+        await b.send_json(cmd('cmd_vel',vx=.3,vy=0,wz=0))
+        await self.receive(b,'telemetry',lambda m:m['robot']['control_owned'] and m['robot']['vx']>0)
+        await a.send_json(cmd('cmd_vel',vx=0,vy=0,wz=0,release_only=True))
+        await b.send_json(cmd('cmd_vel',vx=.3,vy=0,wz=0))
+        kept=await self.receive(b,'telemetry',lambda m:m['robot']['control_owned'] and m['robot']['vx']>0)
+        self.assertEqual(kept['robot']['mode'],'MANUAL')
+        await b.send_json(cmd('set_mode',mode='IDLE'));await self.receive(b,'ack')
+        free=await self.receive(a,'telemetry',lambda m:m['robot']['mode']=='IDLE')
+        self.assertFalse(free['robot']['control_occupied'])
+        await a.close();await b.close()
+
     async def test_private_paths_and_cross_origin_control_are_blocked(self):
         for path in ('/.git/config','/.venv/pyvenv.cfg','/mock/server.py','/.env'):
             async with self.session.get(self.server.make_url(path)) as r:self.assertEqual(r.status,404)

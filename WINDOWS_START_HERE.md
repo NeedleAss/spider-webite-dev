@@ -1,3 +1,13 @@
+# Windows V6 接手入口
+
+以 [V6 交付版本](docs/V6_DELIVERY.md)、[V6 验收](docs/V6_ACCEPTANCE.md) 为准。把 [V6 AI 提示词](docs/V6_WINDOWS_AI_PROMPT.md) 发给实物端 AI，填写 [现场表与答辩流程](docs/V6_FIELD_RUNBOOK.md)。默认直接手势，不需要网页先授权；主控、CAM 和 FFat 必须同版本。公开编译包为 compile_only，不可直接烧录。
+
+展示可直接播放 `presentation/assets/film/CareRover-film.mp4`；交互网页通过本地 HTTP 打开 `/presentation/`。展示资产不烧进 ESP32。真机当前轮仍为 NOT RUN，G01 动力门槛未关闭。
+
+---
+
+以下为历史 V4/旧冻结记录，旧 ZIP 不替代 V6。
+
 # Windows V4 候选接手入口
 
 当前下一轮候选为 `codex/final-polish` 的 V4 更新。请先读 [V4 实施与验收](docs/V4_ACCEPTANCE.md)，把 [V4 Windows AI 提示词](docs/V4_WINDOWS_AI_PROMPT.md) 交给实物端 AI。复审使用 [V4 提示词](docs/V4_REVIEW_PROMPT.md)。

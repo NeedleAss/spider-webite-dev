@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Update or check hashes of the authored V4 presentation assets. No CAD modification."""
+"""Update or check hashes of the authored V6 presentation assets. No CAD modification."""
 import argparse
 import hashlib
 import json
@@ -15,6 +15,7 @@ def main():
     files = [ROOT / x for x in ['app.js', 'index.html', 'style.css', 'parts.js', 'assets/cad/carerover.glb']]
     for directory, suffix in [('scene', '.js'), ('effects', '.js'), ('story', '.js'), ('assets/appearance', '.png'), ('assets/reference', '.jpg')]:
         files += sorted((ROOT / directory).glob('*' + suffix))
+    files += [p for folder in ['assets/actors','assets/film'] for p in (ROOT/folder).rglob('*') if p.is_file()]
     entries = [{'path': p.relative_to(ROOT).as_posix(), 'bytes': p.stat().st_size,
                 'sha256': hashlib.sha256(p.read_bytes()).hexdigest()} for p in sorted(files)]
     assert hashlib.sha256((ROOT / 'assets/cad/carerover.glb').read_bytes()).hexdigest() == data['originalGLBSha256'], 'Original CAD GLB changed'
@@ -22,7 +23,7 @@ def main():
     if args.check:
         if data.get('files') != entries or data.get('assetHash') != asset_hash:
             raise SystemExit('FAIL: run python3 tools/appearance_manifest.py after updating assets/posters')
-        print(f'PASS: {len(entries)} V4 files match {asset_hash}')
+        print(f'PASS: {len(entries)} V6 files match {asset_hash}')
     else:
         data['files'] = entries
         data['assetHash'] = asset_hash

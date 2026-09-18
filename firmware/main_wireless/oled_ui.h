@@ -4,6 +4,8 @@
 #include <Wire.h>
 
 struct OledUiSnapshot {
+  bool actionVisible=false;
+  const char *actionTitle="", *actionDetail="", *actionReason="";
   bool heartRateHeld=false,spo2Held=false;
   bool frontEnabled=false,frontValid=false;
   float frontCm=0;

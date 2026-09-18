@@ -181,7 +181,7 @@ void processCamPacket(const carerover::VisionPacket& p, bool resync) {
   const bool actionEligible = boundedScore >= carerover::tuning::GestureActionScore && gestureFilter.accepted() && !gestureFilter.holding() &&
                                carerover::gestureActionBoxValid(label, x0, y0, x1, y1);
   wirelessGesture(gestureFilter.label(), gestureFilter.scoreMilli() / 1000.0f,
-                  gestureFilter.accepted(), actionEligible, gestureFilter.holding(), gestureFilter.age(p.receivedMs), inferMs);
+                  gestureFilter.accepted(), actionEligible, gestureFilter.holding(), gestureFilter.age(p.receivedMs), inferMs, !handDetected || !strcmp(label,"no_hand") || !strcmp(label,"no_gesture"));
 
   Serial.printf(
       "{\"type\":\"gesture\",\"seq\":%lu,\"cam_ms\":%lu,\"hand\":%s,"
@@ -655,6 +655,8 @@ void printBoardInfo() {
 
 void serviceOled(uint32_t nowMs) {
   OledUiSnapshot snapshot = {};
+  const auto action=wirelessGestureStatus();snapshot.actionVisible=action.show;
+  snapshot.actionTitle=action.title;snapshot.actionDetail=action.detail;snapshot.actionReason=action.reason;
   snapshot.camConnected = validPackets > 0 && !timeoutReported;
   snapshot.gestureValid = snapshot.camConnected && gestureFilter.accepted();
   snapshot.gestureLabel = snapshot.gestureValid ? gestureFilter.label() : "--";

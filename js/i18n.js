@@ -22,7 +22,7 @@ const DICT = {
 
     'cam.title':      '实时视野',
     'cam.source':     '画面源',
-    'cam.src.canvas': '合成画面',
+    'cam.src.canvas': '模拟视野',
     'cam.src.mjpeg':  '摄像头视频',
     'cam.src.file':   '本地视频…',
     'cam.stale':      '视觉数据过期',

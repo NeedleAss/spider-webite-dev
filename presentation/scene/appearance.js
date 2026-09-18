@@ -139,6 +139,7 @@ function display(g,m) {
     c.fillRect(12,36,232,1);c.font='34px monospace';c.fillText('DEMO',12,77);c.font='13px monospace';c.fillText('READY  /  PROTOTYPE',12,109);
     c.globalCompositeOperation='destination-out';for(let y=0;y<h;y+=3)c.clearRect(0,y,w,1);
   });texture.magFilter=T.NearestFilter;
+  g.userData.setOLED=value=>{const key=JSON.stringify(value);if(g.userData.oledKey===key)return;g.userData.oledKey=key;const c=texture.image.getContext('2d');c.clearRect(0,0,256,128);c.globalCompositeOperation='source-over';c.fillStyle='#02080c';c.fillRect(0,0,256,128);c.fillStyle='#59cfe7';c.font='16px monospace';c.fillText(value.line1,10,25);c.fillRect(10,34,236,1);c.font='bold 28px monospace';c.fillText(value.line2,10,76);c.font='14px monospace';c.fillText(value.line3,10,110);texture.needsUpdate=true;};
   add(g,new T.PlaneGeometry(.020,.010),new T.MeshBasicMaterial({map:texture,toneMapped:false}),[0,.00225,0],[-Math.PI/2,0,0]);
   for(const x of [-.0105,.0105])for(const z of [-.0105,.0105])screw(g,m,x,.0018,z,'y',.0011);
 }

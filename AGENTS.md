@@ -1,5 +1,7 @@
 # CareRover Windows 续作
 
+V6 当前候选：先读 `docs/V6_DECISIONS.md`、`docs/V6_ACCEPTANCE.md` 和 `docs/V6_DELIVERY.md`，实物接手用 `docs/V6_WINDOWS_AI_PROMPT.md`。用户已决定默认直接手势，不需要网页先授权；旧报告中的强制网页手势准入不再适用。`V6_CONSOLE_AND_FIRMWARE.md` 是早期软件检查点；当前影片和展示证据以 V6_ACCEPTANCE 为准，不能据此放行真机动力。
+
 这是已有集成源码，不是空白项目。V4 展示与控制台更新先读 `docs/V4_ACCEPTANCE.md`、`docs/visual-v4/RESULTS.json` 和 `docs/V4_WINDOWS_AI_PROMPT.md`；旧冻结包与旧视觉交互说明属于历史。当前最终候选先读 `WINDOWS_START_HERE.md`、`docs/FINAL_TEAM_HANDOFF.md` 和 `docs/FINAL_ACCEPTANCE.md`；当前阈值和任务范围优先于历史交接。历史背景再读 `docs/0915-demo-development.md` 了解 0915 合并、配置选择与证据边界；原始 0915 文件夹同样保持不变。开始工作先读 `WINDOWS_START_HERE.md`、`docs/WINDOWS_0915_HANDOFF.md`（历史环境与设备流程），按需参考 `docs/WINDOWS_ULTRASONIC_HANDOFF.md` 的现场流程，再读 `docs/tracking-development.md`、`docs/ultrasonic-development.md` 和对应验收记录。`docs/WINDOWS_AI_HANDOFF.md` 是早期改动索引，其历史未提交状态不代表当前 Git。本文件适用于此工程；原始参考目录保持不变。
 
 - 当前根目录 `firmware/`、`js/`、`tools/` 是开发代码；`CareRover_Tracking_Motion_Handoff_2026-09-11/` 是原始参考，不能整目录覆盖回来。

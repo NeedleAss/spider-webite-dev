@@ -32,3 +32,26 @@ test('errors retain request correlation and sensor block freshness is independen
   assert.equal(state.connection.lastHealthTs,123); assert.equal(state.vision.lastGestureTs,456);
   assert.equal(CONFIG.PPG_EXPECTED_RATE_HZ,25);
 });
+
+test('robot freshness cannot be renewed by health, IMU, vision or PPG traffic',()=>{
+  s.resetForDisconnect();s.setConnectionState('connected');s.markEstopLocal(false);s.setRequestedMode(null);
+  s.applyTelemetry({robot:{mode:'MANUAL',estop:false,control_allowed:true}});
+  const state=s.getState(),then=Date.now()-CONFIG.TELEMETRY_STALE_MS-1;state.connection.lastRobotTs=then;
+  for(const block of [{health:{sqi:.95}},{imu:{yaw_deg:0}},{vision:{gesture:{label:'LIKE'}}},{robot:{state:'READY'}}])s.applyTelemetry(block);
+  s.appendPpgSamples([1,2,3],25,Date.now());
+  assert.equal(s.isTelemetryStale(),false);assert.equal(s.isRobotStale(),true);assert.equal(s.isManualEnabled(),false);
+  s.setRequestedMode('MANUAL');s.applyTelemetry({health:{sqi:.9}});assert.equal(state.ui.requestedMode,'MANUAL');
+  s.applyTelemetry({robot:{mode:'MANUAL',estop:false}});assert.equal(s.isRobotStale(),false);assert.equal(state.ui.requestedMode,null);
+  assert.equal(s.isRobotStale(state.connection.lastRobotTs-1),true);
+});
+test('scoped release and recognized-versus-accepted gesture events retain their meaning',()=>{
+  assert.equal(p.validateOutgoing(p.releaseInput()),null);
+  assert.ok(p.validateOutgoing({...p.releaseInput(),vx:.5}));assert.ok(p.validateOutgoing({...p.releaseInput(),release_only:'true'}));
+  const raw={type:'telemetry',robot:{control_owned:false,control_occupied:false},device:{scoped_release:true},gesture_action:{seq:4,label:'TWO',accepted:false,reason:'CONTROL_BUSY',age_ms:300}};
+  const msg=p.decode(JSON.stringify(raw)).msg;
+  assert.equal(msg.gesture_action.accepted,false);assert.equal(msg.robot.control_owned,false);s.applyTelemetry(msg);
+  const at=s.getState().gestureAction.sourceAt;s.applyTelemetry({...msg,gesture_action:{...msg.gesture_action,age_ms:0}});
+  assert.equal(s.getState().gestureAction.sourceAt,at);
+  raw.gesture_action.accepted='yes';assert.equal(p.decode(JSON.stringify(raw)).msg.gesture_action,undefined);
+  s.resetForDisconnect();assert.equal(s.getState().gestureAction,null);
+});

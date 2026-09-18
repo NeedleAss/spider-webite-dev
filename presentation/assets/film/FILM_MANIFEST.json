@@ -1,0 +1,92 @@
+{
+  "durationSeconds": 150,
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "frames": 4500,
+  "source": "production presentation/story/director.js and scene modules",
+  "simulation": true,
+  "renderSourceHashes": {
+    "presentation/app.js": "1146b5e3c773c4c1d4af9ccc330bc17d42d96ddd63d5ef30fbf544febf79dcfa",
+    "presentation/assets/actors/BUILD_INPUTS.json": "6aabe22e808a87a9e26f2e0a8d3837b147ea31c7a170ad0fd988552e0a6545f5",
+    "presentation/assets/actors/adult-source.json": "1cb42cce8cbd41f1f49b6900d79ceafb4ea98f8c3e2dcaa85eb3f893fe6e9d0d",
+    "presentation/assets/actors/adult.glb": "ea891bc748b7c5a04f1fdbd98db2e3c278c047c7b14972de6c62c30ce2a1069f",
+    "presentation/assets/appearance/care-mobile.png": "6ce78bccf9f70d049a1306de2fb6e8a6941c5e031c9574b245b1214d5333c3b4",
+    "presentation/assets/appearance/care.png": "8272f428fb4e385268c767ec77ebd554728127fb4b2d245d7b960d7fa4f13f3d",
+    "presentation/assets/appearance/inside-mobile.png": "0d4e0ba8ab82d0b3fdb9c232ce61b69407f88495a68e521e2f647f6098f6b72d",
+    "presentation/assets/appearance/inside.png": "87435a16b57f3a623604c65d65fe23b7a0ece15838d8e5c70f4f87cf7291ac33",
+    "presentation/assets/appearance/meet-mobile.png": "07981f5a8e6fb970d0becd14ed0e5a0198bee3a48c38ff37897558ca95ea0c7e",
+    "presentation/assets/appearance/meet.png": "12ec9422fd1ed12742bd9db0d942ec72c51001256762db047107053f60c85c54",
+    "presentation/assets/appearance/motion-mobile.png": "9245d8fd55611561349ca5b1693ea43ced5c8ac28640b747459e1eb3129ae4e8",
+    "presentation/assets/appearance/motion.png": "ba9b0f58bba97f2f3d6b39b9908abf7b2921cb240252f056ba2489a7f5378727",
+    "presentation/assets/appearance/range-mobile.png": "3c59a1adfce204fa3ac8e3e97cb4e4b361342155ab2a18ce5d75a8cd02ad5d6c",
+    "presentation/assets/appearance/range.png": "ed79b43d43a9d4988059b34b26a9a30fcf4b2be77c9981782442d09e3b6b5ff5",
+    "presentation/assets/appearance/vision-mobile.png": "e15f75282455d8c3532aca4d9adfb7ffefeb22267cbeed2237fb8fe46632822e",
+    "presentation/assets/appearance/vision.png": "208864e419ba8f051f8db7c6fc7ec9b6abad32f200f4acec3a784a90563f2919",
+    "presentation/assets/appearance/whole-mobile.png": "9b739dff827bc6e38f056118900776f388f86ae41549dd9dd59da031905e8e0a",
+    "presentation/assets/appearance/whole.png": "c9768fe29341433ff26cf2d9879a4d98de654047b75cccf0c499a89052ae2915",
+    "presentation/assets/cad/assembly.png": "f426513fc3decfaf26ae1197dbd820b3901fb2ef87a74fe5ab4a99fda7213d5c",
+    "presentation/assets/cad/battery.png": "a82a6df6309ab339aabf90793c85cb23ab6dc1c3e4234e61465db9406c0da49d",
+    "presentation/assets/cad/board-frame.png": "7700d757962dd4cb43ab644aeeee5f42b674fd645ee09439e0dc68ba8aeb1669",
+    "presentation/assets/cad/board-mount.png": "07c04975169bb0ca16407ddc2472c5c2096336719c4125d4b0bb12b9921c8767",
+    "presentation/assets/cad/cad-manifest.json": "42ab9cfe1b0276f978dce5525d109bc8332762baa0b2db5ce240700885a3bd8d",
+    "presentation/assets/cad/camera-mount.png": "f753cd44793266e544eca81a878f2014120aaab78451d27af01145def716a8ec",
+    "presentation/assets/cad/camera.png": "e3556ede0997191cdce167d1101227d25ca3cc64cc1a85500b7305a33475ca35",
+    "presentation/assets/cad/carerover.glb": "2310e2bd46a6940497349d1acf00ef70bd8279881a637424b2764c136229d61b",
+    "presentation/assets/cad/chassis.png": "29b871ff622bb1239ee05e3d2c748cbac62ac63a24bcdd7cfb3d2477f4c53bbf",
+    "presentation/assets/cad/controller.png": "c8531f9da87fbdf94d0d6d8b80723c562664d4f4471ceac19f9c8dfd2e78d5ea",
+    "presentation/assets/cad/display.png": "17cc8c0233528a546305915a2c89b06e2ca1abaa2ec0760c6bd242471e70fd13",
+    "presentation/assets/cad/health.png": "db4ed79238e0fb07ad7ca28b2ef27106c9316bda4457a40579e017c16bdb3a46",
+    "presentation/assets/cad/imu.png": "034f112361e1f9ab282ed1c23908bb58f213198b66b7d169171a0f4c6833c2eb",
+    "presentation/assets/cad/lid.png": "fe8763fed03cca4f8ae0bda8fcc5f192a0989dbe10f9340914c05240353d0148",
+    "presentation/assets/cad/servo.png": "198422bbb856057597ed69bc2e4fb8a495b8690480a80beb8607943766ef0063",
+    "presentation/assets/cad/shell.png": "709965c36dae13e4d9a79a865f1e85178d4e9ef8528cae858675f0f059beee17",
+    "presentation/assets/cad/ultrasonic.png": "76c6138a1ec42fed26b7a9ce72969decab11f3c1c377984a5527f9515b15b544",
+    "presentation/assets/cad/wheel.png": "fb84f9c5973d1760c71f33d8e54b13addc2cb2e93efd94ad656d3ecc9786b590",
+    "presentation/assets/reference/robot-front.jpg": "68696a887309c1239566faf6fd72966ae2fbd98b09a600d71dda8e686bfc5147",
+    "presentation/assets/reference/robot-open.jpg": "ee36d6129265207044fe78db7f3fe49e0c0db7fc0449b12fc9d93ab7770e2382",
+    "presentation/effects/sensors.js": "cd9f626d4f69ba8095963b76c32b70a2a615ce216ef5dc9a233fad4b9150f2fc",
+    "presentation/index.html": "7f24bd8486e7c73873de761f90982007fda5e61d49a893b0558726a20a27ce0d",
+    "presentation/parts.js": "0dbdf7e69e8123b0c404d5438bab193526d81e3b151351eb8fe56f1a0cf6d4b8",
+    "presentation/scene/actor.js": "207c28723c65221fd0911b0f642af4b1cd39ca5f71fa8936d26d0a0cf8575cbc",
+    "presentation/scene/appearance.js": "28428f75b1e5d70a9e68dbe91e6f2bc038fc703f29c4b017a816e02d2fa99bc1",
+    "presentation/scene/inspection.js": "a5754e03c4e3f9d9fa49023402472a14cf5b4839baecf6b9600246567eff0d4a",
+    "presentation/scene/robot.js": "6328c8de7bf143ef3b33ad74f84cd87cbeab630c4f2f8bb1a3d88ed86a714078",
+    "presentation/scene/studio.js": "5bd2b39036378eafdd3882545fa9869879464b09147cf21f33029ff009eabf06",
+    "presentation/story/director.js": "d83adf1c6242db53d4e79412857ea4e19031ae8398944d900c2a0078facc25f4",
+    "presentation/story/timeline.js": "5202031d5906559e8e66e2a8cd5371e1729080d89a1915d676cb4f6fcd7e0569",
+    "presentation/style.css": "56a01c581f48398c58b093eea5295262de8c990f4622f25cf3cdd99095fef422",
+    "presentation/vendor/three/examples/jsm/controls/OrbitControls.js": "b97879c748170baadeb3fb84cea1ffdf4674e283dc06042f34e2acb95a76042c",
+    "presentation/vendor/three/examples/jsm/loaders/GLTFLoader.js": "67ac5551fdafa6e349bd80c8f8e5e39c136d6b2fb1ad647db9abb21dc86f9e4a",
+    "presentation/vendor/three/examples/jsm/utils/BufferGeometryUtils.js": "fda7e946b8e0b5ab39b779206589e7a1079a22eb24efb89d7223e03fdfb1f751",
+    "presentation/vendor/three/three.core.js": "eb077d2417f61d3e6d9264c317cabc4ea35769ed6b0ab533067292a550784c20",
+    "presentation/vendor/three/three.module.js": "c8211c69345d2e9949dc7a8ac969380497aa0600a5a8ac6a459c8cd02dd9cb8a"
+  },
+  "audio": "Original procedural ambient score generated by tools/film_score.py; no samples",
+  "files": {
+    "CareRover-film.mp4": {
+      "bytes": 14017538,
+      "sha256": "18c6873d0b87dfe09aa2b843e07a363ed3007f9dabeac00912516fbbdba2d6c2"
+    },
+    "poster.jpg": {
+      "bytes": 124396,
+      "sha256": "a5ee1b03ab04898cfe42e42d3f0e08c53cf4829df1b2af8c1cc4a010a71e8929"
+    },
+    "console-demo.mp4": {
+      "bytes": 643404,
+      "sha256": "91d4c808b14ca740256803ba6fb58fff260b0c2dfb83020410886bc8599c6eb2"
+    },
+    "CareRover-film.vtt": {
+      "bytes": 1481,
+      "sha256": "5c97d420eae6620e0820456b595be94070425525d9ae2c3e13e8776ddac386e7"
+    },
+    "CareRover-film.srt": {
+      "bytes": 1497,
+      "sha256": "36f6e1503be39a530cd1a952cd8d0d7251a5c76e2a142343127ea6e080adc94e"
+    },
+    "TIMELINE.json": {
+      "bytes": 3655,
+      "sha256": "077286d9f58f6146099aca1dee9631327b25c24bae666dd77447330694a9bd6e"
+    }
+  }
+}

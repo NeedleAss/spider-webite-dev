@@ -1,0 +1,49 @@
+
+> test
+> node --test tests/*.test.js
+
+✔ contain mapping centers a 4:3 image in widescreen and portrait canvases (1.613625ms)
+✔ joystick eight directions, radius limiting, and deadzone use robot axes (0.155416ms)
+✔ protocol rejects malformed frames, unsafe commands, bad samples and ACKs (0.582583ms)
+✔ manual control requires fresh robot confirmation, healthy links, and no safety latch (0.277ms)
+✔ PPG storage stays bounded through 5 minutes at 50 Hz (1.769792ms)
+✔ simulator enforces mode arbitration, hard ESTOP, explicit recovery and configured watchdog (0.568334ms)
+✔ MockTransport removes completed timeout handles and reconnects at zero (104.475417ms)
+✔ pointer capture loss, touch cancellation, blur and hidden all release targets (1.310708ms)
+✔ simulated lost target waits at zero, expires independently and reentry resets wait (1.496125ms)
+✔ gesture display alone cannot start simulated motion and stop exits gesture mode (0.28525ms)
+✔ held metrics remain independent, old telemetry replaces validity, disconnect clears state (0.648041ms)
+✔ prediction age comes from last measured seq and expires even with repeated telemetry (0.13275ms)
+✔ gesture holding is distinct from confidence and IMU rejected count survives decoding (0.073708ms)
+✔ local latch and successful transmission do not claim device confirmation (0.762583ms)
+✔ recorded emergency telemetry is presented as replay even with a stale live transport (0.058292ms)
+✔ source batch time survives delayed network arrival and remains distinct from receipt time (0.640333ms)
+✔ missing, zero, unsynchronised and future clocks are labelled arrival estimates (0.359541ms)
+✔ replay remaps capture and source clocks by one fixed offset, preserving source gaps (0.068709ms)
+✔ front protocol does not retain malformed/no-echo/stale ranges and validates demo commands (1.207084ms)
+✔ manual stop latches until release and missing echo cancels movement (1.571209ms)
+✔ simulated demo visits every bypass phase then disables itself (2.145792ms)
+✔ bypass timeout, repeated obstruction and ESTOP cannot resume automatically (0.251708ms)
+✔ story seeks are deterministic and cannot accumulate displacement over 100 assembly cycles (11.199875ms)
+✔ lid and OLED share the same reversible displacement, and final shot returns to the original front (0.117625ms)
+✔ camera chapter widens to a complete response before transitioning to sonar (0.062583ms)
+✔ reduced motion has deterministic readable chapter poses (0.052209ms)
+✔ normalised orthogonal mixing preserves longitudinal/transverse pairs and bounded rotation (0.143708ms)
+✔ in-place turning really holds translation fixed; trajectory closes and sonar returns to the emitting plane (0.103542ms)
+✔ saved source CAD fixes both module forward axes at world -X; original manifest has not been rewritten (0.594709ms)
+✔ CAD wheel instances have the physical axes and geometric rotation signs required by the orthogonal layout (0.099584ms)
+✔ stream query and telemetry share URL validation and deterministic precedence (0.889166ms)
+✔ duplicate person sequence cannot refresh its deadline; fresh sequence can (0.9015ms)
+✔ tracking capabilities, IMU validity and explicit null survive decoding (0.436792ms)
+✔ held gesture and IMU age come from the source, not aggregate arrival (0.1325ms)
+✔ independently invalidated HR/SpO2 explicitly clear old values (2.153333ms)
+✔ wireless capabilities block non-owner input and reset on disconnect (0.447375ms)
+✔ errors retain request correlation and sensor block freshness is independent (0.077125ms)
+ℹ tests 37
+ℹ suites 0
+ℹ pass 37
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 168.831958

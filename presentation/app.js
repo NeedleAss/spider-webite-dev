@@ -1,190 +1,109 @@
-let T,OrbitControls,loadRobot;
+import * as T from 'three';
+import {OrbitControls} from './vendor/three/examples/jsm/controls/OrbitControls.js';
+import {loadRobot} from './scene/robot.js';
+import {loadActor} from './scene/actor.js';
+import {makeStudio} from './scene/studio.js';
+import {makeInspection} from './scene/inspection.js';
 import {parts} from './parts.js';
-import {chapters,storyState,clamp,motionPose,wheelAngles} from './story/timeline.js';
-
-const $=id=>document.getElementById(id), sections=[...document.querySelectorAll('.chapter')];
-const reduced=matchMedia('(prefers-reduced-motion: reduce)');
-let renderer,scene,camera,controls,robot,observer,scheduled=false,ready=false,mode='story';
-let index=0,progress=0,paused=reduced.matches,clock=0,lastTime=0,lastChapter=-1,lastPose='',selected=null;
-let lost=false,restoring=false,draws=0,lastInfo=null,savedScroll=0;
-let lastBeat='';
-document.body.dataset.enhanced='true';
-const stage=$('stage'),poster=$('poster'),links=[...document.querySelectorAll('#chapterLinks a')];
-const captions=['CAD 装配 · 实物外观重建','目标装配 · 连接关系示意','人脸检测原理 · 非实时图像','前方测距原理 · 非标定波束','运动学演示 · 无实测轮速','接触式健康原型 · OLED 演示状态','团队实物记录 · 尚未完成装配'];
+import {Director,evaluate,scenes,DURATION,ROBOT_Y} from './story/director.js';
+import {clamp,ease} from './story/timeline.js';
+const $=id=>document.getElementById(id),stage=$('stage'),director=new Director(),reduced=matchMedia('(prefers-reduced-motion:reduce)');
+const params=new URLSearchParams(location.search),exporting=params.get('export')==='1';
+let renderer,scene,camera,controls,robot,actor,studio,inspection,ready=false,lost=false,mode='scroll',scheduled=false,last=0,draws=0;
+let selected=null,inspectOpen=0,inspectGoal=0,cameraFlight=null,hoverTimer=null,exitTimer=null,saved=null,lastIndex=-1,external=false;
+let state=evaluate(0),sonarWaves=[],inspectStart=0;
+document.body.dataset.mode=mode;document.body.dataset.export=String(exporting);if(exporting)$('consolePreview').src='about:blank';
+const stamp=t=>`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
 function request(){if(!scheduled&&!document.hidden){scheduled=true;requestAnimationFrame(frame);}}
-function measure(){
-  if(mode==='inspect')return;
-  const y=scrollY+2;index=sections.reduce((a,s,i)=>y>=s.offsetTop?i:a,0);
-  progress=clamp((y-sections[index].offsetTop)/(sections[index].offsetHeight));
-  document.body.dataset.chapter=chapters[index];
-  if(index!==lastChapter){clock=0;lastChapter=index;lastPose='';}
-  sections.forEach((s,i)=>s.toggleAttribute('data-active',i===index));
-  links.forEach((a,i)=>i===index?a.setAttribute('aria-current','step'):a.removeAttribute('aria-current'));
-  $('previous').disabled=index===0;$('next').disabled=index===6;$('sceneCaption').textContent=captions[index];
-  if(!ready)showPoster();request();
+function scrollTime(){return clamp(scrollY/Math.max(1,document.documentElement.scrollHeight-innerHeight))*DURATION;}
+function syncScroll(){window.scrollTo({top:director.time/DURATION*Math.max(1,document.documentElement.scrollHeight-innerHeight),behavior:'instant'});}
+function setMode(next){if(mode==='inspect')leaveInspect();mode=next;director.setMode(next);external=false;document.body.dataset.mode=mode;
+ document.querySelectorAll('[data-mode]').forEach(b=>{if(b.tagName==='BUTTON')b.setAttribute('aria-pressed',String(b.dataset.mode===mode));});
+ if(mode==='scroll')syncScroll();else if(mode==='film'){director.hold=DURATION;director.play();}else{director.hold=scenes[state.index].end;}
+ last=0;resize();request();}
+function chapter(i){external=false;i=clamp(i,0,scenes.length-1);director.chapter(i);if(mode==='scroll'){director.seek(scenes[i].start+.02);syncScroll();}request();}
+function copy(){document.body.dataset.chapter=state.chapter;const s=state.copy;if(state.index!==lastIndex){lastIndex=state.index;$('kicker').textContent=s.kicker;const lines=s.title.split('\n');$('title').replaceChildren(document.createTextNode(lines[0]),document.createElement('br'));const span=document.createElement('span');span.textContent=lines[1]||'';$('title').append(span);$('description').textContent=s.body;$('chapterCount').textContent=String(state.index+1).padStart(2,'0');}
+ $('sceneCaption').textContent=s.note;$('watch').hidden=state.index!==0;$('scrollCue').hidden=state.index!==0;
+ let beat='';if(state.chapter==='motion')beat=state.pose.label;if(state.chapter==='gesture')beat=state.gesture.label==='NONE'?'松手 · 准备新的动作':`${state.gesture.label}  /  ${state.gesture.accepted?'指令已接受':'识别确认中'}`;
+ if(state.chapter==='follow'||state.chapter==='range')beat=state.pose.label;
+ if(state.chapter==='care')beat=state.care.hr?'72 BPM   ·   SpO₂ 98%\n模拟读数':state.care.contact?'手指接触 · 采集中':'等待接触';
+ $('beat').textContent=beat;$('scrub').value=director.time;$('time').value=`${stamp(director.time)} / 2:30`;$('pause').textContent=director.playing?'Ⅱ':'▷';$('pause').setAttribute('aria-pressed',String(director.playing));$('pause').setAttribute('aria-label',director.playing?'暂停':'播放');$('previous').disabled=state.index===0;$('next').disabled=state.index===scenes.length-1;
+ $('consoleShot').hidden=!state.console||mode==='inspect';
+ if(state.console&&!exporting&&$('consolePreview').getAttribute('src')==='about:blank')$('consolePreview').src=$('consolePreview').dataset.src;
+ if(exporting){$('consolePreview').hidden=true;$('consoleRecording').hidden=false;}
 }
-function go(i,behavior=reduced.matches?'instant':'smooth'){i=clamp(i,0,6);const s=sections[i];window.scrollTo({top:s.offsetTop+(i?s.offsetHeight*.34:0),behavior});history.replaceState(null,'',`#${chapters[i]}`);}
-links.forEach((a,i)=>a.addEventListener('click',e=>{e.preventDefault();go(i);}));
-function showPoster(){const suffix=innerWidth<=850&&innerHeight>520?'-mobile':'';poster.src=`assets/appearance/${chapters[index]}${suffix}.png`;poster.hidden=false;}
-function fallback(message){ready=false;document.body.dataset.viewer='fallback';if(renderer)renderer.domElement.hidden=true;showPoster();$('loadStatus').hidden=false;$('loadStatus').textContent=message;$('inspect').disabled=true;request();}
-function setPaused(value){paused=value;$('pause').setAttribute('aria-pressed',String(paused));$('pause').setAttribute('aria-label',paused?'播放原理动画':'暂停原理动画');$('pause').textContent=paused?'▷':'Ⅱ';lastTime=0;request();}
-$('pause').addEventListener('click',()=>setPaused(!paused));$('previous').addEventListener('click',()=>go(index-1));$('next').addEventListener('click',()=>go(index+1));
-$('restart').addEventListener('click',()=>{clock=0;lastTime=0;setPaused(false);request();});
-$('showPhoto').addEventListener('click',()=>$('photoDialog').showModal());$('closePhoto').addEventListener('click',()=>$('photoDialog').close());
-$('photoDialog').addEventListener('close',()=>{lastTime=0;request();});
-$('photoDialog').addEventListener('click',e=>{if(e.target===$('photoDialog')){const r=e.target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)e.target.close();}});
-window.addEventListener('scroll',measure,{passive:true});
-window.addEventListener('resize',()=>{
-  // Viewport height changes chapter pixel lengths; preserve the semantic position.
-  const y=Math.max(0,sections[index].offsetTop+progress*sections[index].offsetHeight-2);
-  if(mode==='inspect')savedScroll=y;else window.scrollTo({top:y,behavior:'instant'});
-  resize();measure();
-});
-document.addEventListener('visibilitychange',()=>{lastTime=0;if(!document.hidden)request();});
-reduced.addEventListener('change',()=>{setPaused(reduced.matches);lastPose='';measure();});
-window.addEventListener('keydown',e=>{
-  if(e.key==='Escape'&&mode==='inspect'){leaveInspect();return;}
-  if(mode!=='story'||$('photoDialog').open||e.target.closest('button,a,input,select,textarea'))return;
-  if(e.key==='PageDown'||e.key==='ArrowRight'){e.preventDefault();go(index+1);}
-  if(e.key==='PageUp'||e.key==='ArrowLeft'){e.preventDefault();go(index-1);}
-});
-function environment(){
-  const env=new T.Scene();env.background=new T.Color('#242a33');
-  for(const [pos,scale,power] of [[[-2,3,1],[2,3,2],7],[[1,2,-2],[1,4,2],4],[[0,4,0],[4,.1,4],3]]){
-    const panel=new T.Mesh(new T.BoxGeometry(...scale),new T.MeshBasicMaterial({color:new T.Color(power,power,power)}));panel.position.fromArray(pos);env.add(panel);
-  }
-  const pmrem=new T.PMREMGenerator(renderer);const map=pmrem.fromScene(env,.025);scene.userData.environmentTarget?.dispose();scene.userData.environmentTarget=map;scene.environment=map.texture;scene.environmentIntensity=.5;pmrem.dispose();
-  env.traverse(o=>{o.geometry?.dispose();o.material?.dispose();});
+function flight(shot,duration=.75){cameraFlight={eye:camera.position.clone(),target:controls.target.clone(),to:shot.eye,at:shot.target,start:performance.now()/1000,duration:reduced.matches?0:duration};request();}
+function applyCamera(eye,target){camera.position.copy(eye);controls.target.copy(target);camera.lookAt(target);}
+function poseScene(){
+ robot.root.position.fromArray(state.pose.position);robot.root.rotation.set(0,state.pose.yaw,0);robot.apply(state);
+ for(const item of robot.instances){const rotor=item.appearance.userData.rotor;if(rotor)rotor.rotation.z=state.pose.wheels[item.node.name]||0;item.appearance.userData.setOLED?.(state.oled);}
+ robot.effects.camera.update(state.t-20,state.focus==='camera'&&state.focusAmount>.8);
+ robot.effects.ultrasonic.update(state.t-25,state.focus==='ultrasonic'&&state.focusAmount>.8);
+ robot.effects.health.update(state.t,state.care.contact&&state.chapter==='care');
+ const contact=robot.effects.health.contact();actor.pose(state,contact);studio.update(state);
+ for(let i=0;i<sonarWaves.length;i++){const m=sonarWaves[i];m.visible=state.sonar;const phase=((state.t-100)*.5+i/3)%1,returning=phase>.5,distance=returning?2-2*phase:2*phase;
+  const origin=robot.effects.ultrasonic.anchor.getWorldPosition(new T.Vector3());const travel=Math.max(.03,origin.x-(-.37+.036));m.position.z=distance*travel;m.scale.setScalar(.8+distance*1.3);m.material.opacity=(1-distance*.5)*.55;m.material.color.set(returning?'#edf6f5':'#9acbd1');}
 }
-function lighting(){
-  scene.add(new T.HemisphereLight(0xb8d8ff,0x12161d,1.5));
-  const key=new T.DirectionalLight(0xfff4e6,3.4);key.position.set(-.3,.45,.25);key.castShadow=true;
-  key.shadow.mapSize.set(1024,1024);Object.assign(key.shadow.camera,{left:-.25,right:.25,top:.30,bottom:-.15,near:.01,far:1});key.shadow.bias=-.00006;key.shadow.normalBias=.0005;key.shadow.radius=4;scene.add(key);
-  const rim=new T.DirectionalLight(0xb5d8ff,2.8);rim.position.set(.18,.3,-.3);scene.add(rim);
-  const fill=new T.DirectionalLight(0xffffff,.7);fill.position.set(-.1,.05,-.3);scene.add(fill);
-  const ground=new T.Mesh(new T.PlaneGeometry(2,2),new T.ShadowMaterial({color:0,opacity:.28}));ground.rotation.x=-Math.PI/2;ground.position.y=-.0212;ground.receiveShadow=true;scene.add(ground);
-  const c=document.createElement('canvas');c.width=c.height=128;const ctx=c.getContext('2d'),grad=ctx.createRadialGradient(64,64,8,64,64,64);grad.addColorStop(0,'rgba(0,0,0,.72)');grad.addColorStop(.5,'rgba(0,0,0,.35)');grad.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=grad;ctx.fillRect(0,0,128,128);
-  const shadow=new T.Mesh(new T.PlaneGeometry(.22,.18),new T.MeshBasicMaterial({map:new T.CanvasTexture(c),transparent:true,depthWrite:false}));shadow.rotation.x=-Math.PI/2;shadow.position.y=-.021;scene.add(shadow);scene.userData.contactShadow=shadow;
-  const person=new T.Group(),personMaterial=new T.MeshStandardMaterial({color:0xa5cbd4,roughness:.65});
-  const head=new T.Mesh(new T.SphereGeometry(.005,20,12),personMaterial);head.position.y=.036;person.add(head);
-  const body=new T.Mesh(new T.CapsuleGeometry(.0055,.012,4,16),personMaterial);body.position.y=.017;person.add(body);
-  for(const x of [-.003,.003]){const leg=new T.Mesh(new T.CapsuleGeometry(.002,.010,4,12),personMaterial);leg.position.set(x,.002,0);person.add(leg);}
-  person.position.set(-.14,-.016,.035);person.visible=false;scene.add(person);scene.userData.person=person;
+function frame(now){scheduled=false;if(!ready||lost)return;const sec=now/1000,dt=last?Math.min(.1,sec-last):0;last=sec;
+ if(mode==='inspect'){
+  const a=reduced.matches?1:1-Math.exp(-dt*7);inspectOpen+=(inspectGoal-inspectOpen)*a;if(Math.abs(inspectOpen-inspectGoal)<.0001)inspectOpen=inspectGoal;
+  robot.root.position.set(0,ROBOT_Y,0);robot.root.rotation.set(0,0,0);inspection.apply(inspectOpen,selected);actor.root.visible=false;studio.update(state,true);sonarWaves.forEach(m=>m.visible=false);
+  const item=robot.instances.find(v=>v.node.name===selected);const effectTime=reduced.matches?2:(sec-inspectStart)%8;
+  if(item&&robot.effects[item.id])robot.effects[item.id].update(effectTime,true);
+  $('partLabels').hidden=inspectOpen<.85||!!selected;
+  if(!$('partLabels').hidden)for(const b of $('partLabels').children){const members=robot.instances.filter(v=>v.id===b.dataset.part),bounds=new T.Box3();members.forEach(n=>bounds.union(new T.Box3().setFromObject(n.appearance)));const p=bounds.getCenter(new T.Vector3()).project(camera);b.style.left=`${(p.x+1)*stage.clientWidth/2}px`;b.style.top=`${(1-p.y)*stage.clientHeight/2+16}px`;}
+  if(cameraFlight){const t=cameraFlight.duration?ease((sec-cameraFlight.start)/cameraFlight.duration):1;applyCamera(cameraFlight.eye.clone().lerp(cameraFlight.to,t),cameraFlight.target.clone().lerp(cameraFlight.at,t));if(t===1)cameraFlight=null;}
+ }else{
+  $('partLabels').hidden=true;
+  if(!external){if(mode==='scroll')director.seek(scrollTime());else director.tick(sec);}
+  state=evaluate(mode==='deck'&&!director.playing&&director.time===director.hold?Math.max(0,director.time-.000001):director.time,{aspect:camera.aspect,reduced:reduced.matches});poseScene();applyCamera(new T.Vector3(...state.eye),new T.Vector3(...state.target));copy();
+ }
+ renderer.render(scene,camera);draws++;
+ if(director.playing||(mode==='inspect'&&selected&&!reduced.matches)||cameraFlight||Math.abs(inspectGoal-inspectOpen)>.0001)request();
 }
-function resize(){
-  if(!renderer)return;const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;
-  camera.fov=camera.aspect<.8?39:32;camera.updateProjectionMatrix();lastPose='';request();
+function resize(){if(!renderer)return;const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=32;camera.updateProjectionMatrix();const frame=$('consolePreview'),box=frame.parentElement;frame.style.transform=`scale(${box.clientWidth/1440})`;request();}
+function expand(value){clearTimeout(hoverTimer);clearTimeout(exitTimer);if(selected)return;inspectGoal=value;$('expand').textContent=value?'收拢整机':'展开结构';
+ // Compute target bounds at the requested layout, then restore the current animated pose.
+ inspection.apply(value);const shot=inspection.shot(null,camera.aspect);inspection.apply(inspectOpen);flight(shot);}
+function clearSelection(){selected=null;$('closePart').hidden=true;document.querySelectorAll('#parts button').forEach(b=>b.setAttribute('aria-pressed','false'));$('partTitle').textContent='选择一个部件';$('partDescription').textContent='独立展开各个功能组。点选之后，带你近一点看。';$('partCategory').textContent='EXPLORE THE STRUCTURE';$('instanceLabel').textContent='';inspectGoal=1;inspection.apply(1);flight(inspection.shot(null,camera.aspect));}
+function selectPart(id,instanceId){if(mode!=='inspect')return;const items=robot.instances.filter(n=>n.id===id);if(!instanceId){const current=items.findIndex(n=>n.node.name===selected);instanceId=items[(current+1)%items.length].node.name;}
+ selected=instanceId;inspectStart=performance.now()/1000;inspectGoal=inspectOpen=1;inspection.apply(1,selected);flight(inspection.shot(selected,camera.aspect));const p=parts.find(p=>p.id===id);
+ $('partTitle').textContent=p.name;$('partCategory').textContent=p.category;$('partDescription').textContent=p.description;$('instanceLabel').textContent=`${instanceId}${items.length>1?' · 再点同一按钮切换实例':''}`;$('closePart').hidden=false;
+ document.querySelectorAll('#parts button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.part===id)));request();}
+function enterInspect(){if(!ready||mode==='inspect')return;saved={mode,time:director.time};director.pause();mode='inspect';document.body.dataset.mode=mode;$('inspectPanel').hidden=false;controls.enabled=true;selected=null;inspectOpen=inspectGoal=0;cameraFlight=null;
+ robot.root.position.set(0,ROBOT_Y,0);robot.root.rotation.set(0,0,0);inspection.apply(0);resize();const shot=inspection.shot(null,camera.aspect);applyCamera(shot.eye,shot.target);$('expand').textContent='展开结构';$('closePart').hidden=true;$('partTitle').textContent='完整，从这里开始。';$('partDescription').textContent='转动、放大，或展开后选择一个部件。';$('instanceLabel').textContent='';$('leaveInspect').focus();request();}
+function leaveInspect(){if(mode!=='inspect')return;clearTimeout(hoverTimer);clearTimeout(exitTimer);mode=saved.mode;director.setMode(mode);director.seek(saved.time);external=mode!=='scroll';selected=null;cameraFlight=null;controls.enabled=false;$('inspectPanel').hidden=true;document.body.dataset.mode=mode;resize();if(mode==='scroll')syncScroll();lastIndex=-1;$('inspect').focus();request();}
+function picking(){const canvas=renderer.domElement,ray=new T.Raycaster(),pointer=new T.Vector2();let down=null,active=new Set();
+ canvas.addEventListener('pointerdown',e=>{active.add(e.pointerId);down=active.size===1?{id:e.pointerId,x:e.clientX,y:e.clientY}:null;cameraFlight=null;clearTimeout(exitTimer);});
+ canvas.addEventListener('pointercancel',e=>{active.delete(e.pointerId);down=null;});
+ canvas.addEventListener('pointerup',e=>{active.delete(e.pointerId);if(mode!=='inspect'||!down||down.id!==e.pointerId||Math.hypot(e.clientX-down.x,e.clientY-down.y)>5){down=null;return;}down=null;const r=canvas.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(pointer,camera);const targets=[];for(const item of robot.instances)if(item.node.visible)item.appearance.traverse(n=>{if(n.isMesh)targets.push(n);});const hit=ray.intersectObjects(targets,false)[0];if(hit)selectPart(hit.object.userData.partId,hit.object.userData.instanceId);});
+ canvas.addEventListener('pointerenter',e=>{if(mode!=='inspect'||selected||e.pointerType==='touch')return;clearTimeout(exitTimer);hoverTimer=setTimeout(()=>expand(1),200);});
+ canvas.addEventListener('pointerleave',e=>{if(mode!=='inspect'||selected||e.pointerType==='touch'||active.size)return;clearTimeout(hoverTimer);exitTimer=setTimeout(()=>expand(0),350);});
+ $('inspectPanel').addEventListener('pointerenter',()=>clearTimeout(exitTimer));
+ controls.addEventListener('start',()=>{cameraFlight=null;});controls.addEventListener('change',request);
 }
-function positionCamera(state){camera.position.fromArray(state.eye);controls.target.fromArray(state.target);camera.lookAt(controls.target);}
-function updateMotion(time,state){
-  robot.root.position.set(0,0,0);robot.root.rotation.y=0;scene.userData.contactShadow.position.x=0;scene.userData.contactShadow.position.z=0;
-  for(const item of robot.instances){const rotor=item.appearance.userData.rotor;if(rotor)rotor.rotation.z=0;}
-  scene.userData.person.visible=state.chapter==='vision'&&state.response===1;
-  if(scene.userData.person.visible){
-    const phase=Math.min(time,8), turn=clamp((phase-1)/1.5)*.20, travel=clamp((phase-3)/2)*.026;
-    scene.userData.person.visible=phase<6.6;
-    scene.userData.person.position.z=.035+Math.max(0,1-phase)*.04;
-    robot.root.rotation.y=turn;robot.root.position.set(-travel*Math.cos(turn),0,travel*Math.sin(turn));
-    const angles=wheelAngles(travel,0,-turn);for(const item of robot.instances){if(item.appearance.userData.rotor)item.appearance.userData.rotor.rotation.z=angles[item.node.name];}
-    scene.userData.contactShadow.position.copy(robot.root.position);scene.userData.contactShadow.position.y=-.021;
-  }
-  if(state.chapter!=='motion'||!state.effect)return;
-  const pose=motionPose(time);robot.root.position.fromArray(pose.position);robot.root.rotation.y=pose.yaw;
-  scene.userData.contactShadow.position.x=pose.position[0];scene.userData.contactShadow.position.z=pose.position[2];
-  document.querySelectorAll('[data-move]').forEach(el=>el.toggleAttribute('data-active',Number(el.dataset.move)===pose.phase));
-  // Integral wheel angles for the two straight segments; rotation uses each axle's geometric sign.
-  const forward=pose.phase===0?pose.distance:pose.phase===3?.060*(1-pose.distance):.060;
-  const lateral=pose.phase===1?pose.distance:pose.phase>=2?.060*(pose.phase===3?1-pose.distance:1):0;
-  const angles=wheelAngles(forward,lateral,-pose.yaw);
-  for(const item of robot.instances){
-    const rotor=item.appearance.userData.rotor;if(!rotor)continue;
-    rotor.rotation.z=angles[item.node.name];
-    for(const roller of item.appearance.userData.rollers)roller.rotation.y=(pose.phase===0?forward:lateral)/.0028;
-  }
-}
-function frame(ms){
-  scheduled=false;if(document.hidden)return;
-  const dt=lastTime?Math.min((ms-lastTime)/1000,.05):0;lastTime=ms;
-  const state=storyState(index,progress,reduced.matches);
-  const beat=`${index}/${state.response===1?'response':'close'}/${state.screen===1?'screen':'body'}`;
-  if(beat!==lastBeat){clock=0;lastBeat=beat;}
-  const finished=state.chapter==='vision'&&clock>=8||state.chapter==='motion'&&clock>=16;
-  const animating=ready&&mode==='story'&&state.effect&&['vision','range','motion','care'].includes(state.chapter)&&!paused&&!reduced.matches&&!$('photoDialog').open&&!finished&&!(state.chapter==='care'&&state.screen===1);
-  if(animating)clock+=dt;
-  if(ready){
-    if(mode==='story'){
-      const key=`${index}/${progress.toFixed(5)}/${reduced.matches}/${camera.aspect}`;
-      if(key!==lastPose){robot.apply(state);positionCamera(state);lastPose=key;}
-      const t=reduced.matches?2:clock;
-      robot.effects.camera.update(t,state.chapter==='vision'&&state.effect);
-      if(state.response===1)robot.effects.camera.content.visible=false;
-      robot.effects.ultrasonic.update(t,state.chapter==='range'&&state.effect);
-      robot.effects.health.update(t,state.chapter==='care'&&state.effect&&state.focus==='health');
-      updateMotion(t,state);
-      if(state.chapter==='vision')$('visionStatus').textContent=t<1?'目标进入视域':t<3?'检测到目标位置':t<6.6?'位置有效 · 先朝向，再跟随':'目标离开 · 停止等待';
-      if(state.chapter==='range')$('sonarStatus').textContent=t%4<2?'声波向前 · 遇到障碍':'回波返回 · 形成距离依据';
-    }else controls.update();
-    renderer.render(scene,camera);draws++;lastInfo={calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures};
-  }
-  if(animating)request();
-}
-function selectPart(id,instanceId){
-  const matches=robot.instances.filter(n=>n.id===id);let item=matches.find(n=>n.node.name===instanceId)||matches[0];if(!item)return;
-  if(!instanceId&&selected?.id===id){const old=matches.findIndex(n=>n.node.name===selected.instanceId);item=matches[(old+1)%matches.length];}
-  selected={id,instanceId:item.node.name};robot.select(item.node.name);
-  const p=parts.find(p=>p.id===id);$('partTitle').textContent=p.name;$('partDescription').textContent=p.description;$('instanceLabel').textContent=`${item.node.name} · ${matches.length>1?'再次点击切换实例':'独立实例'}`;
-  document.querySelectorAll('[data-part]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.part===id)));
-  const bounds=new T.Box3().setFromObject(item.appearance),center=bounds.getCenter(new T.Vector3()),size=bounds.getSize(new T.Vector3()).length();
-  controls.target.copy(center);const direction=new T.Vector3(-1,.5,.55).normalize();camera.position.copy(center).addScaledVector(direction,Math.max(.055,size*2.3));controls.update();request();
-}
-for(const p of parts){const b=document.createElement('button');b.type='button';b.textContent=p.name;b.dataset.part=p.id;b.setAttribute('aria-pressed','false');b.addEventListener('click',()=>selectPart(p.id));$('parts').append(b);}
-function inspectReset(){for(const item of robot.instances){if(item.appearance.userData.rotor)item.appearance.userData.rotor.rotation.z=0;}scene.userData.contactShadow.position.set(0,-.021,0);robot.root.position.set(0,0,0);robot.root.rotation.set(0,0,0);robot.apply(storyState(1,.6,true));robot.select(null);selected=null;positionCamera(storyState(1,.6,true));controls.update();$('partTitle').textContent='选择一个部件';$('partDescription').textContent='原 CAD 安装位置，实物参考外观。';$('instanceLabel').textContent='';document.querySelectorAll('[data-part]').forEach(b=>b.setAttribute('aria-pressed','false'));request();}
-function enterInspect(){if(!ready)return;mode='inspect';savedScroll=scrollY;document.body.dataset.mode=mode;document.body.style.overflow='hidden';controls.enabled=true;$('inspectDialog').show();for(const effect of Object.values(robot.effects))effect.content.visible=false;scene.userData.person.visible=false;resize();inspectReset();$('leaveInspect').focus();}
-function leaveInspect(){mode='story';document.body.dataset.mode=mode;document.body.style.overflow='';controls.enabled=false;$('inspectDialog').close();window.scrollTo({top:savedScroll,behavior:'instant'});lastPose='';resize();measure();$('inspect').focus();}
-$('inspect').addEventListener('click',enterInspect);$('leaveInspect').addEventListener('click',leaveInspect);$('inspectReset').addEventListener('click',inspectReset);
-function picking(){
-  const canvas=renderer.domElement,ray=new T.Raycaster(),pointer=new T.Vector2(),active=new Set();let down=null;
-  canvas.addEventListener('pointerdown',e=>{active.add(e.pointerId);down=active.size===1?{id:e.pointerId,x:e.clientX,y:e.clientY}:null;});
-  canvas.addEventListener('pointercancel',e=>{active.delete(e.pointerId);down=null;});
-  canvas.addEventListener('pointerup',e=>{
-    active.delete(e.pointerId);if(mode!=='inspect'||!down||down.id!==e.pointerId||Math.hypot(e.clientX-down.x,e.clientY-down.y)>5){down=null;return;}down=null;
-    const r=canvas.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);ray.setFromCamera(pointer,camera);
-    const targets=[];for(const item of robot.instances)if(item.node.visible)item.appearance.traverse(n=>{if(n.isMesh&&n.visible)targets.push(n);});
-    const hit=ray.intersectObjects(targets,false)[0];if(hit)selectPart(hit.object.userData.partId,hit.object.userData.instanceId);
-  });
-}
-function projectedRobotBounds(){
-  const box=new T.Box3();for(const item of robot.instances)if(item.node.visible)box.union(new T.Box3().setFromObject(item.appearance));
-  const min=[Infinity,Infinity],max=[-Infinity,-Infinity];
-  for(const x of [box.min.x,box.max.x])for(const y of [box.min.y,box.max.y])for(const z of [box.min.z,box.max.z]){
-    const v=new T.Vector3(x,y,z).project(camera);min[0]=Math.min(min[0],v.x);min[1]=Math.min(min[1],v.y);max[0]=Math.max(max[0],v.x);max[1]=Math.max(max[1],v.y);
-  }
-  return {min,max};
-}
-async function boot(){
-  try{
-    [T,{OrbitControls},{loadRobot}]=await Promise.all([import('three'),import('./vendor/three/examples/jsm/controls/OrbitControls.js'),import('./scene/robot.js')]);
-    renderer=new T.WebGLRenderer({alpha:true,antialias:true,powerPreference:'high-performance'});
-    renderer.setPixelRatio(Math.min(devicePixelRatio,matchMedia('(max-width:850px)').matches?1.5:1.75));renderer.setClearColor(0,0);
-    renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
-    stage.append(renderer.domElement);scene=new T.Scene();camera=new T.PerspectiveCamera(32,1,.001,5);
-    controls=new OrbitControls(camera,renderer.domElement);controls.enabled=false;controls.enableDamping=false;controls.enablePan=false;controls.minDistance=.025;controls.maxDistance=.9;controls.maxPolarAngle=Math.PI*.88;controls.addEventListener('change',request);
-    environment();lighting();robot=await loadRobot();scene.add(robot.root);picking();
-    renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();lost=true;if(mode==='inspect')leaveInspect();fallback('3D 暂时中断 · 继续浏览章节海报');});
-    renderer.domElement.addEventListener('webglcontextrestored',()=>{environment();lost=false;ready=true;restoring=true;document.body.dataset.viewer='ready';renderer.domElement.hidden=false;poster.hidden=true;$('loadStatus').hidden=true;$('inspect').disabled=false;lastPose='';request();});
-    ready=true;$('inspect').disabled=false;document.body.dataset.viewer='ready';document.body.dataset.mode='story';poster.hidden=true;$('loadStatus').hidden=true;
-    observer=new ResizeObserver(resize);observer.observe(stage);resize();measure();
-    // Read-only diagnostic surface for reproducible evidence; never references robot transport.
-    window.__careRover={snapshot:()=>({index,progress,mode,paused,clock,ready,lost,restoring,draws,render:lastInfo,
-      camera:camera.position.toArray(),target:controls.target.toArray(),projectedRobotBounds:projectedRobotBounds(),
-      instances:robot.instances.map(n=>({id:n.id,instanceId:n.node.name,position:n.node.position.toArray(),rotation:n.node.quaternion.toArray(),visible:n.node.visible})),
-      sensors:Object.fromEntries(Object.entries(robot.effects).filter(([,e])=>e.anchor).map(([k,e])=>[k,{position:e.anchor.getWorldPosition(new T.Vector3()).toArray(),forward:new T.Vector3(0,0,1).transformDirection(e.anchor.matrixWorld).toArray()}]))}),
-      loseContext:()=>renderer.forceContextLoss(),restoreContext:()=>renderer.forceContextRestore()};
-  }catch(error){console.error('CareRover presentation:',error);fallback('3D 未能载入 · 继续浏览章节海报');}
-}
-setPaused(paused);measure();
-// Initial deep links select a composed shot; reload/back preserve the browser's exact scroll restoration.
-const navigationType=performance.getEntriesByType('navigation')[0]?.type;
-if(navigationType==='navigate'&&location.hash&&chapters.includes(location.hash.slice(1)))go(chapters.indexOf(location.hash.slice(1)),'instant');
-window.addEventListener('pageshow',()=>requestAnimationFrame(measure));
-if(new URLSearchParams(location.search).get('static')==='1')fallback('静态展示 · 章节海报与文字');else boot();
+function fallback(message){$('poster').hidden=false;$('loadStatus').hidden=false;$('loadStatus').replaceChildren(document.createTextNode(message+' '));const link=document.createElement('a');link.href='assets/film/CareRover-film.mp4';link.textContent='播放离线影片 ↗';$('loadStatus').append(link);$('inspect').disabled=true;document.body.dataset.viewer='fallback';}
+async function boot(){try{
+ renderer=new T.WebGLRenderer({alpha:true,antialias:true,powerPreference:'high-performance',preserveDrawingBuffer:exporting});renderer.setPixelRatio(exporting?1:Math.min(devicePixelRatio,1.5));renderer.setClearColor(0,0);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.03;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;stage.append(renderer.domElement);
+ scene=new T.Scene();camera=new T.PerspectiveCamera(32,1,.001,20);controls=new OrbitControls(camera,renderer.domElement);controls.enabled=false;controls.enableDamping=false;controls.enablePan=false;controls.minDistance=.035;controls.maxDistance=3;controls.minPolarAngle=.001;controls.maxPolarAngle=Math.PI-.001;
+ studio=makeStudio(scene,renderer);[robot,actor]=await Promise.all([loadRobot(),loadActor()]);scene.add(robot.root,actor.root);inspection=makeInspection(robot);
+ for(let i=0;i<3;i++){const wave=new T.Mesh(new T.RingGeometry(.012,.0128,64),new T.MeshBasicMaterial({color:'#9acbd1',transparent:true,side:T.DoubleSide,depthWrite:false}));robot.effects.ultrasonic.anchor.add(wave);sonarWaves.push(wave);}
+ picking();renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();lost=true;if(mode==='inspect')leaveInspect();director.pause();fallback('3D 暂时中断 · 可使用离线影片继续展示');});renderer.domElement.addEventListener('webglcontextrestored',()=>{studio.restoreEnvironment();lost=false;ready=true;document.body.dataset.viewer='ready';$('poster').hidden=true;$('loadStatus').hidden=true;$('inspect').disabled=false;request();});
+ ready=true;document.body.dataset.viewer='ready';$('poster').hidden=true;$('loadStatus').hidden=true;$('inspect').disabled=false;new ResizeObserver(resize).observe(stage);resize();
+ // Local-only diagnostics and deterministic film capture. This page imports no transport.
+ window.__careRover={seek:async(t)=>{if(mode==='inspect')leaveInspect();external=true;director.pause();director.seek(t);state=evaluate(t,{aspect:camera.aspect});poseScene();applyCamera(new T.Vector3(...state.eye),new T.Vector3(...state.target));copy();
+   if(exporting&&state.console){const video=$('consoleRecording');if(video.readyState<2)await new Promise(resolve=>video.addEventListener('loadeddata',resolve,{once:true}));const target=Math.min(video.duration-.04,Math.max(0,t-130));if(Math.abs(video.currentTime-target)>.012)await new Promise(resolve=>{video.addEventListener('seeked',resolve,{once:true});video.currentTime=target;});}
+   renderer.render(scene,camera);await new Promise(requestAnimationFrame);return state;},
+  snapshot:()=>({ready,mode,time:director.time,playing:director.playing,selected,open:inspectOpen,draws,camera:camera.position.toArray(),target:controls.target.toArray(),render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},actor:{height:1.70,position:actor.root.position.toArray()},contact:robot.effects.health.contact().toArray(),indexTip:actor.indexTip().toArray(),partBounds:robot.instances.map(n=>{const box=new T.Box3().setFromObject(n.appearance),points=[];for(const x of [box.min.x,box.max.x])for(const y of [box.min.y,box.max.y])for(const z of [box.min.z,box.max.z])points.push(new T.Vector3(x,y,z).project(camera).toArray());return {id:n.node.name,visible:n.node.visible,min:box.min.toArray(),max:box.max.toArray(),projected:points};}),instances:robot.instances.map(n=>({id:n.id,instanceId:n.node.name,position:n.node.position.toArray(),rotation:n.node.quaternion.toArray(),visible:n.node.visible})),sensors:Object.fromEntries(Object.entries(robot.effects).filter(([,e])=>e.anchor).map(([k,e])=>[k,{position:e.anchor.getWorldPosition(new T.Vector3()).toArray(),forward:new T.Vector3(0,0,1).transformDirection(e.anchor.matrixWorld).toArray()}]))}),
+  setMode,enterInspect,leaveInspect,selectPart,expand,reset:()=>{$('inspectReset').click();},loseContext:()=>renderer.forceContextLoss(),restoreContext:()=>renderer.forceContextRestore()};
+ if(exporting){mode='film';director.setMode(mode);document.body.dataset.mode=mode;external=true;await window.__careRover.seek(Number(params.get('t'))||0);}request();
+ }catch(error){console.error('CareRover presentation',error);fallback('3D 未能载入 · 请使用离线影片或章节海报');}}
+for(const part of parts){const b=document.createElement('button');b.textContent=part.name;b.dataset.part=part.id;b.setAttribute('aria-pressed','false');b.addEventListener('click',()=>selectPart(part.id));$('parts').append(b);const label=b.cloneNode(true);label.addEventListener('click',()=>selectPart(part.id));$('partLabels').append(label);}
+document.querySelectorAll('.modes button').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+$('watch').addEventListener('click',()=>{director.seek(0);setMode('film');});$('pause').addEventListener('click',()=>{external=false;if(mode==='scroll')setMode('film');else if(director.playing)director.pause();else{if(director.time===DURATION)director.seek(0);if(mode==='deck'&&director.time>=director.hold)director.chapter(Math.min(state.index+1,scenes.length-1));director.play();}request();});
+$('previous').addEventListener('click',()=>chapter(state.index-1));$('next').addEventListener('click',()=>chapter(state.index+1));$('scrub').addEventListener('input',e=>{director.pause();director.seek(Number(e.target.value));external=mode!=='scroll';if(mode==='scroll')syncScroll();request();});
+$('fullscreen').addEventListener('click',()=>{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen().catch(()=>{});});
+$('inspect').addEventListener('click',enterInspect);$('leaveInspect').addEventListener('click',leaveInspect);$('expand').addEventListener('click',()=>{if(selected)clearSelection();else expand(inspectGoal?0:1);});$('closePart').addEventListener('click',clearSelection);$('inspectReset').addEventListener('click',()=>{selected=null;inspectOpen=inspectGoal=0;inspection.apply(0);flight(inspection.shot(null,camera.aspect));$('expand').textContent='展开结构';$('closePart').hidden=true;$('partTitle').textContent='完整，从这里开始。';$('partDescription').textContent='转动、放大，或展开后选择一个部件。';$('instanceLabel').textContent='';document.querySelectorAll('#parts button').forEach(b=>b.setAttribute('aria-pressed','false'));});
+window.addEventListener('scroll',()=>{if(mode==='scroll'&&!external)request();},{passive:true});window.addEventListener('resize',resize);document.addEventListener('visibilitychange',()=>{last=0;director.last=null;if(!document.hidden)request();});
+window.addEventListener('keydown',e=>{if(e.key==='Escape'&&mode==='inspect'){leaveInspect();return;}if(mode==='inspect'||e.target.closest('input,button,a'))return;if(['ArrowRight','PageDown','ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();chapter(state.index+(['ArrowRight','PageDown'].includes(e.key)?1:-1));}if(e.code==='Space'){e.preventDefault();$('pause').click();}});
+if(params.get('static')==='1')fallback('静态展示 · 请使用离线影片了解完整故事');else boot();

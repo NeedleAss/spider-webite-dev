@@ -10,15 +10,10 @@ export const sensorDefinitions={
   ultrasonic:{position:[0,0,.0133],forward:[0,0,1],up:[0,1,0],status:'module-level axis; TX/RX and beam angle uncalibrated'},
 };
 export function makeCareEffect(instance) {
-  const content=new T.Group();content.name='illustrative-finger-contact';instance.add(content);
-  const finger=new T.Group();finger.position.set(0,.012,.012);content.add(finger);
-  const skin=new T.MeshStandardMaterial({color:0xb7a999,roughness:.72});
-  const body=new T.Mesh(new T.CapsuleGeometry(.004,.022,6,20),skin);body.rotation.x=Math.PI/2;finger.add(body);
-  const nail=new T.Mesh(new T.SphereGeometry(1,18,10),new T.MeshStandardMaterial({color:0xd9c7b8,roughness:.43}));nail.scale.set(.0028,.0006,.0038);nail.position.set(0,.0037,-.008);finger.add(nail);
-  for(const z of [.002,.006]){const crease=new T.Mesh(new T.TorusGeometry(.0039,.00009,4,18,Math.PI*.6),new T.MeshStandardMaterial({color:0x938679,roughness:.85}));crease.rotation.x=Math.PI/2;crease.rotation.z=.6;crease.position.z=z;finger.add(crease);}
-  const contact=new T.Mesh(new T.RingGeometry(.0048,.0051,48),new T.MeshBasicMaterial({color:accent,transparent:true,opacity:.5,side:T.DoubleSide,depthWrite:false}));
-  contact.rotation.x=-Math.PI/2;contact.position.set(0,.0037,0);content.add(contact);content.visible=false;
-  return {content,update(time,enabled){content.visible=enabled;if(!enabled)return;const phase=time%7,approach=clamp(phase/1.5),exit=clamp((7-phase)/1.4);finger.position.y=.008+(1-Math.min(approach,exit))*.023;contact.visible=phase>1.5&&phase<5.6;contact.material.opacity=.35+.15*Math.sin(time*3);}};
+ const content=new T.Group();content.name='optical-contact';instance.add(content);
+ const ring=new T.Mesh(new T.RingGeometry(.0048,.0051,48),new T.MeshBasicMaterial({color:accent,transparent:true,opacity:.5,side:T.DoubleSide,depthWrite:false}));
+ ring.rotation.x=-Math.PI/2;ring.position.set(0,.0037,0);content.add(ring);content.visible=false;
+ return {content,update(time,enabled){content.visible=enabled;ring.material.opacity=.35+.15*Math.sin(time*3);},contact:()=>instance.localToWorld(new T.Vector3(0,.006,0))};
 }
 export function makeSensorEffect(kind,instance) {
   const d=sensorDefinitions[kind], anchor=new T.Group();anchor.name=`${instance.name}-sensor-anchor`;

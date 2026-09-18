@@ -71,6 +71,8 @@ class RobotSim:
             return [ack]
         if kind == 'cmd_vel':
             v = [msg.get(k) for k in ('vx', 'vy', 'wz')]
+            if ('release_only' in msg and type(msg['release_only']) is not bool) or (msg.get('release_only') is True and any(v)):
+                return error('INVALID_COMMAND', 'Scoped release requires zero velocity')
             if any(not finite(x) or abs(x) > 1 for x in v):
                 return error('INVALID_COMMAND', 'Velocity components must be finite and in [-1,1]')
             if any(v) and self.estop:
@@ -158,7 +160,7 @@ class RobotSim:
             status = 'TRACKING' if self.person['found'] else 'WAIT_TARGET'
         if not self.estop and self.mode == 'HEALTH_CHECK':
             status = 'MEASURING'
-        return {'type': 'telemetry', 'ts': stamp(), 'front':self.front.telemetry(self.t), 'connection': {'camera': True, 'main_mcu': True, 'simulated': True},
+        return {'type': 'telemetry', 'ts': stamp(), 'front':self.front.telemetry(self.t), 'device':{'scoped_release':True,'backend':'simulation'}, 'connection': {'camera': True, 'main_mcu': True, 'simulated': True},
                 'robot': {'mode': 'ESTOP' if self.estop else self.mode, 'state': status, 'estop': self.estop,
                           'battery_pct': max(5, round(87 - self.t * .004)), **dict(zip(('vx', 'vy', 'wz'), (round(v, 3) for v in self.velocity)))},
                 'imu': {'yaw_deg': round(self.yaw, 1), 'pitch_deg': round(math.sin(self.t) * .4, 1), 'roll_deg': round(math.cos(self.t) * .3, 1)},
@@ -211,7 +213,7 @@ class Server:
             raise web.HTTPForbidden(text='Use the console served by this server')
         ws = web.WebSocketResponse(max_msg_size=65536, heartbeat=10, timeout=1)
         await ws.prepare(request); self.clients.add(ws)
-        await ws.send_json(self.sim.telemetry())
+        await ws.send_json(self.session_telemetry(ws,self.sim.telemetry()))
         try:
             async for frame in ws:
                 if frame.type != WSMsgType.TEXT:
@@ -227,12 +229,16 @@ class Server:
                 # Non-owner zero commands must not interfere with the owner's motion.
                 if kind == 'cmd_vel' and self.owner is not None and self.owner is not ws:
                     continue
+                if kind=='cmd_vel' and msg.get('release_only') is True and self.owner is not ws:
+                    continue
                 if kind=='ping' and self.owner is not None and self.owner is not ws:
                     await ws.send_json({'type':'pong','ts':stamp(),'id':msg.get('id')})
                     continue
                 replies = self.sim.command(msg)
                 if claims and not any(r['type'] == 'error' for r in replies):
-                    self.owner = ws
+                    self.owner = ws if kind=='set_demo_bypass' or kind=='cmd_vel' or (kind=='set_mode' and msg.get('mode') in ('MANUAL','PERSON_FOLLOW')) else None
+                if kind=='cmd_vel' and not any(msg.get(k) for k in ('vx','vy','wz')) and self.owner is ws and not any(r['type']=='error' for r in replies):
+                    self.owner=None
                 for reply in replies:
                     await ws.send_json(reply)
                 if kind in ('set_mode','estop','clear_estop','set_demo_bypass'):
@@ -243,12 +249,15 @@ class Server:
                 self.owner = None; self.sim.stop(idle=True,reason='network_down')
         return ws
 
+    def session_telemetry(self,ws,msg):
+        return {**msg,'robot':{**msg['robot'],'control_allowed':self.owner is None or self.owner is ws,'control_owned':self.owner is ws,'control_occupied':self.owner is not None}}
+
     async def broadcast(self, msg):
         async def deliver(ws):
             try:
                 payload=msg
                 if msg.get('type')=='telemetry':
-                    payload={**msg,'robot':{**msg['robot'],'control_allowed':self.owner is None or self.owner is ws}}
+                    payload=self.session_telemetry(ws,msg)
                 await asyncio.wait_for(ws.send_json(payload), .15)
             except (ConnectionError, asyncio.TimeoutError, RuntimeError):
                 await ws.close()

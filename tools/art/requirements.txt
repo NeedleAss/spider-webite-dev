@@ -1,0 +1,4 @@
+# Optional film/asset validation toolchain, not browser or firmware runtime.
+numpy==2.5.3
+imageio-ffmpeg==0.6.0
+Pillow==12.3.0

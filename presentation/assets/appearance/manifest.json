@@ -1,6 +1,6 @@
 {
-  "version": "v4.1",
-  "baselineCommit": "72ee475bd76b7a46f2c3bd6477dcd2f45b76ac69",
+  "version": "v6.0",
+  "baselineCommit": "7e3a091125028a68a292df645dfe2512e489d4c9",
   "originalGLBSha256": "2310e2bd46a6940497349d1acf00ef70bd8279881a637424b2764c136229d61b",
   "units": "metres; no legacy 1000 scale",
   "geometry": "Original CAD structural meshes and saved installation transforms; authored runtime appearance for nine hardware classes. Not a calibrated scan.",
@@ -14,7 +14,7 @@
     "robot-front.jpg": "Team photograph embedded in V4 PDF, extracted unchanged; unfinished assembly",
     "robot-open.jpg": "Team photograph crop embedded in V4 PDF, extracted unchanged; background personal card already excluded"
   },
-  "publicTextures": "Procedurally authored silk-screen, OLED, material grain, and environment. No merchant photos used as textures.",
+  "publicTextures": "Procedural hardware silk-screen/OLED/materials plus CC0 MakeHuman skin, clothing and hair textures; see assets/actors/BUILD_INPUTS.json and LICENSE-CC0.txt. No merchant images used as textures.",
   "uncertainties": [
     "Final sonar installation depth and TX/RX",
     "Exact camera optical FOV",
@@ -28,8 +28,28 @@
   "files": [
     {
       "path": "app.js",
-      "bytes": 18841,
-      "sha256": "d4a4f97bb527baa5ac20d0834eea21245233e909f71e797254f42c11e3b113bc"
+      "bytes": 19654,
+      "sha256": "1146b5e3c773c4c1d4af9ccc330bc17d42d96ddd63d5ef30fbf544febf79dcfa"
+    },
+    {
+      "path": "assets/actors/BUILD_INPUTS.json",
+      "bytes": 978,
+      "sha256": "6aabe22e808a87a9e26f2e0a8d3837b147ea31c7a170ad0fd988552e0a6545f5"
+    },
+    {
+      "path": "assets/actors/LICENSE-CC0.txt",
+      "bytes": 6962,
+      "sha256": "f6089cba01cb570a24712b41ab8a586ccd3cc5ef53dc266ca50b95c288956d2c"
+    },
+    {
+      "path": "assets/actors/adult-source.json",
+      "bytes": 40265,
+      "sha256": "1cb42cce8cbd41f1f49b6900d79ceafb4ea98f8c3e2dcaa85eb3f893fe6e9d0d"
+    },
+    {
+      "path": "assets/actors/adult.glb",
+      "bytes": 4750856,
+      "sha256": "ea891bc748b7c5a04f1fdbd98db2e3c278c047c7b14972de6c62c30ce2a1069f"
     },
     {
       "path": "assets/appearance/care-mobile.png",
@@ -107,6 +127,41 @@
       "sha256": "2310e2bd46a6940497349d1acf00ef70bd8279881a637424b2764c136229d61b"
     },
     {
+      "path": "assets/film/CareRover-film.mp4",
+      "bytes": 14017538,
+      "sha256": "18c6873d0b87dfe09aa2b843e07a363ed3007f9dabeac00912516fbbdba2d6c2"
+    },
+    {
+      "path": "assets/film/CareRover-film.srt",
+      "bytes": 1497,
+      "sha256": "36f6e1503be39a530cd1a952cd8d0d7251a5c76e2a142343127ea6e080adc94e"
+    },
+    {
+      "path": "assets/film/CareRover-film.vtt",
+      "bytes": 1481,
+      "sha256": "5c97d420eae6620e0820456b595be94070425525d9ae2c3e13e8776ddac386e7"
+    },
+    {
+      "path": "assets/film/FILM_MANIFEST.json",
+      "bytes": 7322,
+      "sha256": "1690c04d4f9cd7b332bd7f8e81cc9c0b8df1ba44a1178c1b295e41022281ba9c"
+    },
+    {
+      "path": "assets/film/TIMELINE.json",
+      "bytes": 3655,
+      "sha256": "077286d9f58f6146099aca1dee9631327b25c24bae666dd77447330694a9bd6e"
+    },
+    {
+      "path": "assets/film/console-demo.mp4",
+      "bytes": 643404,
+      "sha256": "91d4c808b14ca740256803ba6fb58fff260b0c2dfb83020410886bc8599c6eb2"
+    },
+    {
+      "path": "assets/film/poster.jpg",
+      "bytes": 124396,
+      "sha256": "a5ee1b03ab04898cfe42e42d3f0e08c53cf4829df1b2af8c1cc4a010a71e8929"
+    },
+    {
       "path": "assets/reference/robot-front.jpg",
       "bytes": 242889,
       "sha256": "68696a887309c1239566faf6fd72966ae2fbd98b09a600d71dda8e686bfc5147"
@@ -118,13 +173,13 @@
     },
     {
       "path": "effects/sensors.js",
-      "bytes": 4798,
-      "sha256": "0ac6e9ad373314d4c0f3a7240d4f9f80dde2c4b767b796039c7c11e64c34d68b"
+      "bytes": 3922,
+      "sha256": "cd9f626d4f69ba8095963b76c32b70a2a615ce216ef5dc9a233fad4b9150f2fc"
     },
     {
       "path": "index.html",
-      "bytes": 8182,
-      "sha256": "ede7028c0bf65ac53a275c3c84b4c726bd5682f34d16943b2bb0efc0039b2f8c"
+      "bytes": 4417,
+      "sha256": "7f24bd8486e7c73873de761f90982007fda5e61d49a893b0558726a20a27ce0d"
     },
     {
       "path": "parts.js",
@@ -132,14 +187,34 @@
       "sha256": "0dbdf7e69e8123b0c404d5438bab193526d81e3b151351eb8fe56f1a0cf6d4b8"
     },
     {
+      "path": "scene/actor.js",
+      "bytes": 6726,
+      "sha256": "207c28723c65221fd0911b0f642af4b1cd39ca5f71fa8936d26d0a0cf8575cbc"
+    },
+    {
       "path": "scene/appearance.js",
-      "bytes": 12377,
-      "sha256": "73690a3d56567d0d8d34ac4a167586dd60cb0e45967b2a2671b1a81e445d8e15"
+      "bytes": 12889,
+      "sha256": "28428f75b1e5d70a9e68dbe91e6f2bc038fc703f29c4b017a816e02d2fa99bc1"
+    },
+    {
+      "path": "scene/inspection.js",
+      "bytes": 3071,
+      "sha256": "a5754e03c4e3f9d9fa49023402472a14cf5b4839baecf6b9600246567eff0d4a"
     },
     {
       "path": "scene/robot.js",
       "bytes": 5233,
       "sha256": "6328c8de7bf143ef3b33ad74f84cd87cbeab630c4f2f8bb1a3d88ed86a714078"
+    },
+    {
+      "path": "scene/studio.js",
+      "bytes": 3953,
+      "sha256": "5bd2b39036378eafdd3882545fa9869879464b09147cf21f33029ff009eabf06"
+    },
+    {
+      "path": "story/director.js",
+      "bytes": 8727,
+      "sha256": "d83adf1c6242db53d4e79412857ea4e19031ae8398944d900c2a0078facc25f4"
     },
     {
       "path": "story/timeline.js",
@@ -148,8 +223,8 @@
     },
     {
       "path": "style.css",
-      "bytes": 10970,
-      "sha256": "deb36b05691688c2848ffc4a6e13c298f42cb9038f7f8724f3fc8423fb829048"
+      "bytes": 10764,
+      "sha256": "56a01c581f48398c58b093eea5295262de8c990f4622f25cf3cdd99095fef422"
     }
   ],
   "appearanceClearanceMetres": {
@@ -185,5 +260,6 @@
     }
   },
   "deliverable": "Procedurally authored geometry in scene/appearance.js plus original structural GLB. No standalone new photoreal/scanned GLB is claimed.",
-  "assetHash": "349c3d4422ee7e641d2fd2823f37e311e8a4751bb30829d538333a991327b74b"
+  "assetHash": "b21f890f867dd7f561e80caa038e0ff27f5d83b2ce8d3e38f2acc0d8f43bf8c6",
+  "film": "assets/film/FILM_MANIFEST.json"
 }

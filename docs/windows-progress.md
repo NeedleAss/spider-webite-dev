@@ -178,3 +178,7 @@
 - 发布包包含当前代码、展示页、来源/证据 SHA-256 清单；不含原始 CAD、构建目录、设备凭据或可直接烧录的设备包。导出清单与代码/证据核对通过后才交接。
 - NOT RUN：当前候选 Windows/真实串口/接线/校准/PWM/实体停止/无线十分钟。安全任务停摆时撤销输出仍是发布阻断，不能用页面零速度代替。
 - 当前文档已去除 AP 明文密码，历史未重写；现场配置由持有人维护。
+
+## 2026-09-18 — V6 first software checkpoint (Mac, not field acceptance)
+
+User approved V6 implementation with direct device gestures; mandatory webpage gesture authorization is superseded. Read `docs/V6_DECISIONS.md`, `docs/V6_CONSOLE_AND_FIRMWARE.md` and the current protocol extension. Production console, scoped owner release, raw-neutral rearming, action-result OLED/telemetry and robot-only freshness are implemented. Bounded direct MJPEG parsing/decode rejects stale frames; CAM error CORS remains restricted to the existing main-controller origin. Loopback browser acceptance: 16 PASS; host/compile logs remain separately identified. No serial writes or hardware movement occurred. Windows, actual mobile devices, G01 and physical measurements are NOT RUN. Film/director/Inspect work is still in progress; do not treat this checkpoint as final V6 release.

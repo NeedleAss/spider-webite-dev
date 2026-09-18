@@ -23,7 +23,7 @@ export class RobotSim {
     this.front = new FrontSim();
     this.t = 0;                 // 仿真时间(s)
     this.mode = 'IDLE';
-    this.estop = false;
+    this.estop = false;this.controlOwned=false;
 
     // 网页下发的目标速度 + 最近一次到达时刻（用于 dead-man 超时）
     this.cmd = { vx: 0, vy: 0, wz: 0 };
@@ -66,6 +66,7 @@ export class RobotSim {
         if(!msg.enabled&&this.front.phase!=='NONE'){this.mode='IDLE';this.vel={vx:0,vy:0,wz:0};}
         this.front.setDemo(msg.enabled,this.t);return [ack(true)];
       case 'cmd_vel': {
+        if(msg.release_only===true&&!this.controlOwned)return [];
         const nonZero = Math.abs(msg.vx) > 1e-6 || Math.abs(msg.vy) > 1e-6 || Math.abs(msg.wz) > 1e-6;
         // 安全裁决在机器人侧：急停期间一律拒绝非零速度
         if (this.estop && nonZero) {
@@ -80,7 +81,7 @@ export class RobotSim {
         }
         if(!nonZero)this.front.release();
         if(nonZero&&this.front.held)return [{type:'error',ts,code:'FRONT_RELEASE_REQUIRED',message:'Release joystick first'}];
-        this.cmd = { vx: msg.vx, vy: msg.vy, wz: msg.wz };
+        this.cmd = { vx: msg.vx, vy: msg.vy, wz: msg.wz };this.controlOwned=nonZero;
         if (!nonZero) {
           if(this.vel.vx||this.vel.vy||this.vel.wz||['PERSON_FOLLOW','GESTURE_CONTROL'].includes(this.mode))this.front.reason='release';
           this.vel={vx:0,vy:0,wz:0};if(['PERSON_FOLLOW','GESTURE_CONTROL'].includes(this.mode))this.mode='IDLE';
@@ -97,7 +98,7 @@ export class RobotSim {
         }
         if(['MANUAL','PERSON_FOLLOW'].includes(msg.mode)&&this.front.held)return [{type:'error',ts,code:'FRONT_RELEASE_REQUIRED',message:'Release joystick first'}];
         this.front.cancel('mode_changed');
-        this.mode = msg.mode;
+        this.mode = msg.mode;this.controlOwned=['MANUAL','PERSON_FOLLOW'].includes(msg.mode);
         this.waitSince = null;
         if(msg.mode === 'PERSON_FOLLOW') { const r=this._personRect(); this.referenceArea=r.w*r.h;this.lastFollowPing=this.t;this.turning=false; }
         this.cmd = { vx: 0, vy: 0, wz: 0 };   // 换模式一律先停
@@ -113,7 +114,7 @@ export class RobotSim {
         return [ack(true)];
 
       case 'clear_estop':
-        this.estop = false;
+        this.estop = false;this.controlOwned=false;
         this.front.cancel('estop_cleared');
         this.mode = 'IDLE';                   // 解除后回到待机，不自动恢复运动
         return [ack(true)];
@@ -268,13 +269,13 @@ export class RobotSim {
     return {
       type: 'telemetry',
       ts: Date.now(),
-      front:this.front.telemetry(this.t),
+      front:this.front.telemetry(this.t),device:{scoped_release:true,backend:'simulation'},
       connection: { camera: true, main_mcu: true, simulated: true },
       robot: {
         mode: this.estop ? 'ESTOP' : this.mode,
         state: this._stateName(),
         estop: this.estop,
-        control_allowed: true,
+        control_allowed: true,control_owned:this.controlOwned,control_occupied:this.controlOwned,
         battery_pct: Math.round(this.battery),
         vx: round3(this.vel.vx), vy: round3(this.vel.vy), wz: round3(this.vel.wz)
       },

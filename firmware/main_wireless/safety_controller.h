@@ -87,6 +87,7 @@ class SafetyController {
     if(state_.estop) return "ESTOP_ACTIVE";
     if(const char* error=motionError(now)) return error;
     if(state_.owner) return "CONTROL_BUSY";
+    if(state_.mode==Mode::Health) return "HEALTH_IN_PROGRESS";
     if(front_.held()) return "FRONT_RELEASE_REQUIRED";
     if(front_.config().enabled&&!front_.config().protectionReady()) return "FRONT_CALIBRATION_REQUIRED";
     if(front_.config().enabled&&!front_.fresh(now)) return "FRONT_UNKNOWN";
@@ -101,6 +102,7 @@ class SafetyController {
     if(state_.estop) return "ESTOP_ACTIVE";
     if(const char* error=motionError(now)) return error;
     if(state_.owner) return "CONTROL_BUSY";
+    if(state_.mode==Mode::Health) return "HEALTH_IN_PROGRESS";
     if(front_.held()) return "FRONT_RELEASE_REQUIRED";
     if(front_.config().enabled&&!front_.config().protectionReady()) return "FRONT_CALIBRATION_REQUIRED";
     if(front_.config().enabled&&!front_.fresh(now)) return "FRONT_UNKNOWN";
@@ -135,7 +137,7 @@ class SafetyController {
     if(state_.fault||tiltFault_||!state_.network) return "FAULT_ACTIVE";
     if(hardware_&&!hardwareHealthy(now)) return "IMU_NOT_READY";
     if(busy(client)) return "CONTROL_BUSY";
-    state_.owner=client; state_.estop=false; stop(now,"estop_cleared"); return nullptr;
+    state_.owner=0; state_.estop=false; stop(now,"estop_cleared"); return nullptr;
   }
   const char* setMode(uint32_t client,Mode mode,uint64_t now) {
     tick(now);
@@ -149,13 +151,20 @@ class SafetyController {
     if(movement&&front_.config().enabled&&!front_.config().protectionReady())return "FRONT_CALIBRATION_REQUIRED";
     if(movement&&front_.config().enabled&&!front_.fresh(now))return "FRONT_UNKNOWN";
     if(mode==Mode::Follow&&(!personFresh(now)||!person_.found||person_.score<PersonAcceptScoreMilli)) return "TARGET_NOT_READY";
-    state_.owner=client; stop(now,"mode_changed"); state_.mode=mode;
+    // Merely monitoring gestures/health or returning to idle must not strand
+    // ownership. Gesture starts are device-native, not browser-authorized.
+    state_.owner=(mode==Mode::Manual||mode==Mode::Follow)?client:0;
+    stop(now,"mode_changed"); state_.mode=mode;
     if(mode==Mode::Follow) { heartbeatMs_=now;waitForTarget(now,now); }
     return nullptr;
   }
-  const char* velocity(uint32_t client,double vx,double vy,double wz,uint64_t now) {
+  const char* velocity(uint32_t client,double vx,double vy,double wz,uint64_t now,bool releaseOnly=false) {
     tick(now);
     if(!valid(vx)||!valid(vy)||!valid(wz)||!client) return "INVALID_COMMAND";
+    if(releaseOnly&&(vx||vy||wz)) return "INVALID_COMMAND";
+    // Lifecycle/retry releases are scoped to their original controller. They
+    // cannot cancel a gesture or another session after ownership was released.
+    if(releaseOnly&&state_.owner!=client) return nullptr;
     if(busy(client)) return "CONTROL_BUSY";
     if(vx==0&&vy==0&&wz==0) {
       front_.release();
@@ -163,15 +172,19 @@ class SafetyController {
       state_.target={}; armed_=false;
       if(state_.mode==Mode::Follow||state_.mode==Mode::Gesture) stop(now,"release");
       else if(wasActive) { state_.stoppedAtMs=now; state_.stopReason="release"; ++state_.stopSequence; }
+      if(state_.owner==client) {
+        if(!wasActive&&state_.mode==Mode::Manual) {state_.stoppedAtMs=now;state_.stopReason="release";++state_.stopSequence;}
+        state_.owner=0;
+      }
       return nullptr;
     }
     if(state_.estop) return "ESTOP_ACTIVE";
     if(const char* error=motionError(now)) return error;
-    if(state_.mode!=Mode::Manual||state_.owner!=client) return "NOT_IN_MANUAL";
+    if(state_.mode!=Mode::Manual) return "NOT_IN_MANUAL";
     if(front_.held()) return "FRONT_RELEASE_REQUIRED";
     if(front_.config().enabled&&!front_.config().protectionReady()) return "FRONT_CALIBRATION_REQUIRED";
     if(front_.config().enabled&&!front_.fresh(now)) return "FRONT_UNKNOWN";
-    state_.target={vx,vy,wz}; state_.lastCommandMs=now; armed_=true; tick(now);return nullptr;
+    state_.owner=client; state_.target={vx,vy,wz}; state_.lastCommandMs=now; armed_=true; tick(now);return nullptr;
   }
   void tick(uint64_t now) {
     const bool movingMode=state_.mode==Mode::Manual||state_.mode==Mode::Follow||state_.mode==Mode::Gesture;

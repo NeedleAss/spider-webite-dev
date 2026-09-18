@@ -9,7 +9,7 @@ export function joystickVector(dx, dy, radius, deadzone = CONFIG.JOYSTICK_DEADZO
     x: dx / distance * magnitude * radius, y: dy / distance * magnitude * radius };
 }
 export class MotionInput {
-  constructor({ pad, knob, left, right, stop, enabled, change, emergency }) {
+  constructor({ pad, knob, left, right, stop, enabled, change, emergency, stopAction }) {
     Object.assign(this, { pad, knob, left, right, enabled, change, emergency });
     this.abort = new AbortController();
     this.pointer = null; this.rotationPointer = null; this.keys = new Set();
@@ -35,12 +35,13 @@ export class MotionInput {
         on(button, event, e => { if (e.pointerId === this.rotationPointer) this.reset(true); });
       }
     }
-    on(stop, 'click', () => this.reset(true));
+    const explicitStop=()=>{this.reset(true);stopAction?.();};
+    on(stop, 'click', explicitStop);
     on(window, 'blur', () => this.reset(true));
     on(document, 'visibilitychange', () => { if (document.hidden) this.reset(true); });
     on(window, 'keydown', e => {
       if (e.key === 'Escape') { e.preventDefault(); emergency(); return; }
-      if (e.code === 'Space' && !this.editing(e.target)) { e.preventDefault(); this.reset(true); return; }
+      if (e.code === 'Space' && !this.editing(e.target)) { e.preventDefault(); explicitStop(); return; }
       if (this.editing(e.target) || e.metaKey || e.ctrlKey || e.altKey || !enabled()) return;
       const key = e.key.toLowerCase();
       if (!'wasdqe'.includes(key) || key.length !== 1) return;

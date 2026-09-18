@@ -1,35 +1,16 @@
-<!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="dark"><meta name="theme-color" content="#08090b">
-<meta name="description" content="CareRover，一个由我们设计与制造的移动健康机器人。探索它的结构、感知与行动。">
-<title>CareRover · 让感知，成为行动。</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%2308090b'/%3E%3Ccircle cx='11' cy='13' r='3' fill='%2383dce9'/%3E%3Ccircle cx='21' cy='13' r='3' fill='%2383dce9'/%3E%3Crect x='14' y='21' width='4' height='3' fill='white'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="style.css?v=4">
-<script type="importmap">{"imports":{"three":"./vendor/three/three.module.js"}}</script>
-</head>
-<body>
-<a class="skip" href="#meet">跳至产品介绍</a>
-<header class="header"><a class="brand" href="#meet" aria-label="CareRover 首页"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="10" cy="12" r="3"/><circle cx="22" cy="12" r="3"/><path d="M13 22h6"/></svg><span>CareRover</span></a><span class="header-label">DESIGNED TO SENSE. BUILT TO CARE.</span><button class="text-button" id="inspect" disabled>自由探索 <span aria-hidden="true">↗</span></button></header>
-<div class="stage" id="stage" role="img" aria-label="CareRover 机器人产品演示，滚动浏览章节">
-  <div class="stage-glow" aria-hidden="true"></div>
-  <img id="poster" class="poster" src="assets/appearance/meet.png" alt="白色机器人正面，顶部蓝色 OLED 与四轮底盘" hidden>
-  <span class="load-status" id="loadStatus" role="status">正在准备你的机器人…</span>
-</div>
-<div class="scene-note" id="sceneNote"><span class="status-dot"></span><span id="sceneCaption">CAD 装配 · 实物外观重建</span></div>
-<main id="story">
-<section id="meet" class="chapter" data-chapter="0"><div class="copy"><p class="eyebrow">SENSE. MOVE. CARE.</p><h1>让感知，<br><span>成为行动。</span></h1><p class="description">认识 CareRover。<br>从一张设计，到我们亲手造出的机器人。</p><a class="scroll-cue" href="#inside"><span class="scroll-icon" aria-hidden="true">↓</span>向下，看看里面。</a></div></section>
-<section id="inside" class="chapter" data-chapter="1"><div class="copy"><p class="eyebrow">01 — INSIDE CAREROVER</p><h2>打开之后，<br><span>各有分工。</span></h2><p class="description">感知、判断、驱动。<br>每个部件各司其职，在小小机身中连接成一个整体。</p><div class="micro-labels"><span>顶部 OLED</span><span>主控与感知</span><span>四轮驱动</span></div><p class="footnote">目标装配 · 线束为连接关系示意，大幅拆解时省略部分连接。</p></div></section>
-<section id="vision" class="chapter" data-chapter="2"><div class="copy"><p class="eyebrow">02 — VISION</p><h2>看见位置，<br><span>作出回应。</span></h2><p class="description">目标进入画面，位置成为线索。<br>先调整朝向，再跟随；失去目标，停下来等待。</p><div class="story-signal"><span class="signal-line"></span><span id="visionStatus">目标进入 → 检测 → 回应</span></div><p class="footnote">人脸位置与手势检测，不识别身份。视域与轨迹为原理演示。</p></div></section>
-<section id="range" class="chapter" data-chapter="3"><div class="copy"><p class="eyebrow">03 — DISTANCE</p><h2>一次回声，<br><span>多一份判断。</span></h2><p class="description">从正面出发，遇到障碍，再返回。<br>把看不见的回声，变成前方距离的依据。</p><div class="story-signal"><span class="signal-line"></span><span id="sonarStatus">发出 → 遇障 → 返回</span></div><p class="footnote">前方测距原理示意。没有侧后方感知，不代表全向避障。</p></div></section>
-<section id="motion" class="chapter" data-chapter="4"><div class="copy"><p class="eyebrow">04 — OMNIDIRECTIONAL</p><h2>不转身，<br><span>也能横移。</span></h2><p class="description">四个全向轮，两组正交轮对。<br>前进、横移、原地转向，让结构配合成为行动。</p><div class="motion-steps"><span data-move="0">01 向前</span><span data-move="1">02 横移</span><span data-move="2">03 转向</span></div><p class="footnote">运动学演示，无实测轮速或导航数据。输入失效时，真实系统撤销运动输出。</p></div></section>
-<section id="care" class="chapter" data-chapter="5"><div class="copy"><p class="eyebrow">05 — A LITTLE CARE</p><h2>轻轻一触，<br><span>状态可见。</span></h2><p class="description">侧面的光学模块，采集接触信号。<br>顶部的蓝色屏幕，让原型状态一眼可见。</p><div class="micro-labels"><span>接触式光学采集</span><span>顶部 OLED</span></div><p class="footnote">课程原型，非医疗设备。页面不生成或展示虚构的健康测量结果。</p></div></section>
-<section id="whole" class="chapter" data-chapter="6"><div class="copy"><p class="eyebrow">06 — FROM DESIGN TO REALITY</p><h2>从一张设计，<br><span>到一台实物。</span></h2><p class="description">结构有来处，细节有依据。<br>这是 CareRover，也是我们把想法变成实物的过程。</p><button class="photo-link" id="showPhoto">查看我们的实物记录 <span aria-hidden="true">↗</span></button><p class="footnote">照片记录未完成装配阶段。动画按四轮、四舵机目标装配呈现；实物验证另行记录。</p></div></section>
-</main>
-<nav class="chapter-nav" aria-label="章节导航"><div id="chapterLinks"><a href="#meet" aria-label="认识整机" aria-current="step"><i></i><span>认识</span></a><a href="#inside" aria-label="打开机身"><i></i><span>结构</span></a><a href="#vision" aria-label="摄像头"><i></i><span>看见</span></a><a href="#range" aria-label="超声测距"><i></i><span>测距</span></a><a href="#motion" aria-label="整车运动"><i></i><span>行动</span></a><a href="#care" aria-label="健康与屏幕"><i></i><span>关怀</span></a><a href="#whole" aria-label="回到实物"><i></i><span>实物</span></a></div><div class="play-controls"><button id="previous" aria-label="上一章">↑</button><button id="restart" aria-label="重播当前章节动画">↺</button><button id="pause" aria-label="暂停原理动画" aria-pressed="false">Ⅱ</button><button id="next" aria-label="下一章">↓</button></div></nav>
-<dialog id="inspectDialog" class="inspect-dialog"><div class="inspect-heading"><div><p class="eyebrow">EXPLORE THE STRUCTURE</p><h2>把细节，看清楚。</h2></div><button id="leaveInspect" aria-label="退出自由探索">×</button></div><p class="inspect-help">拖动旋转 · 滚动缩放 · 点选零件<br>关闭后回到刚才的章节。</p><div id="parts" class="parts"></div><div class="part-detail"><h3 id="partTitle">选择一个部件</h3><p id="partDescription">原 CAD 安装位置，实物参考外观。</p><p id="instanceLabel"></p></div><button id="inspectReset" class="text-button">恢复结构总览 ↺</button></dialog>
-<dialog id="photoDialog" class="photo-dialog"><button id="closePhoto" aria-label="关闭实物照片">×</button><img src="assets/reference/robot-front.jpg" alt="团队白色机器人未完成装配时的正面照片，顶盖装有蓝色 OLED，正面有两个超声通道和镜头开口" loading="lazy"><div><p class="eyebrow">OUR PROTOTYPE</p><h2>真实的制作过程。</h2><p>顶部 OLED、正面双圆孔与镜头孔、白色打印外壳。照片记录未完成装配阶段，不作为成品或运动验收证据。</p></div></dialog>
-<noscript><style>.stage,.chapter-nav,.scene-note,#inspect{display:none}.chapter{height:auto;min-height:65vh}.copy{opacity:1!important;position:relative;top:auto;padding-block:80px;width:90%;max-width:680px}.footer{position:relative}</style><p class="no-script">当前为文字版。启用 JavaScript 可查看模型与章节海报。</p></noscript>
-<script type="module" src="app.js?v=4"></script>
-</body></html>
+<!doctype html><html lang="zh-CN"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#08090b">
+<meta name="description" content="CareRover。让感知，成为行动。观看产品影片、逐页讲解，或自由探索每一个部件。">
+<title>CareRover · 让感知，成为行动。</title><link rel="icon" href="data:,"><link rel="stylesheet" href="style.css?v=6">
+<script type="importmap">{"imports":{"three":"./vendor/three/three.module.js"}}</script></head><body>
+<a class="skip" href="#story">跳至产品介绍</a>
+<header><a class="brand" href="./"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="10" cy="12" r="3"/><circle cx="22" cy="12" r="3"/><path d="M13 22h6"/></svg>CareRover</a><nav class="modes" aria-label="展示方式"><button data-mode="scroll" aria-pressed="true">随心浏览</button><button data-mode="deck" aria-pressed="false">逐页讲解</button><button data-mode="film" aria-pressed="false">播放影片</button></nav><div class="header-actions"><button id="inspect" disabled>自由探索 ↗</button><a href="../">操作台 ↗</a></div></header>
+<div id="stage" class="stage" role="img" aria-label="机器人三维产品演示"><img id="poster" src="assets/appearance/meet.png" alt="CareRover 白色机器人正面" hidden><div id="partLabels" class="part-labels" hidden></div><span id="loadStatus" role="status">正在准备你的机器人…</span></div>
+<main id="story"><div class="copy"><p class="eyebrow" id="kicker">SENSE. MOVE. CARE.</p><h1 id="title">让感知，<br><span>成为行动。</span></h1><p class="description" id="description">认识 CareRover。<br>一台把感知、运动与关怀连在一起的小机器人。</p><p class="beat" id="beat"></p><button class="watch" id="watch">▷ 观看产品影片 <span>2 分 30 秒</span></button><p class="scroll-cue" id="scrollCue">向下，看看里面。↓</p></div><div id="scrollTrack" aria-hidden="true"></div></main>
+<div class="scene-note"><span class="dot"></span><span id="sceneCaption">CAD 装配与实物参考外观 · 产品原理动画</span></div>
+<div class="transport" id="transport"><button id="previous" aria-label="上一章">‹</button><div class="chapter-counter"><span id="chapterCount">01</span><span class="muted"> / 11</span></div><button id="next" aria-label="下一章">›</button><span class="divider"></span><button id="pause" aria-label="播放" aria-pressed="false">▷</button><input id="scrub" type="range" min="0" max="150" step="0.01" value="0" aria-label="影片进度"><output id="time">0:00 / 2:30</output><button id="fullscreen" aria-label="全屏">⛶</button></div>
+<div id="consoleShot" class="console-shot" hidden><div class="console-frame"><div class="window-bar"><i></i><i></i><i></i><span>CareRover · 操作台模拟会话</span></div><video id="consoleRecording" src="assets/film/console-demo.mp4" muted playsinline preload="auto" hidden></video><iframe id="consolePreview" title="生产操作台模拟会话" src="about:blank" data-src="../?transport=mock&amp;video=canvas" tabindex="-1"></iframe></div></div>
+<aside id="inspectPanel" class="inspect-panel" aria-label="自由探索" hidden><div class="inspect-heading"><div><p class="eyebrow">EXPLORE EVERY DETAIL</p><h2>把细节，<br>看清楚。</h2></div><button id="leaveInspect" aria-label="退出自由探索">×</button></div><p class="help">拖动旋转 · 滚动缩放 · 点选部件<br>鼠标停留展开，也可以使用下方按钮。</p><div class="inspect-actions"><button id="expand">展开结构</button><button id="inspectReset">恢复整机 ↺</button></div><div id="parts" class="parts"></div><div class="part-detail"><p class="eyebrow" id="partCategory">CAREROVER</p><h3 id="partTitle">完整，从这里开始。</h3><p id="partDescription">转动、放大，或展开后选择一个部件。</p><p id="instanceLabel"></p><button id="closePart" hidden>返回展开总览 ←</button></div></aside>
+<div class="film-mark">CAREROVER <span>PRODUCT FILM / SIMULATION</span></div>
+<noscript><p style="padding:120px 8vw">CareRover 将感知、运动与状态反馈连接起来。请启用 JavaScript 浏览三维展示，或<a href="assets/film/CareRover-film.mp4">打开离线 MP4</a>。</p></noscript>
+<script type="module" src="app.js?v=6"></script></body></html>

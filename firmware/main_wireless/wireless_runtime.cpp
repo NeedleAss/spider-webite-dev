@@ -44,6 +44,7 @@ portMUX_TYPE sourceMux = portMUX_INITIALIZER_UNLOCKED;
 SafetyController safety;
 FrontInstallation frontInstallation;
 GestureActionLatch gestureActions(4,3,tuning::balanced);
+GestureRearmGate gestureRearm;
 uint64_t pendingGestureFollowUntil=0;
 uint32_t pendingGestureStopSequence=0;
 ContinuousServoDrive drive;
@@ -72,6 +73,10 @@ struct Sources {
   bool displayAccepted = false;
   uint32_t inferMs = 0, gestureSeq = 0, healthSeq = 0, ppgSeq = 0;
   uint64_t gestureMs = 0, displayGestureMs = 0, ppgMs = 0;
+  char actionLabel[24] = "NONE", actionError[48] = "";
+  bool actionAccepted=false;
+  uint32_t actionSeq=0;
+  uint64_t actionMs=0;
   uint32_t ppg[5] = {};
 } sources;
 uint32_t partialPpg[5] = {};
@@ -184,6 +189,7 @@ void command(Session& c, const cJSON* j) {
   const auto* x=field(j,"vx"); const auto* y=field(j,"vy"); const auto* z=field(j,"wz");
   const bool velocity = strcmp(kind,"cmd_vel")==0;
   const bool zero = velocity && number(x) && number(y) && number(z) && x->valuedouble==0 && y->valuedouble==0 && z->valuedouble==0;
+  if(const auto* release=field(j,"release_only");release&&(!velocity||!cJSON_IsBool(release)||(cJSON_IsTrue(release)&&!zero))) {replyError(c,"INVALID_COMMAND",j);return;}
   if ((CAREROVER_STAGE < 4 || CAREROVER_INTEGRATION==1) && !zero) { replyError(c,"READ_ONLY",j); return; }
   // Reject old queued motion/mode/recovery requests. Clock is display-only for
   // watchdogs; this additional per-session age check never refreshes a lease.
@@ -193,7 +199,7 @@ void command(Session& c, const cJSON* j) {
   if (velocity) {
     if (!number(x)||!number(y)||!number(z)) { replyError(c,"INVALID_COMMAND",j); return; }
     portENTER_CRITICAL(&safetyMux);
-    error=safety.velocity(c.id,x->valuedouble,y->valuedouble,z->valuedouble,now);
+      error=safety.velocity(c.id,x->valuedouble,y->valuedouble,z->valuedouble,now,cJSON_IsTrue(field(j,"release_only")));
     portEXIT_CRITICAL(&safetyMux);
   } else if (strcmp(kind,"set_demo_bypass")==0) {
     const auto* enabled=field(j,"enabled");
@@ -318,9 +324,12 @@ void publish(void*) {
     cJSON_AddBoolToObject(robot,"motion_output_installed",driveReady.load());
     cJSON_AddBoolToObject(robot,"calibration_ready",calibrationReady);
     cJSON_AddBoolToObject(robot,"control_allowed",state.owner==0 || state.owner==c.id);
+    cJSON_AddBoolToObject(robot,"control_owned",state.owner==c.id);
+    cJSON_AddBoolToObject(robot,"control_occupied",state.owner!=0);
     cJSON_AddNumberToObject(robot,"vx",state.target.vx); cJSON_AddNumberToObject(robot,"vy",state.target.vy); cJSON_AddNumberToObject(robot,"wz",state.target.wz);
     auto* device=cJSON_AddObjectToObject(j,"device");
     cJSON_AddStringToObject(device,"firmware",CAREROVER_BUILD_VERSION); cJSON_AddNumberToObject(device,"stage",CAREROVER_STAGE);
+    cJSON_AddBoolToObject(device,"scoped_release",true);
     cJSON_AddStringToObject(device,"backend",CAREROVER_INTEGRATION?"tracking":"test_targets");
     cJSON_AddStringToObject(device,"integration",CAREROVER_INTEGRATION==3?"follow":CAREROVER_INTEGRATION==2?"manual":CAREROVER_INTEGRATION==1?"observe":"legacy");
     auto* modes=cJSON_AddArrayToObject(device,"supported_modes");
@@ -342,6 +351,14 @@ void publish(void*) {
     cJSON_AddNumberToObject(device,"min_free_heap",ESP.getMinFreeHeap());
     cJSON_AddNumberToObject(device,"min_free_psram",ESP.getMinFreePsram());
     auto* vision=cJSON_AddObjectToObject(j,"vision");
+    if(source.actionSeq) {
+      auto* action=cJSON_AddObjectToObject(j,"gesture_action");
+      cJSON_AddNumberToObject(action,"seq",source.actionSeq);
+      cJSON_AddStringToObject(action,"label",source.actionLabel);
+      cJSON_AddBoolToObject(action,"accepted",source.actionAccepted);
+      cJSON_AddStringToObject(action,"reason",source.actionError);
+      cJSON_AddNumberToObject(action,"age_ms",now>=source.actionMs?double(now-source.actionMs):0);
+    }
     cJSON_AddNumberToObject(vision,"image_width",320);cJSON_AddNumberToObject(vision,"image_height",240);
     cJSON_AddNumberToObject(vision,"ai_fps",state.camera?source.aiFps:0);
     const bool displayGestureFresh=source.displayAccepted && now>=source.displayGestureMs &&
@@ -488,7 +505,14 @@ void safetyTask(void*) {
 } // namespace
 
 uint64_t wirelessNowMs() { return uint64_t(esp_timer_get_time())/1000; }
-void wirelessGesture(const char* label,float score,bool accepted,bool actionEligible,bool held,uint64_t ageMs,uint32_t inferMs) {
+void recordGestureAction(const char* label,const char* error,uint64_t now) {
+  portENTER_CRITICAL(&sourceMux);
+  snprintf(sources.actionLabel,sizeof(sources.actionLabel),"%s",label);
+  snprintf(sources.actionError,sizeof(sources.actionError),"%s",error?error:"");
+  sources.actionAccepted=error==nullptr;sources.actionMs=now;++sources.actionSeq;
+  portEXIT_CRITICAL(&sourceMux);
+}
+void wirelessGesture(const char* label,float score,bool accepted,bool actionEligible,bool held,uint64_t ageMs,uint32_t inferMs,bool neutralEvidence) {
   const auto now=wirelessNowMs();
   portENTER_CRITICAL(&safetyMux); safety.cameraPacket(now); portEXIT_CRITICAL(&safetyMux);
   char upper[24]; size_t n=0;
@@ -514,8 +538,16 @@ void wirelessGesture(const char* label,float score,bool accepted,bool actionElig
   // Display hysteresis may temporarily hold a label through detector gaps.  Only
   // fresh, directly supported stable frames are allowed to arm motion actions.
   if(CAREROVER_STAGE<4 || CAREROVER_INTEGRATION<3) return;
+  const auto before=readSafety(now);
+  const bool neutral=neutralEvidence&&!held;
+  const bool rearmed=gestureRearm.observe(before.stopSequence,before.owner!=0,
+    before.estop||before.fault||!before.network||before.mode==Mode::Health,neutral);
   const auto action=gestureActions.update(actionEligible,upper,now);
   if(action==GestureAction::None) return;
+  if(action!=GestureAction::Stop&&!rearmed) {
+    recordGestureAction(upper,before.estop?"ESTOP_ACTIVE":before.fault||!before.network?"FAULT_ACTIVE":before.owner?"CONTROL_BUSY":before.mode==Mode::Health?"HEALTH_IN_PROGRESS":"NEW_GESTURE_REQUIRED",now);
+    pendingGestureFollowUntil=0;return;
+  }
   const char* error=nullptr;
   if(action==GestureAction::StartFollow) {
     portENTER_CRITICAL(&safetyMux); error=safety.autonomousFollow(now); portEXIT_CRITICAL(&safetyMux);
@@ -535,6 +567,8 @@ void wirelessGesture(const char* label,float score,bool accepted,bool actionElig
       portEXIT_CRITICAL(&safetyMux);
     }
   }
+  gestureRearm.acknowledge(readSafety(now).stopSequence);
+  recordGestureAction(upper,error,now);
   Serial.printf("{\"type\":\"gesture_action\",\"label\":\"%s\",\"ok\":%s,\"error\":\"%s\"}\n",upper,error?"false":"true",error?error:"");
 }
 void wirelessHealth(const WirelessHealth& h) {
@@ -613,6 +647,8 @@ void wirelessBegin() {
 }
 
 void wirelessVision(const carerover::VisionPacket& p,bool resync) {
+  bool startedPending=false;
+  uint32_t resultingSequence=0;
   portENTER_CRITICAL(&safetyMux);
   if(resync) safety.cameraReset(p.receivedMs);
   safety.cameraPacket(p.receivedMs);
@@ -620,10 +656,11 @@ void wirelessVision(const carerover::VisionPacket& p,bool resync) {
     safety.person(p);
     if(pendingGestureFollowUntil) {
       if(p.receivedMs>pendingGestureFollowUntil || safety.snapshot(p.receivedMs).stopSequence!=pendingGestureStopSequence) pendingGestureFollowUntil=0;
-      else if(p.found&&p.score>=SafetyController::PersonAcceptScoreMilli&&!safety.autonomousFollow(p.receivedMs)) pendingGestureFollowUntil=0;
+      else if(p.found&&p.score>=SafetyController::PersonAcceptScoreMilli&&!safety.autonomousFollow(p.receivedMs)) {pendingGestureFollowUntil=0;startedPending=true;resultingSequence=safety.snapshot(p.receivedMs).stopSequence;}
     }
   }
   portEXIT_CRITICAL(&safetyMux);
+  if(startedPending) {gestureRearm.acknowledge(resultingSequence);recordGestureAction("LIKE",nullptr,p.receivedMs);}
   portENTER_CRITICAL(&sourceMux);
   if(resync)sources.displayTrack.reset();
   if(p.kind=='P') {
@@ -653,3 +690,19 @@ void wirelessDiagnostics() {
 
 carerover::FrontSnapshot wirelessFront() { return readSafety(wirelessNowMs()).front; }
 const char* wirelessStopReason() { return readSafety(wirelessNowMs()).stopReason; }
+
+WirelessGestureStatus wirelessGestureStatus() {
+  WirelessGestureStatus result;const auto now=wirelessNowMs();const auto state=readSafety(now);
+  if(state.estop||state.fault) {
+    result.show=true;snprintf(result.title,sizeof(result.title),"%s",state.estop?"ESTOP LATCHED":"DEVICE FAULT");
+    snprintf(result.detail,sizeof(result.detail),"MOTION INHIBITED");
+    snprintf(result.reason,sizeof(result.reason),"%.21s",state.stopReason);return result;
+  }
+  portENTER_CRITICAL(&sourceMux);
+  if(sources.actionSeq&&now>=sources.actionMs&&now-sources.actionMs<4000) {
+    result.show=true;snprintf(result.title,sizeof(result.title),"GESTURE %.13s",sources.actionLabel);
+    snprintf(result.detail,sizeof(result.detail),"%s",sources.actionAccepted?"COMMAND ACCEPTED":"NOT STARTED");
+    snprintf(result.reason,sizeof(result.reason),"%.21s",sources.actionAccepted?modeName(state.mode):sources.actionError);
+  }
+  portEXIT_CRITICAL(&sourceMux);return result;
+}

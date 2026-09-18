@@ -1,0 +1,82 @@
+[
+  {
+    "name": "hero sensor face points to CAD -X",
+    "status": "PASS"
+  },
+  {
+    "name": "four wheels and four saved servo instances",
+    "status": "PASS"
+  },
+  {
+    "name": "seek forwards/backwards restores exact CAD-derived transforms",
+    "status": "PASS"
+  },
+  {
+    "name": "anatomical fingertip within 10 mm of sensor contact anchor",
+    "status": "PASS",
+    "detail": {
+      "metres": 0.0039995037036687315
+    }
+  },
+  {
+    "name": "shared contact event renders simulated OLED result",
+    "status": "PASS"
+  },
+  {
+    "name": "release clears simulated readings",
+    "status": "PASS"
+  },
+  {
+    "name": "Inspect enters assembled and paused",
+    "status": "PASS"
+  },
+  {
+    "name": "desktop hover expands",
+    "status": "PASS"
+  },
+  {
+    "name": "exploded groups have no positive-volume AABB penetration",
+    "status": "PASS"
+  },
+  {
+    "name": "selection locks expanded while pointer reads explanation",
+    "status": "PASS"
+  },
+  {
+    "name": "focused part fits viewport",
+    "status": "PASS"
+  },
+  {
+    "name": "drag rotates selected component, including underneath",
+    "status": "PASS"
+  },
+  {
+    "name": "reset restores full assembly",
+    "status": "PASS"
+  },
+  {
+    "name": "Inspect returns to saved semantic time",
+    "status": "PASS"
+  },
+  {
+    "name": "Deck owns clock and advances without scroll",
+    "status": "PASS"
+  },
+  {
+    "name": "pause holds timeline",
+    "status": "PASS"
+  },
+  {
+    "name": "390px story has no horizontal overflow",
+    "status": "PASS"
+  },
+  {
+    "name": "explicit touch-compatible button expands",
+    "status": "PASS"
+  },
+  {
+    "name": "no uncaught page exceptions",
+    "status": "PASS",
+    "detail": []
+  }
+]

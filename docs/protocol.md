@@ -153,7 +153,7 @@ CRC8 多项式 0x07、初值 0，覆盖 `G,...` 或 `P,...`，不含 @、* 和�
 | `device.supported_modes` / `integration` | 当前固件能力和 observe/manual/follow 配置 |
 | `robot.calibration_ready` / `motion_output_installed` | 校准已由操作者验证、实际 PWM 输出已安装 |
 
-网页视频优先级：合法 `?stream=` → 合法遥测地址 → 同源 `/stream`。视频发生错误后 1–5 秒退避重试，切换画面源或 WS 断开取消重试。人物框独立过期，重复 seq 不刷新页面来源期限。
+网页视频优先级：合法 `?stream=` → 合法遥测地址 → 同源 `/stream`。V6 默认不打开视频；用户选择摄像头后直连 CAM，以成功解码的新帧计时。首帧等待最多 5 秒；最后新帧超过 2 秒即过期。连续连接失败最多按 1/2/4 秒重试三次，然后手动重试；HTTP 503 不自动重试。切换画面源或 WS 断开取消重试。人物框独立过期，重复 seq 不刷新页面来源期限。UART 识别与 MJPEG 没有共同帧号，标记仅是异步估计；本地视频不叠现场框。
 
 跟随只接受控制者的现有 `ping` 格式作保活，推荐每 100 ms；有效会话中只有递增 id 且 ts 新鲜的 ping 才续期。当前手动速度、控制者保活、控制计算输出各按 300 ms 过期；CAM/人物来源按 1200 ms 过期。ping 不续手动速度；旁观者 ping 不续跟随。非零 cmd_vel 在跟随模式被拒绝，零值停止并退出跟随。模式切换和故障退出后需显式重新进入；普通目标丢失保留 WAIT_TARGET，新接受实测可以恢复，30 s 到期退出。
 
@@ -191,3 +191,19 @@ CRC8 多项式 0x07、初值 0，覆盖 `G,...` 或 `P,...`，不含 @、* 和�
 - `imu.held/warning_tilt/rejected_frames/accepted_frames`：样本保持、倾角提示与计数；拒绝样本不刷新 `age_ms` 的来源时间。
 
 详见 [0915 实现与验收边界](0915-demo-development.md)。
+
+
+## V6 直接手势与输入交接（用户决定优先于旧监督模式建议）
+
+设备就绪时可直接比合格手势，无需打开网页或选择 `GESTURE_CONTROL`。手势直接启动的 Follow/Turn owner=0，不依赖浏览器 ping；相机/人物/IMU/标定/超声配置/动作期限等原有门禁仍生效。手动操作和网页 Follow 仍有会话所有权与各自期限。观察页面不占有所有权。
+
+- `robot.control_owned`：这一个 WebSocket 会话是否是当前 owner；`control_occupied`：是否存在网页 owner。`control_allowed` 只表示可以申请，不能当作本页正在监督。
+- 成功选择 MANUAL/PERSON_FOLLOW 可取得空闲所有权；IDLE/HEALTH_CHECK/兼容 GESTURE_CONTROL 释放自己的所有权。其他 owner 仍会阻止争抢。HEALTH_CHECK 禁止启动手势动作。
+- 新固件提供 `device.scoped_release=true`。页面的松手/隐藏/视频失效/源切换使用 `cmd_vel` + `release_only:true` 且三个速度均为零。此命令只取消发送会话当前拥有的动作；所有权已交回后，迟到重复包不取消后续直接手势。对旧固件不发这个扩展，且不重复补发普通零命令。
+- 显式“停止”仍发普通零速度；DISLIKE 仍为普通停止。急停独立存在，DISLIKE 不能解除。
+- 正常松手归零并释放 owner。命令超时归零不视为正常交接。手动占用、故障和取消事件之后，启动手势需先有三个非保持的原始中性/无手帧，再有合格的新确认；保持的旧手势不重启。
+- `gesture_action={seq,label,accepted,reason,age_ms}` 是最近一次设备动作准入结果，不是物理运动证明，也不是每一帧的识别标签。待目标的 LIKE 会先报告 TARGET_NOT_READY，若既有限时内收到合格目标且取消序列未变才报告接受。
+- OLED 显示原有识别与健康结果，收到动作结果时短暂显示 COMMAND ACCEPTED / NOT STARTED；急停/故障优先。真实运动及停止仍须在现场核验。
+- 页面确认机器人模式、急停、速度目标使用最后一次同时包含合法 mode/estop 的 robot 块的接收年龄（当前 1000 ms），其他健康、IMU 或 PPG 消息不能续期。重连清空控制来源；回放不发送指令。
+
+视频 HTTP 503 与成功流均仅允许现有 `http://192.168.4.1` 控制台源跨域读取；未扩展到任意网站。GitHub 展示站不提供远程控制机器人或代理摄像头。
