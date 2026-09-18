@@ -12,7 +12,7 @@ def run(code):
  with (BUILD/'capture.txt').open('a') as f:f.write(r.stdout+r.stderr+'\n')
  if r.returncode or '### Error' in r.stdout:raise RuntimeError(r.stdout+r.stderr)
 def hashes():
- paths=[ROOT/'presentation/app.js',ROOT/'presentation/index.html',ROOT/'presentation/style.css',*sorted((ROOT/'presentation/v7').glob('*.js')),*sorted((ROOT/'presentation/scene').glob('*.js')),*sorted((ROOT/'presentation/effects').glob('*.js')),ROOT/'presentation/story/timeline.js',ROOT/'presentation/parts.js',ROOT/'presentation/assets/cad/carerover.glb',ROOT/'presentation/assets/hand/hand_demo.glb',ROOT/'presentation/assets/film/console-demo.mp4']
+ paths=[ROOT/'presentation/app.js',ROOT/'presentation/index.html',ROOT/'presentation/style.css',*sorted((ROOT/'presentation/v7').glob('*.js')),*sorted((ROOT/'presentation/scene').glob('*.js')),*sorted((ROOT/'presentation/effects').glob('*.js')),ROOT/'presentation/story/timeline.js',ROOT/'presentation/parts.js',ROOT/'presentation/assets/cad/carerover.glb',ROOT/'presentation/assets/hand/hand_demo.glb',ROOT/'presentation/assets/film/console-demo.mp4',*sorted((ROOT/'presentation/assets/interaction').glob('*.glb'))]
  return {p.relative_to(ROOT).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
 source=hashes()
 run("async page=>{await page.route('**/*',route=>route.continue());await page.setViewportSize({width:1920,height:1080});await page.goto('http://127.0.0.1:8765/presentation/?export=1');await page.waitForFunction(()=>window.__careRover);}")

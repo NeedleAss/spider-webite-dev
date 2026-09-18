@@ -1,0 +1,19 @@
+### Result
+{"total":22,"checks":[{"name":"Sensor chapter starts as whole robot camera","pass":true},{"name":"Continuous transparency during reveal camera","pass":true},{"name":"Focus keeps translucent installation context camera","pass":true},{"name":"Reverse seek reproduces sculpted sensor frame camera","pass":true},{"name":"Whole robot returns before next chapter camera","pass":true},{"name":"Sensor chapter starts as whole robot ultrasonic","pass":true},{"name":"Continuous transparency during reveal ultrasonic","pass":true},{"name":"Focus keeps translucent installation context ultrasonic","pass":true},{"name":"Reverse seek reproduces sculpted sensor frame ultrasonic","pass":true},{"name":"Whole robot returns before next chapter ultrasonic","pass":true},{"name":"3D gesture TWO","pass":true},{"name":"No flat card TWO","pass":true},{"name":"3D gesture DISLIKE","pass":true},{"name":"No flat card DISLIKE","pass":true},{"name":"3D gesture LIKE","pass":true},{"name":"No flat card LIKE","pass":true},{"name":"Neutral interval clears hand","pass":true},{"name":"Inspect resets transparency","pass":true},{"name":"Mobile no horizontal overflow 22","pass":true},{"name":"Mobile no horizontal overflow 32","pass":true},{"name":"Mobile no horizontal overflow 59","pass":true},{"name":"No browser errors","pass":true}],"errors":[]}
+### Ran Playwright code
+```js
+await (async page=>{
+ const checks=[],errors=[];page.on('pageerror',e=>errors.push(e.message));const ok=(name,pass)=>{checks.push({name,pass});if(!pass)throw Error(name);};
+ await page.setViewportSize({width:1440,height:900});await page.goto('http://127.0.0.1:8765/presentation/?revision=interaction1');await page.waitForFunction(()=>window.__careRover);
+ const seek=t=>page.evaluate(t=>__careRover.seek(t),t),snap=()=>page.evaluate(()=>__careRover.snapshot());
+ for(const [start,part] of [[18,'camera'],[28,'ultrasonic']]){await seek(start);ok('Sensor chapter starts as whole robot '+part,Object.values((await snap()).interaction.reveal).every(v=>v===1));await seek(start+1);let r=(await snap()).interaction.reveal;ok('Continuous transparency during reveal '+part,r.shell>0.08&&r.shell<1&&r[part]===1);await seek(start+4);r=(await snap()).interaction.reveal;ok('Focus keeps translucent installation context '+part,r.shell>0&&r.shell<.1&&r[part]===1);const a=await page.locator('#stage canvas').screenshot();await seek(109);await seek(start+4);ok('Reverse seek reproduces sculpted sensor frame '+part,a.equals(await page.locator('#stage canvas').screenshot()));await page.screenshot({path:`output/playwright/v7/interaction-${part}.png`});await seek(start+9);ok('Whole robot returns before next chapter '+part,(await snap()).interaction.reveal.shell>.4);}
+ for(const [t,label] of [[59,'TWO'],[64,'DISLIKE'],[69,'LIKE']]){await seek(t);ok('3D gesture '+label,(await snap()).interaction.gesture===label&&(await snap()).interaction.visible);ok('No flat card '+label,await page.locator('#gestureCard').isHidden());await page.screenshot({path:`output/playwright/v7/interaction-${label}.png`});}
+ await seek(66.5);ok('Neutral interval clears hand',!(await snap()).interaction.visible);await seek(22);await page.evaluate(()=>__careRover.enterInspect());await page.waitForTimeout(100);ok('Inspect resets transparency',Object.values((await snap()).interaction.reveal).every(v=>v===1));
+ await page.evaluate(()=>__careRover.leaveInspect());await page.setViewportSize({width:390,height:844});for(const t of [22,32,59]){await seek(t);await page.screenshot({path:`output/playwright/v7/interaction-mobile-${t}.png`});ok('Mobile no horizontal overflow '+t,await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
+ ok('No browser errors',errors.length===0);return {total:checks.length,checks,errors};
+}
+)(page);
+```
+### Page
+- Page URL: http://127.0.0.1:8765/presentation/?revision=interaction1
+- Page Title: CareRover · 让感知，成为行动。

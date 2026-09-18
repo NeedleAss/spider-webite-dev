@@ -7,14 +7,15 @@
   "frames": 3360,
   "simulation": true,
   "renderSourceHashes": {
-    "presentation/app.js": "a812d9d1a22381a8419527a4feec9954f15a8dcb38a279de8f6ba608ba29b939",
-    "presentation/index.html": "14657ef8b4376e2622fc187c52381feb1efa931c519e5de0a442589e74ac7328",
+    "presentation/app.js": "c587b6e7f4ed20b45c7d83b925c74e4976c32fe1529d17eeea6b8eeb518030b8",
+    "presentation/index.html": "ad00725aafeee2b5b6db84d04eacd4e3ead8c3c8cf67eb34c59c67623e398c7d",
     "presentation/style.css": "98383fea1a3af512422b738ca5f55d5e79bdae16182362023191dbee25fe834b",
     "presentation/v7/app.js": "6d2151aaf55f3584ae38c5e83ad1cdc96f0426e42c643582e582507dc8447847",
     "presentation/v7/assembly.js": "c9b3a8c03e521233d0860b6bb82ef3c8baac640514c2e7e32145007fe3a07737",
-    "presentation/v7/director.js": "467626caaed3546d4e582cdd893ab481334cf1eb6d54f5229ff85325d304c83a",
-    "presentation/v7/effects.js": "f7b9514a3ebee567f162ca7e65462f654ba95fc66dd227d847b30a71d51f2b83",
+    "presentation/v7/director.js": "b1344421bc1a63232834ac1f9ba5989d1bb2d65afe98ce37baa5991278969fd1",
+    "presentation/v7/effects.js": "77a926c125410731815ff291f754bddbfb58e08ee1595b76d58ccca00f7cd0b2",
     "presentation/v7/hand.js": "26373faf62c5256acab84c3933b29a971a5765ba0b8624847842b55d9e505bbc",
+    "presentation/v7/interaction.js": "cbab42b5a54d0aa42585f97b3d2082a75634ad30a5a4c4e442095dc900e084ca",
     "presentation/v7/lighting.js": "4844ed47f58a1cde06882a1443a2dc97aea2b2cfdbe914c123118f8efe4d8080",
     "presentation/v7/structure.js": "d3d4760550430cb82f34dede51b6d1f31f80cdb9ab07e35a178f609e54af3d27",
     "presentation/scene/actor.js": "207c28723c65221fd0911b0f642af4b1cd39ca5f71fa8936d26d0a0cf8575cbc",
@@ -27,27 +28,30 @@
     "presentation/parts.js": "0dbdf7e69e8123b0c404d5438bab193526d81e3b151351eb8fe56f1a0cf6d4b8",
     "presentation/assets/cad/carerover.glb": "2310e2bd46a6940497349d1acf00ef70bd8279881a637424b2764c136229d61b",
     "presentation/assets/hand/hand_demo.glb": "bbb567c4d50d2dc7cbd8db12ed883ff4c818c2798b6cc87406e7fcc5029fb846",
-    "presentation/assets/film/console-demo.mp4": "91d4c808b14ca740256803ba6fb58fff260b0c2dfb83020410886bc8599c6eb2"
+    "presentation/assets/film/console-demo.mp4": "91d4c808b14ca740256803ba6fb58fff260b0c2dfb83020410886bc8599c6eb2",
+    "presentation/assets/interaction/head.glb": "2a85c721b014da10c7b6bdce152138bdc4be837a1b4cdafc5febe99a75d456b8",
+    "presentation/assets/interaction/like.glb": "57f2899f43c53a7a9a9e7f9b302de5e1606b0e13842e2bc853b1e72319655d2b",
+    "presentation/assets/interaction/two.glb": "4fbaa8a1826ac758b88abb83058d26e71c1d662bb3ee850938a9324675e596ef"
   },
   "audio": "Original oscillator-only ambient score; tools/film_score_v7.py",
   "handReview": "independent user visual review pending",
   "files": {
     "presentation/assets/film-v7/CareRover-film.mp4": {
-      "bytes": 8634563,
-      "sha256": "c578ed805d878e2a713e49ce481c68fc9f61c10c40436e1ecdea7ce9ae1939ab",
+      "bytes": 9516805,
+      "sha256": "96d44eee740edac0ee0329b62db4b2c8e030b0bda16239f55d48dc93fed8db84",
       "frames": 3360,
       "seconds": 112.0,
       "fullDecode": "PASS"
     },
     "presentation/assets/hand/contact.mp4": {
-      "bytes": 557278,
-      "sha256": "7b63b8758b90543145d9025cdd3aff326747ec028463109e18244cf146c0eb4f",
+      "bytes": 549533,
+      "sha256": "d0cb702471c75e50d7bf3c1b4663df610fc97f541801d339ee1fc18fa6784e8e",
       "frames": 150,
       "seconds": 5.0,
       "fullDecode": "PASS"
     },
     "presentation/assets/film-v7/poster.jpg": {
-      "sha256": "4cdf5f32744a7b32934cdd314e262b66031372879ae11d27392db4241feda878"
+      "sha256": "8b5b9836ca530b0011e71c82467b5f16e4d770c1cb9a06040ee7ffd7c7e3804f"
     },
     "presentation/assets/film-v7/CareRover-film.srt": {
       "sha256": "3dbe56238a7c0aae8bcfe6f8fd537fa3d5bb64f45a4ceed98a69f1615836dbb7",

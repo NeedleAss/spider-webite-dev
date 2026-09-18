@@ -76,3 +76,11 @@ python tools/validate_film_v7.py
 | 固件/控制台/配置 | 原 75 文件哈希再次核对未变 | `evidence/v7/protected-hashes.json` |
 
 画面对照见 `evidence/v7/visual/structure-reference.png`、`structure-film.png`、`structure-inspect.png`。离线影片重新从当前生产页面导出并完整解码，哈希和抽帧证据更新在 `FILM_MANIFEST.json`、`evidence/v7/film-validation.json`。先前 Python/C++/控制台 fixture 为上一轮记录，本次没有把它们重记为重跑。用户最终视觉审核与实物门槛仍保留。
+
+## 三维人头 / 立体障碍物 / 手势候选
+
+- 新场景检查 22 项 PASS：整机进入、连续透视、安装参照、返回整体、反向 seek 图像一致、三种模型手势、中立清空、Inspect 恢复材质、手机布局与浏览器异常。证据 `evidence/v7/interaction-browser.txt`。
+- 拆合对照 21 项 PASS：`evidence/v7/interaction-structure.txt`；Node 59 项 PASS：`interaction-node.txt`。
+- 新增模型无皮肤纹理，均有 CC0 来源；手指离线摆姿后导出，浏览器只移动和旋转整体。截图在 `evidence/v7/visual/interaction-*`。手形与新镜头的最终美术评价由用户审核。
+- 预览服务改用 `python3 tools/serve_presentation.py`，增大并发连接队列并要求缓存重新验证。排查中旧预览服务曾发生 ES 模块连接重置，未把这些失败记为通过。
+- 完整展示回归 55 项 PASS：`interaction-regression.txt`，在新浏览器会话重跑，包含模型手势替代符号、传感器/接触帧倒放一致性、Inspect、手机说明和上下文恢复。

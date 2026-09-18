@@ -4,6 +4,7 @@ import {loadRobot} from './scene/robot.js';
 import {loadHand} from './v7/hand.js';
 import {lightProduct} from './v7/lighting.js';
 import {makeScan,makeEcho} from './v7/effects.js';
+import {loadInteraction,makeReveal} from './v7/interaction.js';
 import {makeInspection} from './scene/inspection.js';
 import {parts} from './parts.js';
 import {Director,evaluate,scenes,DURATION,ROBOT_Y} from './v7/director.js';
@@ -13,7 +14,7 @@ const $=id=>document.getElementById(id),stage=$('stage'),director=new Director()
 const params=new URLSearchParams(location.search),exporting=params.get('export')==='1';
 let renderer,scene,camera,controls,robot,hand,lighting,inspection,scan,echo,ready=false,lost=false,mode='scroll',scheduled=false,last=0,draws=0;
 let isolated=false,selected=null,inspectOpen=0,inspectPhase=0,inspectGoal=0,cameraFlight=null,hoverTimer=null,exitTimer=null,saved=null,lastIndex=-1,external=false;
-let state=evaluate(0),inspectStart=0;
+let state=evaluate(0),inspectStart=0,interaction,reveal;
 document.body.dataset.mode=mode;document.body.dataset.export=String(exporting);if(exporting)$('consolePreview').src='about:blank';
 const stamp=t=>`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
 function request(){if(!scheduled&&!document.hidden){scheduled=true;requestAnimationFrame(frame);}}
@@ -42,14 +43,17 @@ function applyCamera(eye,target){camera.position.copy(eye);controls.target.copy(
 function poseScene(){
  robot.root.position.fromArray(state.pose.position);robot.root.rotation.set(0,state.pose.yaw,0);
  inspection.apply(state.open);scan.root.visible=echo.root.visible=false;
- if(state.focus)for(const item of robot.instances)item.node.visible=item.id===state.focus;
+ const sensor=state.chapter==='vision'?'camera':state.chapter==='range'?'ultrasonic':null;
+ const revealTime=state.t-(sensor==='camera'?18:28),revealAmount=sensor?ease(revealTime/2)*(1-ease((revealTime-8)/2)):0;
+ reveal.apply(sensor,revealAmount);
  for(const item of robot.instances){const rotor=item.appearance.userData.rotor;if(rotor)rotor.rotation.z=state.pose.wheels[item.node.name]||0;item.appearance.userData.setOLED?.(state.oled);}
  robot.root.updateMatrixWorld(true);
- if(state.chapter==='vision')scan.update(state.t-18);
- if(state.chapter==='range')echo.update(state.t-28);
+ if(state.chapter==='vision'){scan.root.scale.setScalar(revealAmount);robot.root.updateMatrixWorld(true);scan.update(state.t-18);}
+ if(state.chapter==='range'){echo.root.scale.setScalar(revealAmount);robot.root.updateMatrixWorld(true);echo.update(state.t-28);}
  robot.effects.health.update(state.t,state.care.contact&&state.chapter==='care');
  if(hand){hand.root.visible=state.chapter==='care';if(hand.root.visible){const n=robot.instances.find(i=>i.id==='health').node;hand.place(n);hand.sample(state.t<83?(state.t-80)/3*1.25:state.t<93?1.25+(state.t-83)/10*2.5:3.75+(state.t-93)/2*1.25);}}
- $('gestureCard').hidden=state.chapter!=='gesture';$('followCard').hidden=state.chapter!=='follow';
+ interaction.gestures.visible=state.chapter==='gesture';if(state.chapter==='gesture'){interaction.update(state.t,state.gesture.label);interaction.gestures.position.set(-.14,.13,.02);interaction.gestures.quaternion.setFromRotationMatrix(new T.Matrix4().lookAt(new T.Vector3(...state.eye),new T.Vector3(...state.target),new T.Vector3(0,1,0)));}
+ $('gestureCard').hidden=true;$('followCard').hidden=state.chapter!=='follow';
  if(state.chapter==='gesture'){
   $('gestureName').textContent=state.gesture.label==='NONE'?'准备新的动作':state.gesture.label;
   $('gestureResult').textContent=state.gesture.accepted?({TWO:'原地转圈',DISLIKE:'停止',LIKE:'跟随已就绪'}[state.gesture.label]):'识别确认中';
@@ -61,7 +65,7 @@ function poseScene(){
 function frame(now){scheduled=false;if(!ready||lost)return;const sec=now/1000,dt=last?Math.min(.1,sec-last):0;last=sec;
  if(mode==='inspect'){
   inspectPhase=reduced.matches?inspectGoal:advanceAssembly(inspectPhase,inspectGoal,dt);inspectOpen=ease(inspectPhase);
-  robot.root.position.set(0,ROBOT_Y,0);robot.root.rotation.set(0,0,0);if(hand)hand.root.visible=false;inspection.apply(inspectOpen,selected,isolated);for(const i of robot.instances){if(i.appearance.userData.rotor)i.appearance.userData.rotor.rotation.z=0;i.appearance.userData.setOLED?.({line1:'CARE ROVER',line2:'EXPLORE',line3:'PRODUCT DEMO'});}scan.root.visible=echo.root.visible=false;$('gestureCard').hidden=$('followCard').hidden=true;
+  robot.root.position.set(0,ROBOT_Y,0);robot.root.rotation.set(0,0,0);if(hand)hand.root.visible=false;inspection.apply(inspectOpen,selected,isolated);reveal.apply(null,0);interaction.gestures.visible=false;scan.root.scale.setScalar(1);echo.root.scale.setScalar(1);for(const i of robot.instances){if(i.appearance.userData.rotor)i.appearance.userData.rotor.rotation.z=0;i.appearance.userData.setOLED?.({line1:'CARE ROVER',line2:'EXPLORE',line3:'PRODUCT DEMO'});}scan.root.visible=echo.root.visible=false;$('gestureCard').hidden=$('followCard').hidden=true;
   const item=robot.instances.find(v=>v.node.name===selected);const effectTime=reduced.matches?2:(sec-inspectStart)%8;
   if(item?.id==='camera')scan.update(effectTime);if(item?.id==='ultrasonic')echo.update(effectTime);
   $('partLabels').hidden=true;
@@ -101,7 +105,8 @@ async function boot(){try{
  renderer=new T.WebGLRenderer({alpha:true,antialias:true,powerPreference:'high-performance',preserveDrawingBuffer:exporting});renderer.setPixelRatio(exporting?1:Math.min(devicePixelRatio,1.5));renderer.setClearColor(0,0);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.95;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;stage.append(renderer.domElement);
  scene=new T.Scene();camera=new T.PerspectiveCamera(30,1,.001,20);controls=new OrbitControls(camera,renderer.domElement);controls.enabled=false;controls.enableDamping=false;controls.enablePan=false;controls.minDistance=.035;controls.maxDistance=3;controls.minPolarAngle=.001;controls.maxPolarAngle=Math.PI-.001;
  lighting=lightProduct(scene,renderer);robot=await loadRobot();scene.add(robot.root);inspection=makeInspection(robot);
- inspection.apply(0);scan=makeScan(robot.effects.camera.anchor);echo=makeEcho(robot.effects.ultrasonic.anchor);robot.visualEffects={camera:scan,ultrasonic:echo};
+ interaction=await loadInteraction();scene.add(interaction.gestures);interaction.gestures.visible=false;reveal=makeReveal(robot);
+ inspection.apply(0);scan=makeScan(robot.effects.camera.anchor,interaction.head);echo=makeEcho(robot.effects.ultrasonic.anchor,true);robot.visualEffects={camera:scan,ultrasonic:echo};
  robot.materials.white.roughness=.56;robot.materials.white.color.set('#d9dddf');robot.materials.silver.roughness=.25;robot.materials.rubber.color.set('#14171a');
 
  hand=await loadHand();scene.add(hand.root);hand.root.visible=false;
@@ -111,7 +116,7 @@ async function boot(){try{
  window.__careRover={seek:async(t)=>{if(mode==='inspect')leaveInspect();external=true;director.pause();director.seek(t);state=evaluate(t,{aspect:camera.aspect});poseScene();applyCamera(new T.Vector3(...state.eye),new T.Vector3(...state.target));copy();
    if(exporting&&state.console){const video=$('consoleRecording');if(video.readyState<2)await new Promise(resolve=>video.addEventListener('loadeddata',resolve,{once:true}));const target=Math.min(video.duration-.04,Math.max(0,t-96));if(Math.abs(video.currentTime-target)>.012)await new Promise(resolve=>{video.addEventListener('seeked',resolve,{once:true});video.currentTime=target;});}
    renderer.render(scene,camera);await new Promise(requestAnimationFrame);return state;},
-  snapshot:()=>({ready,mode,isolated,flight:!!cameraFlight,state:state.chapter,hand:hand?{visible:hand.root.visible,pad:hand.pad().toArray()}:null,contact:robot.instances.find(i=>i.id==='health').node.localToWorld(new T.Vector3(0,.0037,0)).toArray(),time:director.time,playing:director.playing,selected,open:inspectOpen,draws,camera:camera.position.toArray(),target:controls.target.toArray(),render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},partBounds:robot.instances.map(n=>{const box=new T.Box3().setFromObject(n.appearance),points=[];for(const x of [box.min.x,box.max.x])for(const y of [box.min.y,box.max.y])for(const z of [box.min.z,box.max.z])points.push(new T.Vector3(x,y,z).project(camera).toArray());return {id:n.node.name,visible:n.node.visible,min:box.min.toArray(),max:box.max.toArray(),projected:points};}),instances:robot.instances.map(n=>({id:n.id,instanceId:n.node.name,position:n.node.position.toArray(),rotation:n.node.quaternion.toArray(),visible:n.node.visible})),sensors:Object.fromEntries(Object.entries(robot.effects).filter(([,e])=>e.anchor).map(([k,e])=>[k,{position:e.anchor.getWorldPosition(new T.Vector3()).toArray(),forward:new T.Vector3(0,0,1).transformDirection(e.anchor.matrixWorld).toArray()}]))}),
+  snapshot:()=>({ready,mode,isolated,flight:!!cameraFlight,state:state.chapter,hand:hand?{visible:hand.root.visible,pad:hand.pad().toArray()}:null,contact:robot.instances.find(i=>i.id==='health').node.localToWorld(new T.Vector3(0,.0037,0)).toArray(),time:director.time,playing:director.playing,selected,open:inspectOpen,draws,interaction:{gesture:state.gesture.label,visible:interaction.gestures.visible,head:interaction.head.visible,reveal:reveal.snapshot()},camera:camera.position.toArray(),target:controls.target.toArray(),render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures},partBounds:robot.instances.map(n=>{const box=new T.Box3().setFromObject(n.appearance),points=[];for(const x of [box.min.x,box.max.x])for(const y of [box.min.y,box.max.y])for(const z of [box.min.z,box.max.z])points.push(new T.Vector3(x,y,z).project(camera).toArray());return {id:n.node.name,visible:n.node.visible,min:box.min.toArray(),max:box.max.toArray(),projected:points};}),instances:robot.instances.map(n=>({id:n.id,instanceId:n.node.name,position:n.node.position.toArray(),rotation:n.node.quaternion.toArray(),visible:n.node.visible})),sensors:Object.fromEntries(Object.entries(robot.effects).filter(([,e])=>e.anchor).map(([k,e])=>[k,{position:e.anchor.getWorldPosition(new T.Vector3()).toArray(),forward:new T.Vector3(0,0,1).transformDirection(e.anchor.matrixWorld).toArray()}]))}),
   setMode,enterInspect,leaveInspect,selectPart,expand,clearSelection, isolate:()=>{$('isolate').click();}, reset:()=>{$('inspectReset').click();},loseContext:()=>renderer.forceContextLoss(),restoreContext:()=>renderer.forceContextRestore()};
  if(exporting){mode='film';director.setMode(mode);document.body.dataset.mode=mode;external=true;await window.__careRover.seek(Number(params.get('t'))||0);}request();
  }catch(error){console.error('CareRover presentation',error);fallback('3D 未能载入 · 请使用离线影片或章节海报');}}
