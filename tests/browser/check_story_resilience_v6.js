@@ -1,0 +1,15 @@
+async page=>{
+ const result=[],check=(name,ok)=>{if(!ok)throw Error(name);result.push({name,status:'PASS'});};
+ await page.setViewportSize({width:1440,height:900});await page.goto('http://127.0.0.1:8765/presentation/');await page.waitForFunction(()=>window.__careRover);
+ await page.evaluate(()=>window.__careRover.seek(23));await page.evaluate(()=>window.__careRover.loseContext());await page.waitForFunction(()=>document.body.dataset.viewer==='fallback');
+ check('context loss gives usable offline film link',await page.locator('#loadStatus a').isVisible());
+ await page.evaluate(()=>window.__careRover.restoreContext());await page.waitForFunction(()=>document.body.dataset.viewer==='ready');
+ check('context restored with same semantic time',Math.abs((await page.evaluate(()=>window.__careRover.snapshot())).time-23)<.01);
+ await page.evaluate(()=>window.__careRover.enterInspect());await page.waitForTimeout(250);let a=await page.evaluate(()=>window.__careRover.snapshot());
+ for(let i=0;i<12;i++){await page.evaluate(()=>window.__careRover.selectPart('wheel'));await page.evaluate(()=>window.__careRover.reset());}
+ await page.waitForTimeout(900);let b=await page.evaluate(()=>window.__careRover.snapshot());check('repeated focus/reset does not accumulate CAD transforms',JSON.stringify(a.instances)===JSON.stringify(b.instances));check('repeated focus/reset keeps geometry count bounded',b.render.geometries<=a.render.geometries+20);
+ await page.mouse.move(1000,400);await page.waitForTimeout(1100);await page.mouse.move(140,35);await page.waitForFunction(()=>window.__careRover.snapshot().open<.001,{},{timeout:5000});check('unselected exit collapses after delay',(await page.evaluate(()=>window.__careRover.snapshot())).open<.001);
+ await page.emulateMedia({reducedMotion:'reduce'});await page.reload();await page.waitForFunction(()=>window.__careRover);await page.waitForTimeout(150);a=await page.evaluate(()=>window.__careRover.snapshot());await page.waitForTimeout(500);b=await page.evaluate(()=>window.__careRover.snapshot());check('reduced motion starts without autoplay',!b.playing&&b.time===a.time&&b.draws-a.draws<5);
+ await page.emulateMedia({reducedMotion:'no-preference'});await page.goto('http://127.0.0.1:8765/presentation/?static=1');check('explicit static fallback has poster and film',await page.locator('#poster').isVisible()&&await page.locator('#loadStatus a').isVisible());
+ return result;
+}

@@ -22,7 +22,7 @@ const DICT = {
 
     'cam.title':      '实时视野',
     'cam.source':     '画面源',
-    'cam.src.canvas': '合成画面',
+    'cam.src.canvas': '模拟视野',
     'cam.src.mjpeg':  '摄像头视频',
     'cam.src.file':   '本地视频…',
     'cam.stale':      '视觉数据过期',
@@ -65,7 +65,7 @@ const DICT = {
     'mode.FAULT':           '故障',
 
     'state.IDLE': '待机', 'state.READY': '就绪', 'state.DRIVING': '运动中',
-    'state.TRACKING': '跟随中', 'state.SEARCHING': '搜索目标', 'state.MEASURING': '测量中',
+    'state.TRACKING': '跟随中', 'state.SEARCHING': '等待目标', 'state.WAIT_TARGET': '等待目标 · 已停车', 'state.REACQUIRE': '重新确认目标', 'state.TURNING': '原地旋转', 'state.MEASURING': '测量中',
     'state.ESTOP': '急停锁定', 'state.FAULT': '故障',
 
     'gesture.none': '无手势',
@@ -175,7 +175,7 @@ const DICT = {
     'mode.FAULT':           'FAULT',
 
     'state.IDLE': 'IDLE', 'state.READY': 'READY', 'state.DRIVING': 'DRIVING',
-    'state.TRACKING': 'TRACKING', 'state.SEARCHING': 'SEARCHING', 'state.MEASURING': 'MEASURING',
+    'state.TRACKING': 'TRACKING', 'state.SEARCHING': 'WAITING', 'state.WAIT_TARGET': 'WAITING · STOPPED', 'state.REACQUIRE': 'REACQUIRING', 'state.TURNING': 'TURNING', 'state.MEASURING': 'MEASURING',
     'state.ESTOP': 'ESTOP', 'state.FAULT': 'FAULT',
 
     'gesture.none': 'No gesture',

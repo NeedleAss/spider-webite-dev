@@ -1,0 +1,167 @@
+{
+  "date": "2026-09-17",
+  "scope": "Software candidate; no hardware motion, flashing, remote push, or physical acceptance",
+  "baseline": "058ce89bd1aa5b5da0dbf89101f4625df70ca6df",
+  "implementation_commit": "78cc581b03c01dba9d66c4a789b61bc5f7788280",
+  "branch": "codex/final-polish",
+  "tests": {
+    "javascript": {
+      "status": "PASS",
+      "count": 24,
+      "command": "npm test"
+    },
+    "python": {
+      "status": "PASS",
+      "count": 37,
+      "command": ".venv/bin/python -m unittest discover -s tests -p test_*.py"
+    },
+    "firmware_host": {
+      "status": "PASS",
+      "suites": 10,
+      "independent_SAFE_BASELINE": "22/22",
+      "independent_DEMO_BALANCED": "23/23",
+      "command": "python3 tools/check_firmware.py"
+    },
+    "sanitizers": {
+      "status": "PASS",
+      "suites": 8,
+      "flags": "-fsanitize=address,undefined -fno-omit-frame-pointer",
+      "profiles": [
+        0,
+        1
+      ],
+      "tests": [
+        "final_safety",
+        "front",
+        "tracking",
+        "demo"
+      ]
+    },
+    "baseline_reproduction": {
+      "status": "EXPECTED FAIL",
+      "SAFE_BASELINE": "7/21",
+      "DEMO_BALANCED": "7/22",
+      "source": "evidence/final/baseline_reproduction.cpp",
+      "hashes": "evidence/final/baseline-source.json"
+    },
+    "original_handoff_integrity": {
+      "status": "PASS",
+      "manifest_entries": 617,
+      "note": "Historical reference integrity only; not current hardware evidence"
+    },
+    "historical_replay": {
+      "status": "PASS",
+      "note": "Offline candidate replay only; missing bbox in historical summaries prevents physical-follow conclusions"
+    }
+  },
+  "builds": [
+    {
+      "name": "safe",
+      "status": "PASS",
+      "firmware_version": "74f0e90609176d60-s5-follow",
+      "web_version": "5d48cc2344e42584",
+      "profile": {
+        "verification": "compile_only",
+        "fqbn": "esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,PSRAM=opi",
+        "core_version": "3.3.10",
+        "sensor_library_version": "1.1.2",
+        "flash_mode": "dio",
+        "flash_freq": "80m",
+        "flash_size": "16MB",
+        "wl_sector_size": 4096,
+        "notes": "Tracking compile-only configuration, 16MB flash / OPI PSRAM; physical board verification and Windows FQBN still required. Never flash compile-only builds."
+      },
+      "source_commit": "78cc581b03c01dba9d66c4a789b61bc5f7788280",
+      "source_dirty": false,
+      "program_bytes": 1094338,
+      "global_bytes": 62224,
+      "package": "build/stage5-follow-74f0e90609176d60-check",
+      "manifest_sha256": "1ecf6ae67ef9d02a47adb746f6206560878294edafdc1e34b4d9f77d01dc53af"
+    },
+    {
+      "name": "balanced",
+      "status": "PASS",
+      "firmware_version": "f3902789a4003713-s5-follow",
+      "web_version": "5d48cc2344e42584",
+      "profile": {
+        "verification": "compile_only",
+        "fqbn": "esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,PSRAM=opi",
+        "core_version": "3.3.10",
+        "sensor_library_version": "1.1.2",
+        "flash_mode": "dio",
+        "flash_freq": "80m",
+        "flash_size": "16MB",
+        "wl_sector_size": 4096,
+        "notes": "Tracking compile-only configuration, 16MB flash / OPI PSRAM; physical board verification and Windows FQBN still required. Never flash compile-only builds."
+      },
+      "source_commit": "78cc581b03c01dba9d66c4a789b61bc5f7788280",
+      "source_dirty": false,
+      "program_bytes": 1096730,
+      "global_bytes": 56912,
+      "package": "build/stage5-follow-f3902789a4003713-check",
+      "manifest_sha256": "d4237a91ceaa90c7e9cd2e0eaf540340c73b3069ce79d1cf016d740e4ae8b3e3"
+    },
+    {
+      "name": "observe",
+      "status": "PASS",
+      "firmware_version": "74f0e90609176d60-s5-observe",
+      "web_version": "5d48cc2344e42584",
+      "profile": {
+        "verification": "compile_only",
+        "fqbn": "esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,PSRAM=opi",
+        "core_version": "3.3.10",
+        "sensor_library_version": "1.1.2",
+        "flash_mode": "dio",
+        "flash_freq": "80m",
+        "flash_size": "16MB",
+        "wl_sector_size": 4096,
+        "notes": "Tracking compile-only configuration, 16MB flash / OPI PSRAM; physical board verification and Windows FQBN still required. Never flash compile-only builds."
+      },
+      "source_commit": "78cc581b03c01dba9d66c4a789b61bc5f7788280",
+      "source_dirty": false,
+      "program_bytes": 1085014,
+      "global_bytes": 62200,
+      "package": "build/stage5-observe-74f0e90609176d60-check",
+      "manifest_sha256": "d8a0b7a166038153db0d7f98b89a2797c87f10341b0ef07e83ff07c816b9e65a"
+    }
+  ],
+  "cad": {
+    "status": "PASS",
+    "part_meshes": 15,
+    "visible_instances": 20,
+    "hidden_instances": 1,
+    "unique_mesh_triangles": 15110,
+    "glb_bytes": 701560,
+    "glb_sha256": "2310e2bd46a6940497349d1acf00ef70bd8279881a637424b2764c136229d61b",
+    "validator_errors": 0,
+    "validator_warnings": 0,
+    "validator_hints": 0,
+    "reexport": "byte identical",
+    "native_CAD": "NOT RUN"
+  },
+  "browser": {
+    "status": "PASS for listed manual checks",
+    "details": "evidence/final/browser-qa.json",
+    "viewports": [
+      [
+        1280,
+        720
+      ],
+      [
+        390,
+        844
+      ]
+    ],
+    "physical_touch_device": "NOT RUN",
+    "reduced_motion_OS_toggle": "NOT RUN; code inspected",
+    "GPU_context_loss_injection": "NOT RUN; static fallback tested"
+  },
+  "physical_acceptance": "NOT RUN",
+  "safety_task_stall": "RELEASE BLOCKER: independent PWM / wheel stop unproven",
+  "cam_build_this_sprint": "NOT RUN; production CAM source unchanged",
+  "evidence_paths": {
+    "workspace": "output/final/",
+    "archive": "evidence/final/"
+  },
+  "archive_name": "output/CareRover_Final_Candidate_20260917.zip"
+}

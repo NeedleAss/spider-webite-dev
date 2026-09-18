@@ -1,0 +1,10 @@
+Safety controller: expired input zeros; owner/network loss cancels; arbitration preserved
+Tracking protocol, follow, safety, IMU and JPEG leases passed
+Orthogonal omni mixing, PWM calibration, rejection, deadline and initialization failure passed
+Front protection: raw stop, filter, freshness, release latch, full bypass and 40 fault/phase cases passed
+HC-SR04 driver: pulse spacing, edge capture, timeout, stuck high, invalid pulse and timer wrap passed
+Field tuning regressions passed
+Demo display votes, action freshness, timed metric hold and gesture arbitration passed
+Demo display votes, action freshness, timed metric hold and gesture arbitration passed
+SAFE_BASELINE: 22/22 checks passed
+DEMO_BALANCED: 23/23 checks passed

@@ -1,6 +1,10 @@
+V7 当前展示入口：先读 `docs/V7_DECISIONS.md`、`docs/V7_ACCEPTANCE.md`、`presentation/README.md`。用户已接受结构/扫描/回波三段样片，明确要求自由探索沿用同一拆合方式；生产故事与 Inspect 共用 `presentation/v7/assembly.js`。V7 覆盖旧版成人/房间与平面分列布局要求。新手部和新长片仍是视觉审核候选；固件与根操作台继续使用以下 V6 交接和现场门槛。
+
 # CareRover Windows 续作
 
-这是已有集成源码，不是空白项目。先读 `docs/0915-demo-development.md` 了解 0915 合并、配置选择与证据边界；原始 0915 文件夹同样保持不变。开始工作先读 `WINDOWS_START_HERE.md`、`docs/WINDOWS_0915_HANDOFF.md`（当前入口），按需参考 `docs/WINDOWS_ULTRASONIC_HANDOFF.md` 的现场流程，再读 `docs/tracking-development.md`、`docs/ultrasonic-development.md` 和对应验收记录。`docs/WINDOWS_AI_HANDOFF.md` 是早期改动索引，其历史未提交状态不代表当前 Git。本文件适用于此工程；原始参考目录保持不变。
+V6 当前候选：先读 `docs/V6_DECISIONS.md`、`docs/V6_ACCEPTANCE.md` 和 `docs/V6_DELIVERY.md`，实物接手用 `docs/V6_WINDOWS_AI_PROMPT.md`。用户已决定默认直接手势，不需要网页先授权；旧报告中的强制网页手势准入不再适用。`V6_CONSOLE_AND_FIRMWARE.md` 是早期软件检查点；当前影片和展示证据以 V6_ACCEPTANCE 为准，不能据此放行真机动力。
+
+这是已有集成源码，不是空白项目。V4 展示与控制台更新先读 `docs/V4_ACCEPTANCE.md`、`docs/visual-v4/RESULTS.json` 和 `docs/V4_WINDOWS_AI_PROMPT.md`；旧冻结包与旧视觉交互说明属于历史。当前最终候选先读 `WINDOWS_START_HERE.md`、`docs/FINAL_TEAM_HANDOFF.md` 和 `docs/FINAL_ACCEPTANCE.md`；当前阈值和任务范围优先于历史交接。历史背景再读 `docs/0915-demo-development.md` 了解 0915 合并、配置选择与证据边界；原始 0915 文件夹同样保持不变。开始工作先读 `WINDOWS_START_HERE.md`、`docs/WINDOWS_0915_HANDOFF.md`（历史环境与设备流程），按需参考 `docs/WINDOWS_ULTRASONIC_HANDOFF.md` 的现场流程，再读 `docs/tracking-development.md`、`docs/ultrasonic-development.md` 和对应验收记录。`docs/WINDOWS_AI_HANDOFF.md` 是早期改动索引，其历史未提交状态不代表当前 Git。本文件适用于此工程；原始参考目录保持不变。
 
 - 当前根目录 `firmware/`、`js/`、`tools/` 是开发代码；`CareRover_Tracking_Motion_Handoff_2026-09-11/` 是原始参考，不能整目录覆盖回来。
 - 本机软件构建/主机测试通过，本轮新代码尚无 Windows/实物证据；0915 原包含历史现场记录，不能转算为本轮新代码验收。不要把 Mac PASS、模拟遥测或控制输出当作实物验收。

@@ -1,0 +1,69 @@
+{
+  "target": "cam",
+  "variant": "stream",
+  "tuning_profile": "DEMO_BALANCED",
+  "verification": "compile_only",
+  "flash_size": "8MB",
+  "idf": "5.3.4",
+  "dependencies": {
+    "esp_idf": {
+      "url": "https://github.com/espressif/esp-idf.git",
+      "tag": "v5.3.4",
+      "commit": "1b459d9c4950395dec12ce19256c73f9a41e306f"
+    },
+    "esp_dl": {
+      "url": "https://github.com/espressif/esp-dl.git",
+      "tag": "v3.3.11",
+      "commit": "5d9c36063dddbe98b5387828c831d6bbadb1370f"
+    },
+    "components": {
+      "esp32-camera": "2.1.3",
+      "hand_gesture_recognition": "0.2.0",
+      "hand_detect": "0.2.0",
+      "human_face_detect": "0.5.0",
+      "esp_new_jpeg": "1.0.2",
+      "esp_jpeg": "1.3.1",
+      "dl_fft": "0.7.0"
+    },
+    "host_build_tools": {
+      "cmake": "3.30.5",
+      "ninja": "1.11.1.3"
+    }
+  },
+  "files": {
+    "bootloader/bootloader.bin": {
+      "address": 0,
+      "sha256": "c95c93b6d07ee8facb88db31f0835068218a271d46855ec6a1f3170c7e632596",
+      "bytes": 21552
+    },
+    "carerover_cam_tracking.bin": {
+      "address": 65536,
+      "sha256": "39105869007019496aede5421f48872d82e17339d22f55b9c98b463bbfcc3669",
+      "bytes": 4195280
+    },
+    "partition_table/partition-table.bin": {
+      "address": 32768,
+      "sha256": "790756bb2d460ac6007db512e1e8811da2b872d1632d787ab90a6d6bd45c06b1",
+      "bytes": 3072
+    }
+  },
+  "hardware_status": "NOT RUN",
+  "source_commit": "40fe1516abfc3b43f6f734bf489d69f04b59b152",
+  "source_dirty": false,
+  "source_files": {
+    "firmware/cam_tracking/main/CMakeLists.txt": "f4acba5f5b96fc64aa91b76fff9310a1eaa7a310c0ef501fd39b05795794fc9d",
+    "firmware/cam_tracking/main/Kconfig.projbuild": "83ed28857b55630e3cf1dbe45bb3600d985670e9b7353bd386f521d8b80f3fee",
+    "firmware/cam_tracking/main/idf_component.yml": "7b9bf33522224ef6570e2bbb771819306c92e1f545ac3b3a247fbbcfb5d4e6b8",
+    "firmware/cam_tracking/main/latest_frame.h": "e3335f8da6ca27eaf907bcb4808f3c261d0e63f40243852e7b6f885cc7fdf7d5",
+    "firmware/cam_tracking/main/main.cpp": "902d369482b354ad914c3edd9405a4b0aaabba86f77cfe614e7317f31637f34c",
+    "firmware/cam_tracking/main/video_server.cpp": "00367914ef1fd50395646084734260b1675e179c55fb5f7d0b6490542b4f2587",
+    "firmware/cam_tracking/main/video_server.h": "91ca021ea2da1e72b82c54d1e0f5e4ba6b17118059c12267cc1dff5bc41e435e",
+    "firmware/cam_tracking/CMakeLists.txt": "2b6ff70dc44fdc04d3286e50d3091dfa1994a4a6a1794c5397dc3007cdce805d",
+    "firmware/cam_tracking/partitions.csv": "28ef39c6bb9ed8a1d0d58ab1ddbe88ae176f1699b8a55c3bda4005e3fffbe5f3",
+    "firmware/cam_tracking/sdkconfig.defaults": "94a255ed6a31ddc5fb64d3baf2005138cc63d9de0a08e3e911e9922f8ff245d9",
+    "firmware/main_wireless/vision_protocol.h": "fc815f36cce0ef984abdb4809c25488e09a24c04ac305b4e74cff9775276fbb9",
+    "firmware/main_wireless/box_track.h": "4b4f67375727371fad579d8ad1051b61bf0dd85bce40dafc449f42c3630909fd",
+    "firmware/main_wireless/demo_tuning.h": "1a19c567f8c5b70b8ae63ab50d9fe8f5a90ad3fae2c120c24e73e061e8afacb8"
+  },
+  "sdkconfig_sha256": "a0ee45abf97ec3f7ed9ed4ebc4aac141419eeb8f3fa2b2e510669a5f830cfe4c"
+}

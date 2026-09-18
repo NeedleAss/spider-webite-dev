@@ -24,6 +24,15 @@ class TrackingToolTests(unittest.TestCase):
             with zipfile.ZipFile(out) as archive:
                 self.assertIn('firmware/main_wireless/front_guard.h',archive.namelist())
                 self.assertNotIn('firmware/main_wireless/front_config.local.h',archive.namelist())
+            selected=root/'selected-evidence';selected.mkdir();(selected/'new.txt').write_text('current results')
+            old=root/'output/evidence';old.mkdir(parents=True);(old/'old.txt').write_text('historic results')
+            with patch.object(tracking,'ROOT',root),patch.object(tracking,'source_info',return_value={}):
+                tracking.release(SimpleNamespace(output=str(out),include_reference=False,evidence_dir=str(selected)))
+            with zipfile.ZipFile(out) as archive:
+                self.assertIn('evidence/new.txt',archive.namelist())
+                self.assertNotIn('evidence/old.txt',archive.namelist())
+                evidence=json.loads(archive.read('EVIDENCE_MANIFEST.json'))
+                self.assertEqual(list(evidence),['evidence/new.txt'])
 
     def test_archive_provenance_without_git_and_after_edit(self):
         with tempfile.TemporaryDirectory() as d:

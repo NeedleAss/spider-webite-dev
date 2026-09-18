@@ -17,10 +17,25 @@ class SimulationTest(unittest.TestCase):
         sim=RobotSim();sim.command(cmd('set_mode',mode='MANUAL'),0)
         sim.command(cmd('cmd_vel',vx=1,vy=0,wz=0),0);sim.step(.02,.02)
         self.assertGreater(sim.velocity[0],0)
-        sim.step(.24,.26);self.assertEqual(sim.velocity,[0,0,0])
+        sim.step(.29,.31);self.assertEqual(sim.velocity,[0,0,0])
         sim.command(cmd('estop'),.3)
         self.assertEqual(sim.command(cmd('cmd_vel',vx=1,vy=0,wz=0),.3)[0]['code'],'ESTOP_ACTIVE')
         sim.command(cmd('clear_estop'),.4);self.assertEqual(sim.mode,'IDLE')
+    def test_lost_person_periodic_wait_and_gesture_stop(self):
+        sim=RobotSim();sim.command(cmd('set_mode',mode='PERSON_FOLLOW'),0)
+        sim.person_override=False;sim.person['found']=False
+        for i in range(301):
+            now=i*.1;sim.command(cmd('ping'),now);sim.step(.1,now)
+            self.assertEqual(sim.velocity,[0,0,0])
+        self.assertEqual(sim.mode,'IDLE')
+        sim.command(cmd('set_mode',mode='PERSON_FOLLOW'),31)
+        self.assertIsNone(sim.wait_since)
+        sim.command(cmd('cmd_vel',vx=0,vy=0,wz=0),31)
+        self.assertEqual(sim.mode,'IDLE')
+        sim.command(cmd('set_mode',mode='GESTURE_CONTROL'),32)
+        sim.step(10,42);self.assertEqual(sim.velocity,[0,0,0])
+        sim.command(cmd('cmd_vel',vx=0,vy=0,wz=0),42)
+        self.assertEqual(sim.mode,'IDLE')
     def test_malformed_velocity_is_rejected(self):
         sim=RobotSim()
         for v in (True,'1',float('inf'),None,2):
@@ -89,6 +104,26 @@ class NetworkTest(unittest.IsolatedAsyncioTestCase):
         stopped=await self.receive(a,'telemetry',lambda m:m['robot']['mode']=='IDLE')
         self.assertFalse(stopped['front']['demo_enabled'])
         self.assertEqual(stopped['robot']['vx'],0)
+        await a.close();await b.close()
+
+    async def test_normal_release_hands_back_ownership_but_delayed_release_cannot_cancel_new_owner(self):
+        a=await self.session.ws_connect(self.server.make_url('/ws'))
+        b=await self.session.ws_connect(self.server.make_url('/ws'))
+        initial=await self.receive(b,'telemetry');self.assertFalse(initial['robot']['control_owned'])
+        await a.send_json(cmd('set_mode',mode='MANUAL'));await self.receive(a,'ack')
+        await a.send_json(cmd('cmd_vel',vx=.4,vy=0,wz=0))
+        await self.receive(a,'telemetry',lambda m:m['robot'].get('control_owned') and m['robot']['vx']>0)
+        await a.send_json(cmd('cmd_vel',vx=0,vy=0,wz=0,release_only=True))
+        await self.receive(b,'telemetry',lambda m:not m['robot']['control_occupied'])
+        await b.send_json(cmd('cmd_vel',vx=.3,vy=0,wz=0))
+        await self.receive(b,'telemetry',lambda m:m['robot']['control_owned'] and m['robot']['vx']>0)
+        await a.send_json(cmd('cmd_vel',vx=0,vy=0,wz=0,release_only=True))
+        await b.send_json(cmd('cmd_vel',vx=.3,vy=0,wz=0))
+        kept=await self.receive(b,'telemetry',lambda m:m['robot']['control_owned'] and m['robot']['vx']>0)
+        self.assertEqual(kept['robot']['mode'],'MANUAL')
+        await b.send_json(cmd('set_mode',mode='IDLE'));await self.receive(b,'ack')
+        free=await self.receive(a,'telemetry',lambda m:m['robot']['mode']=='IDLE')
+        self.assertFalse(free['robot']['control_occupied'])
         await a.close();await b.close()
 
     async def test_private_paths_and_cross_origin_control_are_blocked(self):

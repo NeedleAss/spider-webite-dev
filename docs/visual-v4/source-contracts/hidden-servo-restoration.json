@@ -1,0 +1,27 @@
+[
+  {
+    "sourceName": "舵机",
+    "referenceNumber": "7",
+    "matrix": [
+      1.0,
+      1.224646799147353e-16,
+      1.04744440165294e-14,
+      0.0,
+      1.04744440165294e-14,
+      1.224646799147353e-16,
+      -1.0,
+      0.0,
+      -1.224646799147366e-16,
+      1.0,
+      1.22464679914734e-16,
+      0.0,
+      0.005100000000000156,
+      -0.002999999999999997,
+      -0.01499999999999992,
+      1.0
+    ],
+    "sourceVisibility": "hidden",
+    "plannedVisibility": "visible per user quantity-four declaration",
+    "approval": "restore exact saved placement only; do not invent a mirrored placement; final installation still to confirm"
+  }
+]

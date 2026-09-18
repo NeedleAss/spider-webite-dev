@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "frames": 3360,
+  "durationSeconds": 112.0,
+  "size": [
+    1920,
+    1080
+  ],
+  "fps": 30.0,
+  "codec": "h264",
+  "fullAudioVideoDecode": "PASS",
+  "sourceHashesVerified": 25,
+  "sha256": "e9b02cff21c9d5c17625a4b6cb150e72101ce019d921cc7e0da52bb488b05bb9",
+  "visualReview": "Encoded four-second sample sheets plus browser/hand close-ups; final user visual acceptance pending.",
+  "hardware": "NOT RUN"
+}

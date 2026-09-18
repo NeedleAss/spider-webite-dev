@@ -6,10 +6,10 @@ import subprocess
 import tempfile
 ROOT=Path(__file__).resolve().parents[1]
 with tempfile.TemporaryDirectory(prefix='carerover-tests-') as d:
-    for name in ['safety','tracking','drive','front','ultrasonic','tuning','demo','demo_balanced']:
+    for name in ['safety','tracking','drive','front','ultrasonic','tuning','demo','demo_balanced','final_safety','final_safety_balanced','gesture_handoff','gesture_handoff_balanced']:
         command=[os.environ.get('CXX','c++'),'-std=c++17','-Wall','-Wextra','-Werror','-Ifirmware/main_wireless','-Ifirmware/cam_tracking/main']
-        source_name='demo' if name=='demo_balanced' else name
-        if name=='demo_balanced': command+=['-DCAREROVER_TUNING_PROFILE=1']
+        source_name=name.removesuffix('_balanced')
+        if name.endswith('_balanced'): command+=['-DCAREROVER_TUNING_PROFILE=1']
         if name=='ultrasonic':command+=['-Itests/fakes/ultrasonic']
         if name=='drive':command+=['-Itests/fakes','firmware/main_wireless/continuous_servo_drive.cpp']
         exe=Path(d)/(name+('.exe' if os.name=='nt' else ''))

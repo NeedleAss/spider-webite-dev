@@ -1,0 +1,45 @@
+{
+  "uri": "carerover.glb",
+  "mimeType": "model/gltf-binary",
+  "validatorVersion": "2.0.0-dev.3.10",
+  "validatedAt": "2026-09-17T10:31:06.493Z",
+  "issues": {
+    "numErrors": 0,
+    "numWarnings": 0,
+    "numInfos": 1,
+    "numHints": 0,
+    "messages": [
+      {
+        "code": "NODE_MATRIX_DEFAULT",
+        "message": "Do not specify default transform matrix.",
+        "severity": 2,
+        "pointer": "/nodes/0/matrix"
+      }
+    ],
+    "truncated": false
+  },
+  "info": {
+    "version": "2.0",
+    "generator": "CareRover saved-CAD display exporter",
+    "resources": [
+      {
+        "pointer": "/buffers/0",
+        "mimeType": "application/gltf-buffer",
+        "storage": "glb",
+        "byteLength": 683256
+      }
+    ],
+    "animationCount": 0,
+    "materialCount": 15,
+    "hasMorphTargets": false,
+    "hasSkins": false,
+    "hasTextures": false,
+    "hasDefaultScene": true,
+    "drawCallCount": 15,
+    "totalVertexCount": 20914,
+    "totalTriangleCount": 15110,
+    "maxUVs": 0,
+    "maxInfluences": 0,
+    "maxAttributes": 2
+  }
+}

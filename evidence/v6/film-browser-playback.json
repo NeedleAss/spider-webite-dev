@@ -1,0 +1,15 @@
+{
+  "ended": true,
+  "time": 150,
+  "duration": 150,
+  "width": 1920,
+  "height": 1080,
+  "error": null,
+  "totalFrames": 4500,
+  "droppedFrames": 11,
+  "playbackRate": 2,
+  "muted": true,
+  "status": "PASS",
+  "scope": "Chromium local HTTP complete MP4 playback at 2x muted; no listening or physical test",
+  "sha256": "18c6873d0b87dfe09aa2b843e07a363ed3007f9dabeac00912516fbbdba2d6c2"
+}

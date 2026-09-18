@@ -1,0 +1,34 @@
+✔ CAM multipart parser survives every byte split and returns only the latest complete frame (6.498667ms)
+✔ malformed, duplicate and oversized JPEG framing is rejected within fixed buffer limits (0.149ms)
+✔ decoded arrivals authorize LIVE; a retained frame expires independently of metadata (16.297417ms)
+✔ source switch discards late decode and closes its bitmap (0.9485ms)
+✔ one decoding frame and one latest pending frame bound backlog (1.129583ms)
+✔ busy HTTP response does not open reader or retry; first-frame timeout is bounded (1.105166ms)
+✖ continuous arrivals do not starve display when decoding is slower than the source (1.004ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 6
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 74.854584
+
+✖ failing tests:
+
+test at tests/video-stream.test.js:57:1
+✖ continuous arrivals do not starve display when decoding is slower than the source (1.004ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  undefined !== 1
+  
+      at TestContext.<anonymous> (file:///Users/eddysiangz/Developer/spider-webite-dev/tests/video-stream.test.js:60:143)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:911:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

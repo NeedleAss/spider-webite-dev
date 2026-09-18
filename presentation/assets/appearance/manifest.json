@@ -1,0 +1,460 @@
+{
+  "version": "v7.0",
+  "baselineCommit": "1d073b5",
+  "originalGLBSha256": "2310e2bd46a6940497349d1acf00ef70bd8279881a637424b2764c136229d61b",
+  "units": "metres; no legacy 1000 scale",
+  "geometry": "Original CAD structural meshes and saved installation transforms; authored runtime appearance for nine hardware classes. Not a calibrated scan.",
+  "targetAssembly": {
+    "wheels": 4,
+    "servos": 4,
+    "servo7": "Original saved hidden placement restored in derivative only",
+    "display": "Top lid"
+  },
+  "references": {
+    "robot-front.jpg": "Team photograph embedded in V4 PDF, extracted unchanged; unfinished assembly",
+    "robot-open.jpg": "Team photograph crop embedded in V4 PDF, extracted unchanged; background personal card already excluded"
+  },
+  "publicTextures": "Procedural hardware silk-screen/OLED/materials plus CC0 MakeHuman skin, clothing and hair textures; see assets/actors/BUILD_INPUTS.json and LICENSE-CC0.txt. No merchant images used as textures.",
+  "uncertainties": [
+    "Final sonar installation depth and TX/RX",
+    "Exact camera optical FOV",
+    "Board revision and hidden details",
+    "Cable endpoints, pin mapping and lengths",
+    "Physical confirmation of fourth servo installation"
+  ],
+  "cables": "Illustrative module-level routes; fade/omit when fixed illustrative slack is exceeded; not an electrical wiring diagram.",
+  "proxyReplacement": "Complete semantic controller appearance replaced; source CAD/GLB untouched; two wire blocks are absent from the new controller.",
+  "animation": "Independent educational simulation. No robot WebSocket or motion commands.",
+  "files": [
+    {
+      "path": "app.js",
+      "bytes": 23764,
+      "sha256": "6c289a4b2e1272ee7306c9f143a2ba561bb15361274e2bfaace584f662877043"
+    },
+    {
+      "path": "assets/actors/BUILD_INPUTS.json",
+      "bytes": 978,
+      "sha256": "6aabe22e808a87a9e26f2e0a8d3837b147ea31c7a170ad0fd988552e0a6545f5"
+    },
+    {
+      "path": "assets/actors/LICENSE-CC0.txt",
+      "bytes": 6962,
+      "sha256": "f6089cba01cb570a24712b41ab8a586ccd3cc5ef53dc266ca50b95c288956d2c"
+    },
+    {
+      "path": "assets/actors/adult-source.json",
+      "bytes": 40265,
+      "sha256": "1cb42cce8cbd41f1f49b6900d79ceafb4ea98f8c3e2dcaa85eb3f893fe6e9d0d"
+    },
+    {
+      "path": "assets/actors/adult.glb",
+      "bytes": 4750856,
+      "sha256": "ea891bc748b7c5a04f1fdbd98db2e3c278c047c7b14972de6c62c30ce2a1069f"
+    },
+    {
+      "path": "assets/appearance/care-mobile.png",
+      "bytes": 43174,
+      "sha256": "6ce78bccf9f70d049a1306de2fb6e8a6941c5e031c9574b245b1214d5333c3b4"
+    },
+    {
+      "path": "assets/appearance/care.png",
+      "bytes": 145192,
+      "sha256": "8272f428fb4e385268c767ec77ebd554728127fb4b2d245d7b960d7fa4f13f3d"
+    },
+    {
+      "path": "assets/appearance/inside-mobile.png",
+      "bytes": 64415,
+      "sha256": "0d4e0ba8ab82d0b3fdb9c232ce61b69407f88495a68e521e2f647f6098f6b72d"
+    },
+    {
+      "path": "assets/appearance/inside.png",
+      "bytes": 217986,
+      "sha256": "87435a16b57f3a623604c65d65fe23b7a0ece15838d8e5c70f4f87cf7291ac33"
+    },
+    {
+      "path": "assets/appearance/meet-mobile.png",
+      "bytes": 59790,
+      "sha256": "07981f5a8e6fb970d0becd14ed0e5a0198bee3a48c38ff37897558ca95ea0c7e"
+    },
+    {
+      "path": "assets/appearance/meet.png",
+      "bytes": 178922,
+      "sha256": "12ec9422fd1ed12742bd9db0d942ec72c51001256762db047107053f60c85c54"
+    },
+    {
+      "path": "assets/appearance/motion-mobile.png",
+      "bytes": 44632,
+      "sha256": "9245d8fd55611561349ca5b1693ea43ced5c8ac28640b747459e1eb3129ae4e8"
+    },
+    {
+      "path": "assets/appearance/motion.png",
+      "bytes": 162193,
+      "sha256": "ba9b0f58bba97f2f3d6b39b9908abf7b2921cb240252f056ba2489a7f5378727"
+    },
+    {
+      "path": "assets/appearance/range-mobile.png",
+      "bytes": 46084,
+      "sha256": "3c59a1adfce204fa3ac8e3e97cb4e4b361342155ab2a18ce5d75a8cd02ad5d6c"
+    },
+    {
+      "path": "assets/appearance/range.png",
+      "bytes": 153220,
+      "sha256": "ed79b43d43a9d4988059b34b26a9a30fcf4b2be77c9981782442d09e3b6b5ff5"
+    },
+    {
+      "path": "assets/appearance/vision-mobile.png",
+      "bytes": 46533,
+      "sha256": "e15f75282455d8c3532aca4d9adfb7ffefeb22267cbeed2237fb8fe46632822e"
+    },
+    {
+      "path": "assets/appearance/vision.png",
+      "bytes": 141096,
+      "sha256": "208864e419ba8f051f8db7c6fc7ec9b6abad32f200f4acec3a784a90563f2919"
+    },
+    {
+      "path": "assets/appearance/whole-mobile.png",
+      "bytes": 49251,
+      "sha256": "9b739dff827bc6e38f056118900776f388f86ae41549dd9dd59da031905e8e0a"
+    },
+    {
+      "path": "assets/appearance/whole.png",
+      "bytes": 178956,
+      "sha256": "c9768fe29341433ff26cf2d9879a4d98de654047b75cccf0c499a89052ae2915"
+    },
+    {
+      "path": "assets/cad/carerover.glb",
+      "bytes": 701560,
+      "sha256": "2310e2bd46a6940497349d1acf00ef70bd8279881a637424b2764c136229d61b"
+    },
+    {
+      "path": "assets/film/CareRover-film.mp4",
+      "bytes": 14017538,
+      "sha256": "18c6873d0b87dfe09aa2b843e07a363ed3007f9dabeac00912516fbbdba2d6c2"
+    },
+    {
+      "path": "assets/film/CareRover-film.srt",
+      "bytes": 1497,
+      "sha256": "36f6e1503be39a530cd1a952cd8d0d7251a5c76e2a142343127ea6e080adc94e"
+    },
+    {
+      "path": "assets/film/CareRover-film.vtt",
+      "bytes": 1481,
+      "sha256": "5c97d420eae6620e0820456b595be94070425525d9ae2c3e13e8776ddac386e7"
+    },
+    {
+      "path": "assets/film/FILM_MANIFEST.json",
+      "bytes": 7322,
+      "sha256": "1690c04d4f9cd7b332bd7f8e81cc9c0b8df1ba44a1178c1b295e41022281ba9c"
+    },
+    {
+      "path": "assets/film/TIMELINE.json",
+      "bytes": 3655,
+      "sha256": "077286d9f58f6146099aca1dee9631327b25c24bae666dd77447330694a9bd6e"
+    },
+    {
+      "path": "assets/film/console-demo.mp4",
+      "bytes": 643404,
+      "sha256": "91d4c808b14ca740256803ba6fb58fff260b0c2dfb83020410886bc8599c6eb2"
+    },
+    {
+      "path": "assets/film/poster.jpg",
+      "bytes": 124396,
+      "sha256": "a5ee1b03ab04898cfe42e42d3f0e08c53cf4829df1b2af8c1cc4a010a71e8929"
+    },
+    {
+      "path": "assets/film-v7/CareRover-film.mp4",
+      "bytes": 9790033,
+      "sha256": "e9b02cff21c9d5c17625a4b6cb150e72101ce019d921cc7e0da52bb488b05bb9"
+    },
+    {
+      "path": "assets/film-v7/CareRover-film.srt",
+      "bytes": 1152,
+      "sha256": "2d9bbcaaf167e90ce524871f488548b6c478f0817f5f835e0bc2d32c0e0b14da"
+    },
+    {
+      "path": "assets/film-v7/CareRover-film.vtt",
+      "bytes": 1142,
+      "sha256": "927f1d8979537e7b082ee3b3713b0ad5469e8646c92a6b0e8d217920824463b1"
+    },
+    {
+      "path": "assets/film-v7/FILM_MANIFEST.json",
+      "bytes": 4076,
+      "sha256": "1faedc2ab05337c61c46b8478605b179350ddfa2eb2e4ae63a85bfb3aa3c64f5"
+    },
+    {
+      "path": "assets/film-v7/TIMELINE.json",
+      "bytes": 2903,
+      "sha256": "2651db7df23a4b66950653e29e8e5c57e1f56581c6382042636f5a77bd0cd873"
+    },
+    {
+      "path": "assets/film-v7/poster.jpg",
+      "bytes": 124183,
+      "sha256": "8b5b9836ca530b0011e71c82467b5f16e4d770c1cb9a06040ee7ffd7c7e3804f"
+    },
+    {
+      "path": "assets/hand/LICENSE.txt",
+      "bytes": 6962,
+      "sha256": "f6089cba01cb570a24712b41ab8a586ccd3cc5ef53dc266ca50b95c288956d2c"
+    },
+    {
+      "path": "assets/hand/SOURCE.json",
+      "bytes": 663,
+      "sha256": "ba8a6084cd8bb61762e6539882acb1c2800295d3f58f185ea85ffe7514b83e7e"
+    },
+    {
+      "path": "assets/hand/back.png",
+      "bytes": 955579,
+      "sha256": "227ad81c2b4b1cef900f87a0e49b87371a29dc77c9cd495e685a49af2c603735"
+    },
+    {
+      "path": "assets/hand/contact.jpg",
+      "bytes": 134999,
+      "sha256": "d1ad9fa66c231c3b780da32aa77e745a17f3b96b8fd6d9283a6fc8c7b1e54ef2"
+    },
+    {
+      "path": "assets/hand/contact.mp4",
+      "bytes": 564027,
+      "sha256": "c9067496358fed5dca3cee9067207aa9b52ea5bc55f654718260d0f4279e360f"
+    },
+    {
+      "path": "assets/hand/hand_demo.glb",
+      "bytes": 514228,
+      "sha256": "bbb567c4d50d2dc7cbd8db12ed883ff4c818c2798b6cc87406e7fcc5029fb846"
+    },
+    {
+      "path": "assets/hand/hand_source.blend",
+      "bytes": 3338109,
+      "sha256": "fe08e4ad6386ef4ec447414f527d3a4c518773fd1e988f5495990e9922740137"
+    },
+    {
+      "path": "assets/hand/palm.png",
+      "bytes": 954458,
+      "sha256": "3f53f1acb8ff6c19ee9c9d4eee0672d29ea5b3a375ae2a9701186e0ecc437498"
+    },
+    {
+      "path": "assets/hand/side.png",
+      "bytes": 955846,
+      "sha256": "14883460053cf42bee91d80e903fce2bde16bdaea2b050213589b88b51cd49f1"
+    },
+    {
+      "path": "assets/interaction/LICENSE.txt",
+      "bytes": 6962,
+      "sha256": "f6089cba01cb570a24712b41ab8a586ccd3cc5ef53dc266ca50b95c288956d2c"
+    },
+    {
+      "path": "assets/interaction/SOURCE.json",
+      "bytes": 437,
+      "sha256": "f5af8909d21e9506f55f414c9b63e6a798ebdb941b7a7b621843867f194d54d0"
+    },
+    {
+      "path": "assets/interaction/head.glb",
+      "bytes": 803664,
+      "sha256": "2a85c721b014da10c7b6bdce152138bdc4be837a1b4cdafc5febe99a75d456b8"
+    },
+    {
+      "path": "assets/interaction/like.glb",
+      "bytes": 347660,
+      "sha256": "57f2899f43c53a7a9a9e7f9b302de5e1606b0e13842e2bc853b1e72319655d2b"
+    },
+    {
+      "path": "assets/interaction/two.glb",
+      "bytes": 347660,
+      "sha256": "4fbaa8a1826ac758b88abb83058d26e71c1d662bb3ee850938a9324675e596ef"
+    },
+    {
+      "path": "assets/reference/robot-front.jpg",
+      "bytes": 242889,
+      "sha256": "68696a887309c1239566faf6fd72966ae2fbd98b09a600d71dda8e686bfc5147"
+    },
+    {
+      "path": "assets/reference/robot-open.jpg",
+      "bytes": 557312,
+      "sha256": "ee36d6129265207044fe78db7f3fe49e0c0db7fc0449b12fc9d93ab7770e2382"
+    },
+    {
+      "path": "effects/sensors.js",
+      "bytes": 3922,
+      "sha256": "cd9f626d4f69ba8095963b76c32b70a2a615ce216ef5dc9a233fad4b9150f2fc"
+    },
+    {
+      "path": "hand.html",
+      "bytes": 2041,
+      "sha256": "dce41a948ca20eb19c4ad08d9bc9dc2f2d41e1ea19ab36df0ceb5574666e68f9"
+    },
+    {
+      "path": "index.html",
+      "bytes": 5921,
+      "sha256": "12c543aac1336a85a261d28d90873e1eb92d681bed9f78616a250a23bc6b4855"
+    },
+    {
+      "path": "parts.js",
+      "bytes": 5460,
+      "sha256": "0dbdf7e69e8123b0c404d5438bab193526d81e3b151351eb8fe56f1a0cf6d4b8"
+    },
+    {
+      "path": "scene/actor.js",
+      "bytes": 6726,
+      "sha256": "207c28723c65221fd0911b0f642af4b1cd39ca5f71fa8936d26d0a0cf8575cbc"
+    },
+    {
+      "path": "scene/appearance.js",
+      "bytes": 12889,
+      "sha256": "28428f75b1e5d70a9e68dbe91e6f2bc038fc703f29c4b017a816e02d2fa99bc1"
+    },
+    {
+      "path": "scene/inspection.js",
+      "bytes": 2162,
+      "sha256": "5efc5bc0cf052d4949738ab9f7422375778c2574436bb6cc9e694024af2d592e"
+    },
+    {
+      "path": "scene/robot.js",
+      "bytes": 5233,
+      "sha256": "6328c8de7bf143ef3b33ad74f84cd87cbeab630c4f2f8bb1a3d88ed86a714078"
+    },
+    {
+      "path": "scene/studio.js",
+      "bytes": 3953,
+      "sha256": "5bd2b39036378eafdd3882545fa9869879464b09147cf21f33029ff009eabf06"
+    },
+    {
+      "path": "story/director.js",
+      "bytes": 8727,
+      "sha256": "d83adf1c6242db53d4e79412857ea4e19031ae8398944d900c2a0078facc25f4"
+    },
+    {
+      "path": "story/timeline.js",
+      "bytes": 4523,
+      "sha256": "5202031d5906559e8e66e2a8cd5371e1729080d89a1915d676cb4f6fcd7e0569"
+    },
+    {
+      "path": "style.css",
+      "bytes": 14451,
+      "sha256": "98383fea1a3af512422b738ca5f55d5e79bdae16182362023191dbee25fe834b"
+    },
+    {
+      "path": "v7/app.js",
+      "bytes": 7336,
+      "sha256": "6d2151aaf55f3584ae38c5e83ad1cdc96f0426e42c643582e582507dc8447847"
+    },
+    {
+      "path": "v7/assembly.js",
+      "bytes": 2400,
+      "sha256": "c9b3a8c03e521233d0860b6bb82ef3c8baac640514c2e7e32145007fe3a07737"
+    },
+    {
+      "path": "v7/director.js",
+      "bytes": 7217,
+      "sha256": "7673de8c50a59f6f251c7661668b4cdd1043505a5414411a5b01be3604a06798"
+    },
+    {
+      "path": "v7/effects.js",
+      "bytes": 10834,
+      "sha256": "3c2acd94e00f263a5bed680a17fb6f03c4e8d05ad9b2bc4e54da56e3b854864a"
+    },
+    {
+      "path": "v7/hand.js",
+      "bytes": 1029,
+      "sha256": "26373faf62c5256acab84c3933b29a971a5765ba0b8624847842b55d9e505bbc"
+    },
+    {
+      "path": "v7/interaction.js",
+      "bytes": 3121,
+      "sha256": "cbab42b5a54d0aa42585f97b3d2082a75634ad30a5a4c4e442095dc900e084ca"
+    },
+    {
+      "path": "v7/lighting.js",
+      "bytes": 1102,
+      "sha256": "4844ed47f58a1cde06882a1443a2dc97aea2b2cfdbe914c123118f8efe4d8080"
+    },
+    {
+      "path": "v7/structure.js",
+      "bytes": 923,
+      "sha256": "d3d4760550430cb82f34dede51b6d1f31f80cdb9ab07e35a178f609e54af3d27"
+    },
+    {
+      "path": "v7/style.css",
+      "bytes": 5063,
+      "sha256": "6371defc93c0c5b18b313a3b157e6b4d97fc53c627e747f0f3f44f4440cdbf72"
+    },
+    {
+      "path": "v7-media/MANIFEST.json",
+      "bytes": 2454,
+      "sha256": "8c192eaa50f1cbfd866aa7fc2f40750a31af2dea26515e9093925eb470d10dcc"
+    },
+    {
+      "path": "v7-media/echo.jpg",
+      "bytes": 133670,
+      "sha256": "8be75d54dea52b4aef5ab1feeea28f7e9548d01ca572fa0712e96da11b827843"
+    },
+    {
+      "path": "v7-media/echo.mp4",
+      "bytes": 262370,
+      "sha256": "1568dbe6ba0e681bdda3bfb218a8452660485c8e3b1f2bbcb14400d37cf750f5"
+    },
+    {
+      "path": "v7-media/scan.jpg",
+      "bytes": 137052,
+      "sha256": "f0c0312ab9a178cc617baa4b9aeca64d25c92b5589ca6e97a926288e602b6b1e"
+    },
+    {
+      "path": "v7-media/scan.mp4",
+      "bytes": 285370,
+      "sha256": "37219e8322ed188125347082f5f975de0c24c1c048e7dd39f3df03b2e563da5a"
+    },
+    {
+      "path": "v7-media/structure.jpg",
+      "bytes": 156466,
+      "sha256": "6b6873262759ad8470d3f342b5525d4f7e4544e46127536f9a972d59abf11e92"
+    },
+    {
+      "path": "v7-media/structure.mp4",
+      "bytes": 570549,
+      "sha256": "ab6ac829447b63a7f03aa68210aad9a5e2b80f39192531af846d20e1af3734f3"
+    },
+    {
+      "path": "v7.html",
+      "bytes": 2371,
+      "sha256": "9fcb07612b05eae11e3d12d3d444e07177d9fa915fca695e6fcddbaa882d082e"
+    }
+  ],
+  "appearanceClearanceMetres": {
+    "camera_local_z": 0.0005,
+    "display_local_y": 0.0025
+  },
+  "appearanceClearanceNote": "Display-only clearance from coplanar CAD surfaces, not measured installation changes. Saved instance rest transforms remain unchanged.",
+  "sensorAnchors": {
+    "coordinateSpace": "instance local metres; tied to assetHash in this manifest",
+    "camera": {
+      "origin": [
+        -0.011,
+        0,
+        0.0213
+      ],
+      "forward": [
+        0,
+        0,
+        1
+      ]
+    },
+    "ultrasonic": {
+      "origin": [
+        0,
+        0,
+        0.0133
+      ],
+      "forward": [
+        0,
+        0,
+        1
+      ]
+    }
+  },
+  "deliverable": "Procedurally authored geometry in scene/appearance.js plus original structural GLB. No standalone new photoreal/scanned GLB is claimed.",
+  "assetHash": "dc5c57290cbd4e60e96cc52fe8f4b695b444ce9239f7cdb1087b09dc138f4b1b",
+  "film": "assets/film-v7/FILM_MANIFEST.json",
+  "historicalAssets": [
+    "assets/actors",
+    "assets/film",
+    "story/director.js"
+  ]
+}

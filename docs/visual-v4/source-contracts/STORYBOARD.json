@@ -1,0 +1,99 @@
+{
+  "schema": "carerover-story/v1",
+  "progressSource": "native document scroll",
+  "mode": "read-only concept presentation",
+  "scrollReversible": true,
+  "orbitControlsDefault": false,
+  "bodyScaleUnit": "metres; preserve legacy root 1000 only behind explicit adapter",
+  "chapters": [
+    {
+      "id": "meet",
+      "title": "先认识，这张脸。",
+      "direction": "整机正面与顶部 OLED。先停住让观众看清，不自动旋转或悬停全拆。",
+      "pose": "assembled",
+      "shot": "front-hero",
+      "progress": [
+        0,
+        0.13
+      ]
+    },
+    {
+      "id": "inside",
+      "title": "打开之后，各有分工。",
+      "direction": "顶盖与OLED一起抬升，外壳后移，露出模块及少量真实线束。",
+      "pose": "exploded",
+      "shot": "front-high",
+      "progress": [
+        0.13,
+        0.28
+      ]
+    },
+    {
+      "id": "vision",
+      "title": "看见位置，作出回应。",
+      "direction": "镜头近景→虚拟目标→同向图像框→方向调整；丢目标时归零的短故事。",
+      "pose": "camera_focus",
+      "shot": "camera-front",
+      "progress": [
+        0.28,
+        0.44
+      ]
+    },
+    {
+      "id": "range",
+      "title": "先看清前方，再向前。",
+      "direction": "声波出发→障碍→回波→前方保护；受限右绕必须注明原理编排。",
+      "pose": "sonar_focus",
+      "shot": "sonar-front",
+      "progress": [
+        0.44,
+        0.59
+      ]
+    },
+    {
+      "id": "motion",
+      "title": "不转身，也能横移。",
+      "direction": "合拢的小车在简洁地面前进、横移、原地转向；轴/被动滚子关系正确。",
+      "pose": "assembled",
+      "shot": "motion-threequarter",
+      "progress": [
+        0.59,
+        0.75
+      ]
+    },
+    {
+      "id": "care",
+      "title": "轻轻一触，状态可见。",
+      "direction": "手指接触侧面真实光学区域，解释采集；顶盖OLED显示原型状态或DEMO。",
+      "pose": "health_focus",
+      "shot": "top-and-side",
+      "progress": [
+        0.75,
+        0.88
+      ]
+    },
+    {
+      "id": "whole",
+      "title": "从一张设计，到一台实物。",
+      "direction": "精确收拢并回到首页相机，同角度真实照片作为原型记录或最终对照。",
+      "pose": "assembled",
+      "shot": "front-hero",
+      "progress": [
+        0.88,
+        1
+      ]
+    }
+  ],
+  "optionalMultiRobot": {
+    "default": false,
+    "classification": "visual choreography only; not swarm/coordination capability",
+    "maximumInstances": 3,
+    "priority": "after single-robot acceptance"
+  },
+  "minimumApproval": [
+    "front hero",
+    "open enclosure",
+    "camera anchored effect"
+  ],
+  "reducedMotion": "Static chapter poses; no forced autoplay; content remains available."
+}

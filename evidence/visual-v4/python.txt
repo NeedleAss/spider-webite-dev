@@ -1,0 +1,7 @@
+.....................................
+----------------------------------------------------------------------
+Ran 37 tests in 0.989s
+
+OK
+/private/var/folders/rj/nc12h74x03qcpkk0_vtlm5l80000gn/T/tmphwg5r3mg/release.zip
+/private/var/folders/rj/nc12h74x03qcpkk0_vtlm5l80000gn/T/tmphwg5r3mg/release.zip

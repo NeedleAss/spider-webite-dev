@@ -21,10 +21,9 @@ class ImuFilter {
   void missing() {
     state_.valid=false;
     state_.held=true;
-    // Missing samples are handled by SafetyController's bounded freshness
-    // grace. They are not evidence of a physical tilt by themselves.
-    state_.tiltFault=false;
-    tiltStart_=0; recoveryStart_=0;
+    // Unknown is neither safe nor evidence of recovery. Keep any latched
+    // fault and pending danger interval; require continuous valid recovery.
+    recoveryStart_=0;
   }
   const ImuSample& state() const { return state_; }
   void update(float ax,float ay,float az,float gx,float gy,float gz,uint64_t now) {
@@ -39,7 +38,7 @@ class ImuFilter {
       const bool transient=false;
       previousNorm_=norm;haveNorm_=true;
       if(implausible||transient) {
-        ++state_.rejectedFrames;state_.held=true;tiltStart_=recoveryStart_=0;
+        ++state_.rejectedFrames;state_.held=true;recoveryStart_=0;
         if(!state_.sampleMs||now<state_.sampleMs||now-state_.sampleMs>=tuning::ImuSafetyMs)missing();
         return;
       }

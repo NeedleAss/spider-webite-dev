@@ -1,76 +1,94 @@
 import { VideoOverlay, computeContainFit, roundRect } from './video-overlay.js';
 import { streamUrl } from './protocol.js';
 import { defaultStreamUrl } from './transport.js';
-/** Video sources and metadata share a stage, never a transport implementation. */
+import { MjpegStream } from './mjpeg.js';
+/** Direct CAM stream. Decoded frame arrival is independent of UART metadata. */
 export class VideoPanel {
-  constructor({ stage, source, overlay, image, video, select, input, openFile, notice }) {
-    Object.assign(this, { stage, source, image, video, select, input, openFile, notice });
-    this.overlay = new VideoOverlay(overlay, stage); this.ctx = source.getContext('2d');
-    this.streamUrl = null; this.retryTimer = null; this.retryMs = 1000; this.streamConnected = false;
-    this.kind = 'canvas'; this.objectUrl = null; this.ready = false;
-    this.abort = new AbortController(); const signal = this.abort.signal;
-    select.addEventListener('change', () => {
-      this.setSource(select.value);
-    }, { signal });
-    openFile.addEventListener('click', () => input.click(), { signal });
-    input.addEventListener('change', () => {
-      const file = input.files[0]; if (!file) return;
-      input.value = '';
-      this.setSource('file'); this.objectUrl = URL.createObjectURL(file); video.src = this.objectUrl;
-      video.play().catch(() => { this.notice('video.failed'); this.setSource('canvas'); });
-    }, { signal });
-    video.addEventListener('loadeddata', () => { this.ready = true; }, { signal });
-    video.addEventListener('error', () => { this.ready = false; this.notice('video.failed'); }, { signal });
-    image.addEventListener('load', () => { this.ready = true; this.streamFailed = false; this.retryMs = 1000; }, { signal });
-    image.addEventListener('error', () => { this.ready = false; this.streamFailed = true; this.notice('video.failed'); this.scheduleRetry(); }, { signal });
-    this.setSource('canvas');
+  constructor({stage,source,overlay,image,video,select,input,openFile,retry,notice,onState}) {
+    Object.assign(this,{stage,source,image,video,select,input,openFile,retry,notice,onState});
+    this.overlay=new VideoOverlay(overlay,stage);this.ctx=source.getContext('2d');
+    this.lastFrame=document.createElement('canvas');this.frameCtx=this.lastFrame.getContext('2d');
+    this.streamUrl=null;this.streamConnected=false;this.kind='none';this.ready=false;this.objectUrl=null;
+    this.generation=0;this.status='idle';this.retryCount=0;this.retryTimer=null;this.fileAbort=null;
+    this.abort=new AbortController();const signal=this.abort.signal;
+    this.stream=new MjpegStream({onFrame:bitmap=>{
+      if(this.lastFrame.width!==bitmap.width||this.lastFrame.height!==bitmap.height){this.lastFrame.width=bitmap.width;this.lastFrame.height=bitmap.height;}
+      this.frameCtx.drawImage(bitmap,0,0);
+    },onState:state=>{
+      this.ready=state.status==='live';this.setStatus(state.status);
+      if(this.ready)this.retryCount=0;
+      else if(['error','stale','decode-error'].includes(state.status))this.scheduleRetry();
+    }});
+    select.addEventListener('change',()=>this.setSource(select.value),{signal});
+    retry?.addEventListener('click',()=>{this.retryCount=0;this.connectStream();},{signal});
+    openFile.addEventListener('click',()=>input.click(),{signal});
+    input.addEventListener('change',()=>{const file=input.files[0];input.value='';if(file)this.openClip(file);},{signal});
+    this.setSource('none');
+  }
+  setStatus(status) {
+    const changed=this.status!==status;this.status=status;this.stage.dataset.videoStatus=status;
+    if(this.retry){this.retry.hidden=this.kind!=='mjpeg'||['live','connecting'].includes(status);this.retry.disabled=!this.streamConnected;}
+    if(changed)this.onState?.({status,kind:this.kind});
   }
   setSource(kind) {
-    clearTimeout(this.retryTimer); this.retryTimer = null;
-    this.video.pause(); this.video.removeAttribute('src'); this.video.load();
-    this.image.removeAttribute('src');
-    if (this.objectUrl) { URL.revokeObjectURL(this.objectUrl); this.objectUrl = null; }
-    this.kind = kind; this.ready = kind === 'canvas'; this.streamFailed = false; this.select.value = kind;
-    this.openFile.hidden = kind !== 'file';
-    this.source.hidden = kind !== 'canvas'; this.image.hidden = kind !== 'mjpeg'; this.video.hidden = kind !== 'file';
-    this.stage.dataset.source = kind;
-    if (kind === 'mjpeg') this.connection(true);
+    if(!['none','canvas','mjpeg','file'].includes(kind))kind='none';
+    ++this.generation;this.fileAbort?.abort();this.fileAbort=null;
+    clearTimeout(this.retryTimer);this.retryTimer=null;this.retryCount=0;this.stream.stop();
+    this.video.pause();this.video.removeAttribute('src');this.video.load();this.image.removeAttribute('src');
+    if(this.objectUrl){URL.revokeObjectURL(this.objectUrl);this.objectUrl=null;}
+    this.kind=kind;this.ready=kind==='canvas';this.select.value=kind;
+    this.lastFrame.width=1;this.lastFrame.height=1;
+    this.openFile.hidden=kind!=='file';this.source.hidden=kind==='file';this.image.hidden=true;this.video.hidden=kind!=='file';
+    this.stage.dataset.source=kind;
+    this.setStatus(kind==='canvas'?'simulation':kind==='file'?'file-waiting':'idle');
+    this.onState?.({status:'source-changed',kind});
+    if(kind==='mjpeg')this.connectStream();
   }
-  setStreamUrl(url) {
-    const next = url || null;
-    if (next === this.streamUrl) return;
-    this.streamUrl = next;
-    if (this.kind === 'mjpeg') this.connection(true);
+  openClip(file) {
+    this.setSource('file');const generation=this.generation;
+    const url=URL.createObjectURL(file);this.objectUrl=url;
+    this.fileAbort=new AbortController();const signal=this.fileAbort.signal;
+    const current=()=>generation===this.generation&&this.kind==='file'&&this.objectUrl===url;
+    this.video.addEventListener('loadeddata',()=>{if(current()){this.ready=true;this.setStatus('file');}},{signal});
+    this.video.addEventListener('error',()=>{if(current()){this.ready=false;this.setStatus('error');}},{signal});
+    this.video.src=url;this.video.play().catch(()=>{if(current()){this.ready=false;this.setStatus('error');}});
   }
+  setStreamUrl(url) {const next=url||null;if(next===this.streamUrl)return;this.streamUrl=next;if(this.kind==='mjpeg')this.connectStream();}
   scheduleRetry() {
-    if (this.retryTimer || this.kind !== 'mjpeg' || !this.streamConnected) return;
-    this.retryTimer = setTimeout(() => {
-      this.retryTimer = null;
-      if (this.kind === 'mjpeg' && this.streamConnected) this.connection(true);
-    }, this.retryMs);
-    this.retryMs = Math.min(5000, this.retryMs * 2);
+    if(this.retryTimer||this.kind!=='mjpeg'||!this.streamConnected||this.retryCount>=3)return;
+    const generation=this.generation;const delay=1000*2**this.retryCount++;
+    this.retryTimer=setTimeout(()=>{this.retryTimer=null;if(generation===this.generation)this.connectStream();},delay);
+  }
+  connectStream() {
+    clearTimeout(this.retryTimer);this.retryTimer=null;this.stream.stop();this.ready=false;
+    if(this.kind!=='mjpeg')return;
+    if(!this.streamConnected){this.setStatus('disconnected');return;}
+    const url=streamUrl(new URLSearchParams(location.search).get('stream'),this.streamUrl,defaultStreamUrl());
+    void this.stream.start(url);
   }
   connection(connected) {
-    this.streamConnected = connected;
-    clearTimeout(this.retryTimer); this.retryTimer = null;
-    if (this.kind !== 'mjpeg') return;
-    this.ready = false; this.streamFailed = !connected;
-    this.image.removeAttribute('src');
-    if (connected) this.image.src = streamUrl(new URLSearchParams(location.search).get('stream'), this.streamUrl, defaultStreamUrl());
+    if(this.streamConnected===connected)return;this.streamConnected=connected;
+    if(this.kind==='mjpeg')this.connectStream();
   }
-  render(vision, flags) {
-    if (this.kind === 'mjpeg' && !this.streamFailed && this.image.naturalWidth > 0) this.ready = true;
-    if (this.kind === 'canvas') this.drawScene(vision, flags.personStale);
-    let mapped = vision;
-    if (this.kind === 'file' && this.video.videoWidth && this.video.videoHeight) {
-      // Local clips may have a different aspect ratio from synthetic metadata.
-      // Preserve normalized positions inside the actual video's contain rectangle.
-      const sx = this.video.videoWidth / vision.image_width, sy = this.video.videoHeight / vision.image_height;
-      const p = vision.person;
-      mapped = { ...vision, image_width: this.video.videoWidth, image_height: this.video.videoHeight,
-        person: p?.found ? { ...p, x: p.x * sx, y: p.y * sy, w: p.w * sx, h: p.h * sy } : p };
-    }
-    this.overlay.render(mapped, { ...flags, personStale: flags.personStale || !this.ready });
+  render(vision,flags) {
+    if(this.kind==='canvas')this.drawScene(vision,flags.personStale);
+    else if(this.kind!=='file')this.drawFrame();
+    // UART detections have no common frame id with MJPEG. They are explicitly
+    // labelled asynchronous estimates, and never survive stale video frames.
+    let mapped=vision;
+    const width=this.kind==='file'?this.video.videoWidth:this.kind==='mjpeg'?this.lastFrame.width:vision.image_width;
+    const height=this.kind==='file'?this.video.videoHeight:this.kind==='mjpeg'?this.lastFrame.height:vision.image_height;
+    if(width>1&&height>1){const sx=width/vision.image_width,sy=height/vision.image_height,p=vision.person;
+      mapped={...vision,image_width:width,image_height:height,person:p?.found?{...p,x:p.x*sx,y:p.y*sy,w:p.w*sx,h:p.h*sy}:p};}
+    this.overlay.render(mapped,{...flags,personStale:flags.personStale||!this.ready||this.kind==='file',gestureStale:flags.gestureStale||!this.ready||this.kind==='file',showGuide:flags.showGuide&&this.ready});
+  }
+  drawFrame() {
+    const box=this.stage.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2),ctx=this.ctx;
+    const w=Math.round(box.width*dpr),h=Math.round(box.height*dpr);
+    if(this.source.width!==w||this.source.height!==h){this.source.width=w;this.source.height=h;}
+    ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#111417';ctx.fillRect(0,0,box.width,box.height);
+    if(this.lastFrame.width>1){const fit=computeContainFit(this.lastFrame.width,this.lastFrame.height,box.width,box.height);
+      ctx.globalAlpha=this.ready?1:.25;ctx.drawImage(this.lastFrame,fit.ox,fit.oy,this.lastFrame.width*fit.scale,this.lastFrame.height*fit.scale);ctx.globalAlpha=1;}
   }
   drawScene(vision, stale) {
     const { source: canvas, ctx, stage } = this;
@@ -113,5 +131,5 @@ export class VideoPanel {
     const shade = ctx.createLinearGradient(0, 0, 0, ih); shade.addColorStop(0, 'rgba(5,10,12,.12)'); shade.addColorStop(.7, 'rgba(5,10,12,0)'); shade.addColorStop(1, 'rgba(5,10,12,.35)');
     ctx.fillStyle = shade; ctx.fillRect(0, 0, iw, ih); ctx.restore();
   }
-  destroy() { clearTimeout(this.retryTimer); this.streamConnected = false; this.abort.abort(); this.overlay.destroy(); this.video.pause(); this.image.removeAttribute('src'); if (this.objectUrl) URL.revokeObjectURL(this.objectUrl); }
+  destroy(){++this.generation;clearTimeout(this.retryTimer);this.fileAbort?.abort();this.stream.stop();this.abort.abort();this.overlay.destroy();this.video.pause();this.image.removeAttribute('src');if(this.objectUrl)URL.revokeObjectURL(this.objectUrl);}
 }

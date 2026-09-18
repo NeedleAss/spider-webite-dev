@@ -53,6 +53,7 @@ function obj(v) {
 export function cmdVel(vx, vy, wz) {
   return { type: 'cmd_vel', ts: now(), vx: r3(clampVel(vx)), vy: r3(clampVel(vy)), wz: r3(clampVel(wz)) };
 }
+export function releaseInput() { return {...cmdVel(0,0,0),release_only:true}; }
 let requestSequence = 0;
 export function setMode(mode) {
   return { type: 'set_mode', ts: now(), mode, request_id: ++requestSequence };
@@ -105,7 +106,7 @@ export function decode(raw) {
 
   switch (o.type) {
     case 'telemetry': return { ok: true, msg: { ...normalizeTelemetry(o), ts } };
-    case 'ppg':       return num(o.value) === undefined ? { ok: false, error: 'invalid PPG sample' } : { ok: true, msg: { type: 'ppg', ts, value: o.value } };
+    case 'ppg':       return num(o.value) === undefined ? { ok: false, error: 'invalid PPG sample' } : { ok: true, msg: { type: 'ppg', ts, sourceTs:num(o.ts), value: o.value } };
     case 'ppg_batch': return { ok: true, msg: normalizePpgBatch(o, ts) };
     case 'ack':       return { ok: true, msg: {
                           type: 'ack', ts,
@@ -150,6 +151,7 @@ export function normalizeTelemetry(o) {
     state:       typeof r.state === 'string' ? r.state.slice(0, 32) : undefined,
     estop:       bool(r.estop),
     control_allowed: bool(r.control_allowed),
+    control_owned: bool(r.control_owned),control_occupied: bool(r.control_occupied),
     motion_output_installed: bool(r.motion_output_installed),
     calibration_ready: bool(r.calibration_ready),
     battery_pct: num(r.battery_pct) !== undefined ? clamp(num(r.battery_pct), 0, 100) : undefined,
@@ -160,6 +162,9 @@ export function normalizeTelemetry(o) {
 
   const d = obj(o.device);
   if (d) out.device = {
+    scoped_release: bool(d.scoped_release),
+    stop_reason: typeof d.stop_reason==='string'?d.stop_reason.slice(0,48):undefined,
+    stop_sequence: Number.isSafeInteger(d.stop_sequence)&&d.stop_sequence>=0?d.stop_sequence:undefined,
     firmware: typeof d.firmware === 'string' ? d.firmware.slice(0, 96) : undefined,
     backend: typeof d.backend === 'string' ? d.backend.slice(0, 32) : undefined,
     supported_modes: Array.isArray(d.supported_modes) ? d.supported_modes.filter(m => MODES.includes(m)) : undefined,
@@ -181,6 +186,11 @@ export function normalizeTelemetry(o) {
 
 
   const v = obj(o.vision);
+  const action=obj(o.gesture_action);
+  if(action&&Number.isSafeInteger(action.seq)&&action.seq>0&&num(action.age_ms)>=0&&typeof action.accepted==='boolean') {
+    out.gesture_action={seq:action.seq,label:enumOf(action.label,GESTURES,'UNKNOWN'),accepted:action.accepted,
+      reason:typeof action.reason==='string'?action.reason.slice(0,48):'',age_ms:Math.min(action.age_ms,86400000)};
+  }
   if (v) {
     out.vision = {
       image_width:  num(v.image_width) > 0 ? Math.min(v.image_width, 8192) : undefined,
@@ -238,6 +248,7 @@ function normalizePpgBatch(o, ts) {
   return {
     type: 'ppg_batch',
     ts,
+    sourceTs:num(o.ts),
     sample_rate_hz: (rate !== undefined && rate > 0 && rate <= 2000) ? rate : undefined,
     samples
   };
@@ -249,6 +260,7 @@ export function validateOutgoing(msg) {
   if (!o || !OUT_TYPES.includes(o.type)) return 'unknown outgoing type';
   if (num(o.ts) === undefined) return 'outgoing ts must be finite';
   if (o.type === 'cmd_vel') {
+    if(o.release_only!==undefined&&(typeof o.release_only!=='boolean'||o.release_only&&(o.vx||o.vy||o.wz)))return 'release_only requires a zero target';
     for (const k of ['vx', 'vy', 'wz']) {
       const n = num(o[k]);
       if (n === undefined) return `cmd_vel.${k} must be a finite number`;

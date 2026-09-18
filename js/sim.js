@@ -10,7 +10,7 @@ import { FrontSim } from './front-sim.js';
 import { CONFIG } from './config.js';
 import { validateOutgoing } from './protocol.js';
 
-const GESTURE_CYCLE = ['NONE', 'PALM', 'FIST', 'THUMB_UP', 'VICTORY', 'POINT_LEFT', 'POINT_RIGHT', 'NONE'];
+const GESTURE_CYCLE = ['NONE', 'LIKE', 'DISLIKE', 'TWO', 'THREE', 'OK', 'NONE'];
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
@@ -23,7 +23,7 @@ export class RobotSim {
     this.front = new FrontSim();
     this.t = 0;                 // 仿真时间(s)
     this.mode = 'IDLE';
-    this.estop = false;
+    this.estop = false;this.controlOwned=false;
 
     // 网页下发的目标速度 + 最近一次到达时刻（用于 dead-man 超时）
     this.cmd = { vx: 0, vy: 0, wz: 0 };
@@ -37,6 +37,7 @@ export class RobotSim {
 
     this.personPhase = rand(0, Math.PI * 2);
     this.personFound = true;
+    this.waitSince = null;
     this.gestureIdx = 0;
     this.gestureAt = 0;
     this.gestureConf = 0.9;
@@ -65,6 +66,7 @@ export class RobotSim {
         if(!msg.enabled&&this.front.phase!=='NONE'){this.mode='IDLE';this.vel={vx:0,vy:0,wz:0};}
         this.front.setDemo(msg.enabled,this.t);return [ack(true)];
       case 'cmd_vel': {
+        if(msg.release_only===true&&!this.controlOwned)return [];
         const nonZero = Math.abs(msg.vx) > 1e-6 || Math.abs(msg.vy) > 1e-6 || Math.abs(msg.wz) > 1e-6;
         // 安全裁决在机器人侧：急停期间一律拒绝非零速度
         if (this.estop && nonZero) {
@@ -79,8 +81,11 @@ export class RobotSim {
         }
         if(!nonZero)this.front.release();
         if(nonZero&&this.front.held)return [{type:'error',ts,code:'FRONT_RELEASE_REQUIRED',message:'Release joystick first'}];
-        this.cmd = { vx: msg.vx, vy: msg.vy, wz: msg.wz };
-        if (!nonZero) { this.vel = { vx: 0, vy: 0, wz: 0 }; if(this.mode === 'PERSON_FOLLOW') this.mode='IDLE'; }
+        this.cmd = { vx: msg.vx, vy: msg.vy, wz: msg.wz };this.controlOwned=nonZero;
+        if (!nonZero) {
+          if(this.vel.vx||this.vel.vy||this.vel.wz||['PERSON_FOLLOW','GESTURE_CONTROL'].includes(this.mode))this.front.reason='release';
+          this.vel={vx:0,vy:0,wz:0};if(['PERSON_FOLLOW','GESTURE_CONTROL'].includes(this.mode))this.mode='IDLE';
+        }
         this.lastCmdAt = this.t;
         return []; // cmd_vel 走高频通道，不逐包 ACK，靠 telemetry 回显确认
       }
@@ -93,7 +98,8 @@ export class RobotSim {
         }
         if(['MANUAL','PERSON_FOLLOW'].includes(msg.mode)&&this.front.held)return [{type:'error',ts,code:'FRONT_RELEASE_REQUIRED',message:'Release joystick first'}];
         this.front.cancel('mode_changed');
-        this.mode = msg.mode;
+        this.mode = msg.mode;this.controlOwned=['MANUAL','PERSON_FOLLOW'].includes(msg.mode);
+        this.waitSince = null;
         if(msg.mode === 'PERSON_FOLLOW') { const r=this._personRect(); this.referenceArea=r.w*r.h;this.lastFollowPing=this.t;this.turning=false; }
         this.cmd = { vx: 0, vy: 0, wz: 0 };   // 换模式一律先停
         this.vel = { vx: 0, vy: 0, wz: 0 };
@@ -108,7 +114,8 @@ export class RobotSim {
         return [ack(true)];
 
       case 'clear_estop':
-        this.estop = false;
+        this.estop = false;this.controlOwned=false;
+        this.front.cancel('estop_cleared');
         this.mode = 'IDLE';                   // 解除后回到待机，不自动恢复运动
         return [ack(true)];
 
@@ -136,22 +143,22 @@ export class RobotSim {
         if (ageMs > CONFIG.DEADMAN_TIMEOUT_MS) this.vel = { vx: 0, vy: 0, wz: 0 };
         target = ageMs > CONFIG.DEADMAN_TIMEOUT_MS ? { vx: 0, vy: 0, wz: 0 } : { ...this.cmd };
       } else if (this.mode === 'PERSON_FOLLOW') {
-        if(!this.personFound || this.trackingScenario==='low-confidence' || this.trackingScenario==='imu-fault' || (this.t-this.lastFollowPing)*1000>=240) {
+        if(this.trackingScenario==='imu-fault' || (this.t-this.lastFollowPing)*1000>=CONFIG.DEADMAN_TIMEOUT_MS) {
           this.mode='IDLE';this.vel={vx:0,vy:0,wz:0};
+        } else if(!this.personFound || this.trackingScenario==='low-confidence') {
+          this.waitSince ??= this.t;this.vel={vx:0,vy:0,wz:0};
+          if(this.front.phase!=='NONE'||this.t-this.waitSince>=30)this.mode='IDLE';
         } else {
+          this.waitSince=null;
           const r=this._personRect(), ex=(r.x+r.w/2-this.imageWidth/2)/(this.imageWidth/2);
-          const dead=x=>Math.abs(x)<=.1?0:x-Math.sign(x)*.1;
-          if(Math.abs(ex)>=.35)this.turning=true;else if(Math.abs(ex)<=.20)this.turning=false;
-          if(this.turning)target.wz=clamp(.8*ex,-.3,.3);
-          else {target.vy=clamp(.6*dead(ex),-.2,.2);target.vx=clamp(.5*dead(1-Math.sqrt(r.w*r.h/this.referenceArea)),-.25,.25);}
+          const dead=(x,d)=>Math.abs(x)<=d?0:x-Math.sign(x)*d;
+          if(Math.abs(ex)>=.04)this.turning=true;else if(Math.abs(ex)<=.025)this.turning=false;
+          if(this.turning)target.wz=clamp(.5*dead(ex,.025),-.20,.20);
+          else target.vx=clamp(.4*dead(1-Math.sqrt(r.w*r.h/this.referenceArea),.03),-.15,.15);
         }
       } else if (this.mode === 'GESTURE_CONTROL') {
-        const g = GESTURE_CYCLE[this.gestureIdx];
-        if (g === 'PALM') target = { vx: 0, vy: 0, wz: 0 };
-        else if (g === 'THUMB_UP') target.vx = 0.4;
-        else if (g === 'FIST') target.vx = -0.3;
-        else if (g === 'POINT_LEFT') target.vy = -0.4;
-        else if (g === 'POINT_RIGHT') target.vy = 0.4;
+        // Selecting this mode alone never starts motion. Synthetic display
+        // labels are not fresh, confirmed real gesture action evidence.
       }
     }
 
@@ -262,13 +269,13 @@ export class RobotSim {
     return {
       type: 'telemetry',
       ts: Date.now(),
-      front:this.front.telemetry(this.t),
+      front:this.front.telemetry(this.t),device:{scoped_release:true,backend:'simulation'},
       connection: { camera: true, main_mcu: true, simulated: true },
       robot: {
         mode: this.estop ? 'ESTOP' : this.mode,
         state: this._stateName(),
         estop: this.estop,
-        control_allowed: true,
+        control_allowed: true,control_owned:this.controlOwned,control_occupied:this.controlOwned,
         battery_pct: Math.round(this.battery),
         vx: round3(this.vel.vx), vy: round3(this.vel.vy), wz: round3(this.vel.wz)
       },
@@ -280,9 +287,9 @@ export class RobotSim {
         ai_fps: round2(this.aiFps),
         person: this.personFound
           ? { found: true, x: r.x, y: r.y, w: r.w, h: r.h,
-              confidence: this.trackingScenario==='low-confidence' ? .4 : round2(clamp(0.87 + Math.sin(this.t * 1.3) * 0.09, 0.5, 0.99)) }
+              confidence: this.trackingScenario==='low-confidence' ? .3 : round2(clamp(0.87 + Math.sin(this.t * 1.3) * 0.09, 0.5, 0.99)) }
           : { found: false },
-        gesture: { label, confidence: round2(this.gestureConf), stable: this.gestureConf >= CONFIG.GESTURE_STABLE_CONFIDENCE }
+        gesture: { label, confidence: label === 'NONE' ? 0 : round2(this.gestureConf), stable: label !== 'NONE' && this.gestureConf >= CONFIG.GESTURE_STABLE_CONFIDENCE }
       },
       health: {
         hr_bpm: Math.round(this.hr),
@@ -299,7 +306,7 @@ export class RobotSim {
     const moving = Math.abs(this.vel.vx) + Math.abs(this.vel.vy) + Math.abs(this.vel.wz) > 0.02;
     switch (this.mode) {
       case 'MANUAL':          return moving ? 'DRIVING' : 'READY';
-      case 'PERSON_FOLLOW':   return this.personFound ? 'TRACKING' : 'IDLE';
+      case 'PERSON_FOLLOW':   return this.waitSince !== null ? 'WAIT_TARGET' : this.front.phase === 'REACQUIRE' ? 'REACQUIRE' : 'TRACKING';
       case 'GESTURE_CONTROL': return moving ? 'DRIVING' : 'READY';
       case 'HEALTH_CHECK':    return 'MEASURING';
       default:                return 'IDLE';

@@ -1,0 +1,514 @@
+{
+  "browser": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+  "results": [
+    {
+      "name": "target assembly has four wheels and four saved-placement servos",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "first camera is on CAD -X front",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "camera points outward at rest",
+      "status": "PASS",
+      "detail": [
+        -1,
+        -6.661338147750939e-16,
+        -2.220446049250313e-16
+      ]
+    },
+    {
+      "name": "ultrasonic points outward at rest",
+      "status": "PASS",
+      "detail": [
+        -1,
+        -1.3435287292045357e-30,
+        -4.440892098500626e-16
+      ]
+    },
+    {
+      "name": "1440x900 / meet chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          270,
+          695.640625
+        ],
+        "height": 900,
+        "overlapsNav": false,
+        "index": 0
+      }
+    },
+    {
+      "name": "1440x900 / inside chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          270,
+          690.65625
+        ],
+        "height": 900,
+        "overlapsNav": false,
+        "index": 1
+      }
+    },
+    {
+      "name": "1440x900 / vision chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          270,
+          681.15625
+        ],
+        "height": 900,
+        "overlapsNav": false,
+        "index": 2
+      }
+    },
+    {
+      "name": "1440x900 / range chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          270,
+          681.15625
+        ],
+        "height": 900,
+        "overlapsNav": false,
+        "index": 3
+      }
+    },
+    {
+      "name": "1440x900 / motion chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          270,
+          695.25
+        ],
+        "height": 900,
+        "overlapsNav": false,
+        "index": 4
+      }
+    },
+    {
+      "name": "1440x900 / care chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          270,
+          690.65625
+        ],
+        "height": 900,
+        "overlapsNav": false,
+        "index": 5
+      }
+    },
+    {
+      "name": "1440x900 / whole chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          270,
+          717.75
+        ],
+        "height": 900,
+        "overlapsNav": false,
+        "index": 6
+      }
+    },
+    {
+      "name": "1366x768 / meet chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          230.3984375,
+          643.8203125
+        ],
+        "height": 768,
+        "overlapsNav": false,
+        "index": 0
+      }
+    },
+    {
+      "name": "1366x768 / inside chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          230.3984375,
+          640.4140625
+        ],
+        "height": 768,
+        "overlapsNav": false,
+        "index": 1
+      }
+    },
+    {
+      "name": "1366x768 / vision chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          230.3984375,
+          630.9140625
+        ],
+        "height": 768,
+        "overlapsNav": false,
+        "index": 2
+      }
+    },
+    {
+      "name": "1366x768 / range chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          230.3984375,
+          630.9140625
+        ],
+        "height": 768,
+        "overlapsNav": false,
+        "index": 3
+      }
+    },
+    {
+      "name": "1366x768 / motion chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          230.3984375,
+          645.0078125
+        ],
+        "height": 768,
+        "overlapsNav": false,
+        "index": 4
+      }
+    },
+    {
+      "name": "1366x768 / care chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          230.3984375,
+          640.4140625
+        ],
+        "height": 768,
+        "overlapsNav": false,
+        "index": 5
+      }
+    },
+    {
+      "name": "1366x768 / whole chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          230.3984375,
+          667.5078125
+        ],
+        "height": 768,
+        "overlapsNav": false,
+        "index": 6
+      }
+    },
+    {
+      "name": "390x844 / meet chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          101.2734375,
+          307.4921875
+        ],
+        "height": 844,
+        "overlapsNav": false,
+        "index": 0
+      }
+    },
+    {
+      "name": "390x844 / inside chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          101.2734375,
+          370.4375
+        ],
+        "height": 844,
+        "overlapsNav": false,
+        "index": 1
+      }
+    },
+    {
+      "name": "390x844 / vision chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          101.2734375,
+          362.9375
+        ],
+        "height": 844,
+        "overlapsNav": false,
+        "index": 2
+      }
+    },
+    {
+      "name": "390x844 / range chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          101.2734375,
+          362.9375
+        ],
+        "height": 844,
+        "overlapsNav": false,
+        "index": 3
+      }
+    },
+    {
+      "name": "390x844 / motion chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          101.2734375,
+          372.1328125
+        ],
+        "height": 844,
+        "overlapsNav": false,
+        "index": 4
+      }
+    },
+    {
+      "name": "390x844 / care chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          101.2734375,
+          370.4375
+        ],
+        "height": 844,
+        "overlapsNav": false,
+        "index": 5
+      }
+    },
+    {
+      "name": "390x844 / whole chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          101.2734375,
+          409.6328125
+        ],
+        "height": 844,
+        "overlapsNav": false,
+        "index": 6
+      }
+    },
+    {
+      "name": "844x390 / meet chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          89.6953125,
+          279.4296875
+        ],
+        "height": 390,
+        "overlapsNav": false,
+        "index": 0
+      }
+    },
+    {
+      "name": "844x390 / inside chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          89.6953125,
+          310.828125
+        ],
+        "height": 390,
+        "overlapsNav": false,
+        "index": 1
+      }
+    },
+    {
+      "name": "844x390 / vision chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          89.6953125,
+          305.828125
+        ],
+        "height": 390,
+        "overlapsNav": false,
+        "index": 2
+      }
+    },
+    {
+      "name": "844x390 / range chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          89.6953125,
+          305.828125
+        ],
+        "height": 390,
+        "overlapsNav": false,
+        "index": 3
+      }
+    },
+    {
+      "name": "844x390 / motion chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          89.6953125,
+          293.828125
+        ],
+        "height": 390,
+        "overlapsNav": false,
+        "index": 4
+      }
+    },
+    {
+      "name": "844x390 / care chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          89.6953125,
+          310.828125
+        ],
+        "height": 390,
+        "overlapsNav": false,
+        "index": 5
+      }
+    },
+    {
+      "name": "844x390 / whole chapter, text, overflow",
+      "status": "PASS",
+      "detail": {
+        "overflow": false,
+        "copy": [
+          89.6953125,
+          351.2265625
+        ],
+        "height": 390,
+        "overlapsNav": false,
+        "index": 6
+      }
+    },
+    {
+      "name": "camera preserves forward when exploded",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ultrasonic preserves forward when exploded",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "100 browser open/close cycles have no rest-pose drift",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "Inspect is explicit",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "wheel instances can be selected independently",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "Inspect exit restores chapter, progress and scroll",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "reduced motion rests without continuous redraw",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "idle hero stops drawing",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "context loss retains current chapter poster",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "context restore keeps chapter",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "emulated touch from canvas centre scrolls Story",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "no robot WebSocket opened",
+      "status": "PASS",
+      "detail": []
+    },
+    {
+      "name": "no external runtime requests",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "no unhandled JavaScript errors",
+      "status": "PASS",
+      "detail": []
+    }
+  ],
+  "requests": [
+    "http://127.0.0.1:8765/presentation/",
+    "http://127.0.0.1:8765/presentation/style.css?v=4",
+    "http://127.0.0.1:8765/presentation/assets/appearance/meet.png",
+    "http://127.0.0.1:8765/presentation/app.js?v=4",
+    "http://127.0.0.1:8765/presentation/parts.js",
+    "http://127.0.0.1:8765/presentation/story/timeline.js",
+    "http://127.0.0.1:8765/presentation/vendor/three/three.module.js",
+    "http://127.0.0.1:8765/presentation/vendor/three/examples/jsm/controls/OrbitControls.js",
+    "http://127.0.0.1:8765/presentation/scene/robot.js",
+    "http://127.0.0.1:8765/presentation/vendor/three/examples/jsm/loaders/GLTFLoader.js",
+    "http://127.0.0.1:8765/presentation/scene/appearance.js",
+    "http://127.0.0.1:8765/presentation/effects/sensors.js",
+    "http://127.0.0.1:8765/presentation/vendor/three/examples/jsm/utils/BufferGeometryUtils.js",
+    "http://127.0.0.1:8765/presentation/vendor/three/three.core.js",
+    "http://127.0.0.1:8765/presentation/assets/cad/carerover.glb",
+    "http://127.0.0.1:8765/presentation/assets/appearance/vision.png"
+  ],
+  "errors": []
+}

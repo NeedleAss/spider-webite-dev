@@ -12,7 +12,7 @@ struct WirelessHealth {
 };
 void wirelessBegin();
 void wirelessGesture(const char* label, float score, bool accepted, bool actionEligible, bool held, uint64_t ageMs,
-                     uint32_t inferMs);
+                     uint32_t inferMs, bool neutralEvidence);
 void wirelessHealth(const WirelessHealth& health);
 void wirelessPpg(uint32_t ir);
 void wirelessStatus();
@@ -26,3 +26,11 @@ void wirelessDiagnostics();
 #include "front_guard.h"
 carerover::FrontSnapshot wirelessFront();
 const char* wirelessStopReason();
+
+// Copies a bounded device-side result for OLED; accepted means command accepted,
+// never proof of physical movement. Fault state takes priority over old results.
+struct WirelessGestureStatus {
+  bool show=false;
+  char title[22]={}, detail[22]={}, reason[22]={};
+};
+WirelessGestureStatus wirelessGestureStatus();

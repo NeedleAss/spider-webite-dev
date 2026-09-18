@@ -6,12 +6,12 @@
 namespace carerover {
 struct FollowVelocity { double vx=0, vy=0, wz=0; };
 struct FollowConfig {
-  float confidence=0.40f, ema=0.30f, centerDeadzone=0.04f, distanceDeadzone=0.05f;
+  float confidence=tuning::balanced?0.40f:0.45f, ema=0.30f, centerDeadzone=0.04f, distanceDeadzone=0.05f;
   float distanceGain=0.40f, turnGain=0.50f;
   float maxVx=0.15f, maxWz=0.20f, matchIou=0.03f;
-  // P results arrive at roughly 3.1-3.3 Hz in the combined stream.  Keep one
-  // transient miss inside the 490 ms source deadline while commanding zero;
-  // two consecutive misses still exceed this grace and latch target loss.
+  // 2G:1P scheduling measured about 1.35–1.75 face FPS. A missed result zeros
+  // output immediately; periodic source expiry and the 30 s mode wait live
+  // in SafetyController. Lookahead never updates the real measurement clock.
   uint64_t lossGraceMs=1100, lookaheadMs=300;
 };
 class PersonFollowController {
@@ -64,6 +64,7 @@ class PersonFollowController {
     }
   }
   FollowVelocity output() const { return lost_?FollowVelocity{}:output_; }
+  void suspend() { output_={};measurementAccepted_=false; }
   bool measurementAccepted() const { return measurementAccepted_; }
   bool ready() const { return initialized_&&!lost_; }
   bool lost() const { return lost_; }

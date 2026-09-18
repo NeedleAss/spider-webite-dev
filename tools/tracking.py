@@ -236,7 +236,7 @@ def capture(args):
 
 def release(args):
     out=Path(args.output).resolve();out.parent.mkdir(parents=True,exist_ok=True)
-    allowed=['firmware','js','css','assets','config','docs','tests','tools','mock','hardware','.github']
+    allowed=['firmware','js','css','assets','config','docs','tests','tools','mock','hardware','.github','presentation']
     files=[ROOT/'index.html',ROOT/'README.md',ROOT/'package.json']
     for name in ['WINDOWS_START_HERE.md','AGENTS.md']:
         if (ROOT/name).exists():files.append(ROOT/name)
@@ -246,15 +246,17 @@ def release(args):
         for p in (ROOT/directory).rglob('*'):
             if not p.is_file():continue
             if any(x in p.parts for x in ['managed_components','__pycache__','build','.venv']):continue
-            if p.name in {'wifi_secrets.h','front_config.local.h','sdkconfig','sdkconfig.old','build_version.h'} or p.name.endswith('.local.json') or p.suffix in {'.log','.pyc'}:continue
+            if p.name in {'wifi_secrets.h','front_config.local.h','sdkconfig','sdkconfig.old','build_version.h','dependencies.lock'} or p.name.endswith('.local.json') or p.suffix in {'.log','.pyc'}:continue
             files.append(p)
     files=sorted(set(files))
-    evidence=sorted(p for p in (ROOT/'output/evidence').rglob('*') if p.is_file())
+    evidence_root=Path(getattr(args,'evidence_dir',None) or ROOT/'output/evidence').resolve()
+    if getattr(args,'evidence_dir',None) and not evidence_root.is_dir():raise ValueError('Evidence directory does not exist')
+    evidence=sorted(p for p in evidence_root.rglob('*') if p.is_file())
     manifest={str(p.relative_to(ROOT)):digest(p) for p in files}
-    evidence_manifest={str(Path('evidence')/p.relative_to(ROOT/'output/evidence')):digest(p) for p in evidence}
+    evidence_manifest={str(Path('evidence')/p.relative_to(evidence_root)):digest(p) for p in evidence}
     with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED) as z:
         for p in files:z.write(p,str(p.relative_to(ROOT)))
-        for p in evidence:z.write(p,str(Path('evidence')/p.relative_to(ROOT/'output/evidence')))
+        for p in evidence:z.write(p,str(Path('evidence')/p.relative_to(evidence_root)))
         z.writestr('EXPORT_INFO.json',json.dumps(source_info(),indent=2)+'\n')
         z.writestr('SOURCE_MANIFEST.json',json.dumps(manifest,indent=2)+'\n')
         z.writestr('EVIDENCE_MANIFEST.json',json.dumps(evidence_manifest,indent=2)+'\n')
@@ -268,7 +270,7 @@ def main():
     s=sub.add_parser('calibration-build');s.add_argument('--profile',default='config/tracking-development.json')
     s=sub.add_parser('capture');s.add_argument('--port',required=True);s.add_argument('--seconds',type=float,default=120);s.add_argument('--output',required=True);s.add_argument('--reset',action='store_true',help='Reset the board through RTS after opening the capture port')
     s=sub.add_parser('analyze');s.add_argument('log')
-    s=sub.add_parser('release');s.add_argument('--output',default='output/CareRover_Tracking_Software.zip');s.add_argument('--include-reference',action='store_true')
+    s=sub.add_parser('release');s.add_argument('--output',default='output/CareRover_Tracking_Software.zip');s.add_argument('--include-reference',action='store_true');s.add_argument('--evidence-dir',help='Use this evidence directory instead of output/evidence')
     args=p.parse_args()
     {'prepare':prepare,'cam-build':cam_build,'cam-flash':cam_flash,'calibration-build':calibration_build,'capture':capture,'analyze':lambda a:print(json.dumps(analyze(a.log),ensure_ascii=False,indent=2)),'release':release}[args.action](args)
 if __name__=='__main__':

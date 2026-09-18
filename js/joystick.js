@@ -9,7 +9,7 @@ export function joystickVector(dx, dy, radius, deadzone = CONFIG.JOYSTICK_DEADZO
     x: dx / distance * magnitude * radius, y: dy / distance * magnitude * radius };
 }
 export class MotionInput {
-  constructor({ pad, knob, left, right, stop, enabled, change, emergency }) {
+  constructor({ pad, knob, left, right, stop, enabled, change, emergency, stopAction }) {
     Object.assign(this, { pad, knob, left, right, enabled, change, emergency });
     this.abort = new AbortController();
     this.pointer = null; this.rotationPointer = null; this.keys = new Set();
@@ -17,7 +17,7 @@ export class MotionInput {
     const on = (el, event, fn) => el.addEventListener(event, fn, { signal: this.abort.signal });
     on(pad, 'pointerdown', e => {
       if (!enabled() || e.button !== 0 || this.pointer !== null) return;
-      e.preventDefault(); this.keys.clear(); this.pointer = e.pointerId;
+      e.preventDefault(); this.takePointerControl(); this.pointer = e.pointerId;
       pad.setPointerCapture(e.pointerId); pad.dataset.active = 'true'; this.move(e);
     });
     on(pad, 'pointermove', e => { if (e.pointerId === this.pointer) this.move(e); });
@@ -27,7 +27,7 @@ export class MotionInput {
     for (const [button, value] of [[left, -1], [right, 1]]) {
       on(button, 'pointerdown', e => {
         if (!enabled() || e.button !== 0 || this.rotationPointer !== null) return;
-        e.preventDefault(); this.keys.clear(); this.rotationPointer = e.pointerId;
+        e.preventDefault(); this.takePointerControl(); this.rotationPointer = e.pointerId;
         button.setPointerCapture(e.pointerId); button.dataset.held = 'true';
         this.wz = value; this.publish();
       });
@@ -35,15 +35,19 @@ export class MotionInput {
         on(button, event, e => { if (e.pointerId === this.rotationPointer) this.reset(true); });
       }
     }
-    on(stop, 'click', () => this.reset(true));
+    const explicitStop=()=>{this.reset(true);stopAction?.();};
+    on(stop, 'click', explicitStop);
     on(window, 'blur', () => this.reset(true));
     on(document, 'visibilitychange', () => { if (document.hidden) this.reset(true); });
     on(window, 'keydown', e => {
       if (e.key === 'Escape') { e.preventDefault(); emergency(); return; }
-      if (e.code === 'Space' && !this.editing(e.target)) { e.preventDefault(); this.reset(true); return; }
+      if (e.code === 'Space' && !this.editing(e.target)) { e.preventDefault(); explicitStop(); return; }
       if (this.editing(e.target) || e.metaKey || e.ctrlKey || e.altKey || !enabled()) return;
       const key = e.key.toLowerCase();
       if (!'wasdqe'.includes(key) || key.length !== 1) return;
+      // Pointer gestures own all motion until released. Stop/Escape above
+      // remain available and can always cancel that ownership.
+      if (this.pointer !== null || this.rotationPointer !== null) { e.preventDefault(); return; }
       e.preventDefault(); if (e.repeat) return;
       this.keys.add(key); this.keyboard();
     });
@@ -52,6 +56,12 @@ export class MotionInput {
     });
   }
   editing(target) { return target.closest('input, select, textarea, dialog, [contenteditable="true"]'); }
+  takePointerControl() {
+    if (this.keys.size) {
+      this.keys.clear(); this.vector = { vx: 0, vy: 0 }; this.wz = 0;
+      this.knob.style.transform = ''; this.pad.dataset.active = 'false';
+    }
+  }
   move(e) {
     if (!this.enabled()) { this.reset(true); return; }
     const box = this.pad.getBoundingClientRect();

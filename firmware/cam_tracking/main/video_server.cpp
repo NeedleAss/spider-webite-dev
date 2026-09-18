@@ -33,6 +33,10 @@ void streamTask(void* arg) {
   httpd_req_async_handler_complete(req);viewer.store(false);vTaskDelete(nullptr);
 }
 esp_err_t stream(httpd_req_t* req) {
+  // Error responses need the same fixed, existing console origin as live video,
+  // so the browser can distinguish a busy single-viewer stream from a dead link.
+  httpd_resp_set_hdr(req,"Access-Control-Allow-Origin","http://192.168.4.1");
+  httpd_resp_set_hdr(req,"Cache-Control","no-store");
   if(viewer.exchange(true)) {httpd_resp_set_status(req,"503 Service Unavailable");return httpd_resp_send(req,"Video viewer busy",HTTPD_RESP_USE_STRLEN);}
   httpd_req_t* async=nullptr;
   if(httpd_req_async_handler_begin(req,&async)!=ESP_OK){viewer.store(false);return ESP_FAIL;}

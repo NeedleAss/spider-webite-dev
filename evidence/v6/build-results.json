@@ -1,0 +1,66 @@
+{
+  "sourceCommit": "40fe1516abfc3b43f6f734bf489d69f04b59b152",
+  "sourceDirty": false,
+  "runtimeGitObjects": {
+    "firmware/main_wireless": "fd8a70a1278aa879254662f59fb6cf4cceec2d4d",
+    "firmware/cam_tracking": "cc5da3d920cd118e77ca07d95db8473c1c2bf124",
+    "firmware/motion_calibration": "5a925662f18a7a794ebbed13aabe3c02757f5a22",
+    "js": "96f0dbc946cefb0e63c824ad9871223d1c4f64e6",
+    "css": "b2d8be0fe0b02fb763f74e1e1db8b0fc6cc339f6",
+    "index.html": "c4985ab9a5283ac99cbe0ebb80613374dc11e130",
+    "presentation": "a6504eafab830da63c02b92dd27ffd8548a3355d"
+  },
+  "builds": [
+    {
+      "target": "main",
+      "tuning": "SAFE_BASELINE",
+      "status": "PASS",
+      "scope": "compile_only",
+      "sourceCommit": "40fe1516abfc3b43f6f734bf489d69f04b59b152",
+      "sourceDirty": false,
+      "firmwareVersion": "3153233c1fe95349-s5-follow",
+      "webVersion": "561e82427c8b4756",
+      "manifest": "evidence/v6/builds/main-safe_baseline-manifest.json",
+      "compileLog": "evidence/v6/builds/main-safe_baseline-compile.txt"
+    },
+    {
+      "target": "main",
+      "tuning": "DEMO_BALANCED",
+      "status": "PASS",
+      "scope": "compile_only",
+      "sourceCommit": "40fe1516abfc3b43f6f734bf489d69f04b59b152",
+      "sourceDirty": false,
+      "firmwareVersion": "7d91a9065a214a3c-s5-follow",
+      "webVersion": "561e82427c8b4756",
+      "manifest": "evidence/v6/builds/main-demo_balanced-manifest.json",
+      "compileLog": "evidence/v6/builds/main-demo_balanced-compile.txt"
+    },
+    {
+      "target": "cam",
+      "tuning": "SAFE_BASELINE",
+      "status": "PASS",
+      "scope": "compile_only",
+      "sourceCommit": "40fe1516abfc3b43f6f734bf489d69f04b59b152",
+      "sourceDirty": false,
+      "firmwareVersion": null,
+      "webVersion": null,
+      "manifest": "evidence/v6/builds/cam-safe_baseline-manifest.json",
+      "compileLog": "evidence/v6/builds/cam-safe_baseline-compile.txt"
+    },
+    {
+      "target": "cam",
+      "tuning": "DEMO_BALANCED",
+      "status": "PASS",
+      "scope": "compile_only",
+      "sourceCommit": "40fe1516abfc3b43f6f734bf489d69f04b59b152",
+      "sourceDirty": false,
+      "firmwareVersion": null,
+      "webVersion": null,
+      "manifest": "evidence/v6/builds/cam-demo_balanced-manifest.json",
+      "compileLog": "evidence/v6/builds/cam-demo_balanced-compile.txt"
+    }
+  ],
+  "hardware": "NOT RUN",
+  "flashed": false,
+  "binaryDistribution": "Compile-only binaries excluded from handoff; field rebuild must use verified private hardware configuration."
+}

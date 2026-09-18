@@ -1,0 +1,67 @@
+[
+  {
+    "name": "passive page neither opens the single-viewer stream nor claims control",
+    "status": "PASS"
+  },
+  {
+    "name": "gesture entry is device-native, no mandatory gesture-mode button",
+    "status": "PASS"
+  },
+  {
+    "name": "passive blur does not cancel independent gesture follow",
+    "status": "PASS"
+  },
+  {
+    "name": "manual input sends nonzero motion and scoped release",
+    "status": "PASS"
+  },
+  {
+    "name": "delayed page release cannot cancel subsequent autonomous gesture",
+    "status": "PASS"
+  },
+  {
+    "name": "explicit Stop still sends a normal zero to cancel autonomous action",
+    "status": "PASS"
+  },
+  {
+    "name": "real multipart JPEG fixture is decoded and reported as fresh",
+    "status": "PASS"
+  },
+  {
+    "name": "recognized gesture does not masquerade as action acceptance",
+    "status": "PASS"
+  },
+  {
+    "name": "video freeze is reported while robot telemetry continues",
+    "status": "PASS"
+  },
+  {
+    "name": "single-viewer busy is explained with manual retry, no reconnect loop",
+    "status": "PASS"
+  },
+  {
+    "name": "fresh robot-specific emergency confirmation is shown",
+    "status": "PASS"
+  },
+  {
+    "name": "C03 health and IMU traffic cannot keep robot emergency confirmation fresh",
+    "status": "PASS"
+  },
+  {
+    "name": "C03 stale robot mode and target are unknown",
+    "status": "PASS"
+  },
+  {
+    "name": "390px console has no horizontal overflow",
+    "status": "PASS"
+  },
+  {
+    "name": "primary controls retain at least 44px targets",
+    "status": "PASS"
+  },
+  {
+    "name": "no uncaught browser exception",
+    "status": "PASS",
+    "detail": []
+  }
+]

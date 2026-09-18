@@ -1,0 +1,12 @@
+{
+  "source_commit": "504d4eed27bb6b64a7e0d21d2f6881e00afc9a6b",
+  "source_dirty": false,
+  "archive": "CareRover_V4_Candidate_20260918.zip",
+  "archive_sha256": "718a438bf200ab0f14dc702f19bcf9f468f76ba0d4478346a5f5fb1b515f2d44",
+  "archive_bytes": 23323929,
+  "validation": "PASS: 367 source/reference/evidence files match the exported SHA-256 manifests.\nThis verifies file integrity, not hardware acceptance.\nPASS: 25 V4 files match 349c3d4422ee7e641d2fd2823f37e311e8a4751bb30829d538333a991327b74b",
+  "contents": "Source, presentation dependencies/appearance/posters, V3/V4 guidance, final and V4 evidence including video, Windows AI prompt and field acceptance tables",
+  "excluded": "Private configs/passwords/calibration, compiled binaries, merchant references, original CAD/PDFs, generated dependency lock",
+  "hardware_acceptance": "NOT RUN; G01 remains release blocker",
+  "note": "This records the clean source snapshot exported before adding the ZIP and this release metadata. Later packaging-only commits do not change the frozen source."
+}

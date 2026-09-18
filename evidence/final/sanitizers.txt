@@ -1,0 +1,16 @@
+Profile=0 suite=final_safety
+SAFE_BASELINE: 22/22 checks passed
+Profile=0 suite=front
+Front protection: raw stop, filter, freshness, release latch, full bypass and 40 fault/phase cases passed
+Profile=0 suite=tracking
+Tracking protocol, follow, safety, IMU and JPEG leases passed
+Profile=0 suite=demo
+Demo display votes, action freshness, timed metric hold and gesture arbitration passed
+Profile=1 suite=final_safety
+DEMO_BALANCED: 23/23 checks passed
+Profile=1 suite=front
+Front protection: raw stop, filter, freshness, release latch, full bypass and 40 fault/phase cases passed
+Profile=1 suite=tracking
+Tracking protocol, follow, safety, IMU and JPEG leases passed
+Profile=1 suite=demo
+Demo display votes, action freshness, timed metric hold and gesture arbitration passed

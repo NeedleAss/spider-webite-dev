@@ -1,0 +1,45 @@
+test_delivered_asset_manifest_matches_glb (test_cad_export.CadExportTest.test_delivered_asset_manifest_matches_glb) ... ok
+test_stream_crc_and_size_are_enforced (test_cad_export.CadExportTest.test_stream_crc_and_size_are_enforced) ... ok
+test_table_is_atomic_not_partial_on_truncation (test_cad_export.CadExportTest.test_table_is_atomic_not_partial_on_truncation) ... ok
+test_blocked_timeout (test_front.FrontTests.test_blocked_timeout) ... ok
+test_demo_and_heartbeat (test_front.FrontTests.test_demo_and_heartbeat) ... ok
+test_manual_latch (test_front.FrontTests.test_manual_latch) ... ok
+test_heartbeat_expires_each_link_independently (test_serial_protocol_adapter.SerialProtocolAdapterTests.test_heartbeat_expires_each_link_independently) ... ok
+test_independent_health_values_are_preserved (test_serial_protocol_adapter.SerialProtocolAdapterTests.test_independent_health_values_are_preserved) ... ok
+test_motion_is_explicitly_disabled_for_current_hardware (test_serial_protocol_adapter.SerialProtocolAdapterTests.test_motion_is_explicitly_disabled_for_current_hardware) ... ok
+test_ppg_uses_ir_channel (test_serial_protocol_adapter.SerialProtocolAdapterTests.test_ppg_uses_ir_channel) ... ok
+test_stable_gesture_is_converted (test_serial_protocol_adapter.SerialProtocolAdapterTests.test_stable_gesture_is_converted) ... ok
+test_unaccepted_gesture_becomes_none (test_serial_protocol_adapter.SerialProtocolAdapterTests.test_unaccepted_gesture_becomes_none) ... ok
+test_zero_velocity_is_safely_accepted_without_noise (test_serial_protocol_adapter.SerialProtocolAdapterTests.test_zero_velocity_is_safely_accepted_without_noise) ... ok
+test_bypass_command_ownership_and_observer_ping_cannot_renew_follow (test_server.NetworkTest.test_bypass_command_ownership_and_observer_ping_cannot_renew_follow) ... ok
+test_end_to_end_commands_reconnect_and_mjpeg (test_server.NetworkTest.test_end_to_end_commands_reconnect_and_mjpeg) ... ok
+test_multiple_clients_cannot_compete_for_motion (test_server.NetworkTest.test_multiple_clients_cannot_compete_for_motion) ... ok
+test_normal_release_hands_back_ownership_but_delayed_release_cannot_cancel_new_owner (test_server.NetworkTest.test_normal_release_hands_back_ownership_but_delayed_release_cannot_cancel_new_owner) ... ok
+test_private_paths_and_cross_origin_control_are_blocked (test_server.NetworkTest.test_private_paths_and_cross_origin_control_are_blocked) ... ok
+test_lost_person_periodic_wait_and_gesture_stop (test_server.SimulationTest.test_lost_person_periodic_wait_and_gesture_stop) ... ok
+test_malformed_velocity_is_rejected (test_server.SimulationTest.test_malformed_velocity_is_rejected) ... ok
+test_watchdog_and_estop (test_server.SimulationTest.test_watchdog_and_estop) ... ok
+test_compile_log_uses_windows_fallback_encoding (test_tooling.BuildGuardTests.test_compile_log_uses_windows_fallback_encoding) ... ok
+test_compile_profile_cannot_be_flashed (test_tooling.BuildGuardTests.test_compile_profile_cannot_be_flashed) ... ok
+test_console_output_replaces_characters_missing_from_gbk (test_tooling.BuildGuardTests.test_console_output_replaces_characters_missing_from_gbk) ... ok
+test_main_console_output_replaces_characters_missing_from_gbk (test_tooling.BuildGuardTests.test_main_console_output_replaces_characters_missing_from_gbk) ... ok
+test_payload_excludes_dev_bridge_tests_secrets_and_recordings (test_tooling.BuildGuardTests.test_payload_excludes_dev_bridge_tests_secrets_and_recordings) ... ok
+test_pending_baseline_never_silently_uses_development_defaults (test_tooling.BuildGuardTests.test_pending_baseline_never_silently_uses_development_defaults) ... ok
+test_real_binary_partition_offsets_and_sizes_are_checked (test_tooling.BuildGuardTests.test_real_binary_partition_offsets_and_sizes_are_checked) ... ok
+test_windows_cam_build_stages_subst_drive_too (test_tooling.BuildGuardTests.test_windows_cam_build_stages_subst_drive_too) ... ok
+test_windows_cam_build_stages_unicode_output_in_ascii_temp (test_tooling.BuildGuardTests.test_windows_cam_build_stages_unicode_output_in_ascii_temp) ... ok
+test_windows_cam_build_uses_utf8_and_disables_ccache (test_tooling.BuildGuardTests.test_windows_cam_build_uses_utf8_and_disables_ccache) ... ok
+test_windows_main_build_stages_subst_drive_too (test_tooling.BuildGuardTests.test_windows_main_build_stages_subst_drive_too) ... ok
+test_windows_main_build_stages_unicode_output_in_ascii_temp (test_tooling.BuildGuardTests.test_windows_main_build_stages_unicode_output_in_ascii_temp) ... ok
+test_archive_provenance_without_git_and_after_edit (test_tracking_tools.TrackingToolTests.test_archive_provenance_without_git_and_after_edit) ... ok
+test_compile_cam_package_rejected_before_any_serial_call (test_tracking_tools.TrackingToolTests.test_compile_cam_package_rejected_before_any_serial_call) ... ok
+test_crc_and_capture_summary (test_tracking_tools.TrackingToolTests.test_crc_and_capture_summary) ... ok
+test_front_diagnostics_and_private_installation_remain_protected (test_tracking_tools.TrackingToolTests.test_front_diagnostics_and_private_installation_remain_protected) ... ok
+test_main_profile_cannot_be_used_as_cam (test_tracking_tools.TrackingToolTests.test_main_profile_cannot_be_used_as_cam) ... ok
+
+----------------------------------------------------------------------
+Ran 38 tests in 1.394s
+
+OK
+/private/var/folders/rj/nc12h74x03qcpkk0_vtlm5l80000gn/T/tmpgbouuur_/release.zip
+/private/var/folders/rj/nc12h74x03qcpkk0_vtlm5l80000gn/T/tmpgbouuur_/release.zip

@@ -1,0 +1,199 @@
+{
+  "schema": "carerover-appearance-contract/v1",
+  "date": "2026-09-18",
+  "repo": "NeedleAss/spider-webite-dev",
+  "sourceCommit": "72ee475bd76b7a46f2c3bd6477dcd2f45b76ac69",
+  "baseGLBSha256": "2310e2bd46a6940497349d1acf00ef70bd8279881a637424b2764c136229d61b",
+  "status": "production instructions; not a finished photoreal asset",
+  "target": "target_assembly based on user confirmed inventory, not evidence of completed physical assembly",
+  "front": "camera and two sonar holes",
+  "displayLocation": "top cover",
+  "counts": {
+    "hardwareClasses": 9,
+    "plannedWheels": 4,
+    "plannedServos": 4,
+    "originalCadVisibleServos": 3
+  },
+  "geometryPolicy": {
+    "retainRawCad": true,
+    "retainRestInstanceTransforms": true,
+    "allowAnisotropicBBoxFit": false,
+    "removeProxyOnlyAfterSemanticIdentification": true,
+    "hiddenServo": "hidden-servo-restoration.json",
+    "doNotModifyFirmware": true
+  },
+  "referenceOrder": [
+    "confirmed final physical geometry/measurements",
+    "user photos and explicit corrections",
+    "saved CAD installation datums",
+    "exact SKU official/measured datasheet",
+    "listing image appearance",
+    "documented illustrative approximation"
+  ],
+  "bom": [
+    {
+      "id": "wheel",
+      "quantity": 4,
+      "model": "24158 mini omni wheel, SG90-compatible 20T adapter",
+      "reference": "wheel-24158",
+      "confirmedBy": "user list and supplied listing image",
+      "nominalListingDimensionsMm": {
+        "diameter": 24,
+        "tyreWidth": 15,
+        "hubProtrusion": 4.3,
+        "hubDiameter": 8.3
+      },
+      "rollerCount": 8,
+      "physicalMeasuredDimensionsMm": null,
+      "modeling": "Use the exact roller silhouette and white coupling hub. Not a mecanum wheel. Axle datum is more important than AABB fitting.",
+      "unknown": [
+        "roller arrangement/axes",
+        "spline engagement dimensions",
+        "installed hub offset"
+      ]
+    },
+    {
+      "id": "servo",
+      "quantity": 4,
+      "model": "MG90S 360-degree continuous-rotation variant per user",
+      "reference": "servo-mg90s",
+      "confirmedBy": "user declaration, product appearance reference",
+      "makerFamilyReferenceMm": [
+        22.8,
+        12.2,
+        28.5
+      ],
+      "physicalMeasuredDimensionsMm": null,
+      "modeling": "Dark semi-translucent housing, metal shaft, ears, screws, label, 3-wire exit. Keep housing fixed while shaft/wheel rotates.",
+      "unknown": [
+        "exact supplier version dimensions",
+        "neutral pulse and direction",
+        "electrical current",
+        "confirmed physical position of fourth servo"
+      ]
+    },
+    {
+      "id": "battery",
+      "quantity": 1,
+      "model": "18650 battery/power module assembly; exact SKU unspecified",
+      "reference": "power-module",
+      "confirmedBy": "user declaration and listing screenshot",
+      "physicalMeasuredDimensionsMm": null,
+      "modeling": "Black carrier/power board, red header blocks, connector and battery volume. Do not replace the entire assembly with one generic cell.",
+      "unknown": [
+        "cell count",
+        "capacity",
+        "converter topology",
+        "sustained current",
+        "real battery level sensing"
+      ]
+    },
+    {
+      "id": "controller",
+      "quantity": 1,
+      "model": "鹿小班 ESP32-S3-N16R8 development board per user",
+      "reference": "controller-s3",
+      "confirmedBy": "user declaration and image, exact vendor revision not independently matched",
+      "physicalMeasuredDimensionsMm": null,
+      "modeling": "Match black PCB, module shield, antenna, two USB connectors, buttons, pin headers. Remove confirmed wire proxy geometry only.",
+      "unknown": [
+        "exact PCB revision and dimensions",
+        "mounting hole datums",
+        "individual cable endpoints"
+      ]
+    },
+    {
+      "id": "camera",
+      "quantity": 1,
+      "model": "ESP32-S3 vision / wireless image transmission camera board per user",
+      "reference": "camera-board",
+      "confirmedBy": "user declaration plus front/internal photos",
+      "physicalMeasuredDimensionsMm": null,
+      "modeling": "Match supplied camera/carrier PCB, lens barrel and orange flex cable. Lens emerges at small square front opening below sonar holes.",
+      "unknown": [
+        "exact image sensor",
+        "carrier revision",
+        "optical FOV",
+        "lens recession/depth"
+      ]
+    },
+    {
+      "id": "ultrasonic",
+      "quantity": 1,
+      "model": "HC-SR04 module per user; voltage/version unspecified",
+      "reference": "ultrasonic-hcsr04",
+      "confirmedBy": "user declaration, listing, front opening explanation",
+      "transducerCount": 2,
+      "physicalMeasuredDimensionsMm": null,
+      "modeling": "One blue board with two silver transducers aimed through two round front holes. Planned install, not demonstrated installed in current front photograph.",
+      "unknown": [
+        "exact variant",
+        "TX/RX identity of physical transducers",
+        "beam angle",
+        "final mounting depth",
+        "verified field protection/bypass"
+      ]
+    },
+    {
+      "id": "imu",
+      "quantity": 1,
+      "model": "MPU-6050 / GY-521 6DOF module per user",
+      "reference": "imu-gy521",
+      "confirmedBy": "user declaration and listing",
+      "physicalMeasuredDimensionsMm": null,
+      "modeling": "Blue board with two mounting holes, IC and silk-screen axes. Keep sensor mounting separate from render-camera orientation.",
+      "unknown": [
+        "final connector orientation in enclosure",
+        "exact PCB dimensions"
+      ]
+    },
+    {
+      "id": "health",
+      "quantity": 1,
+      "model": "MAX30102 heart-rate/SpO2 breakout per user",
+      "reference": "health-max30102",
+      "confirmedBy": "user declaration and supplied white-board reference",
+      "physicalMeasuredDimensionsMm": null,
+      "modeling": "Use the supplied white carrier, contact optical side and socket, not an unrelated red MAX30102 module. Located at finger access, not front camera.",
+      "unknown": [
+        "exact carrier revision",
+        "actual finger contact surface location/depth"
+      ]
+    },
+    {
+      "id": "display",
+      "quantity": 1,
+      "model": "Blue SSD1306-class OLED; user calls it 1306",
+      "reference": "oled-blue",
+      "confirmedBy": "user declaration and actual top-cover photo",
+      "diagonalInchesFromListing": 0.96,
+      "physicalMeasuredDimensionsMm": null,
+      "modeling": "Top-cover display: black rectangular glass, blue board, four screws, cyan-blue monochrome pixels. No tablet-like full-color UI.",
+      "unknown": [
+        "exact visible active area and PCB dimensions",
+        "validated pixel dimensions for texture export"
+      ]
+    }
+  ],
+  "notClaimed": [
+    "scan-level metrology",
+    "physical motion acceptance",
+    "exact wiring diagram",
+    "medical measurement accuracy",
+    "multi-robot coordination",
+    "outdoor qualification"
+  ],
+  "blockingOnlyForFinalLabels": [
+    "sonar installed depth and module variant",
+    "remaining cable endpoints",
+    "physical confirmation of restored fourth servo"
+  ],
+  "continueWithoutBlocking": [
+    "dark layout",
+    "camera/sonar frame binding",
+    "wheel and servo appearance",
+    "top OLED placement",
+    "chapter timeline",
+    "unknown-field diagnostics"
+  ]
+}

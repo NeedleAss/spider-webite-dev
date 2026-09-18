@@ -1,0 +1,25 @@
+{
+  "status": "INDEPENDENT VISUAL STUDY",
+  "source": {
+    "repository": "https://api.github.com/repos/makehumancommunity/makehuman",
+    "commit": "a8bc2d54ff0ac92e78ff71431b1023eda42bf482"
+  },
+  "license": "CC0",
+  "tool": "4.5.7 LTS",
+  "units": "metres",
+  "hand": "right",
+  "clip": "Contact",
+  "seconds": 5,
+  "fps": 30,
+  "contactHold": [
+    1.25,
+    3.75
+  ],
+  "padRestBlender": [
+    0.15958231687545776,
+    0.030954105779528618,
+    -0.006100377067923546
+  ],
+  "rigBones": 21,
+  "notes": "Cropped original CC0 topology and weights; offline digit-specific pose; baked approach/hold/retract; no adult or runtime IK. User hand approval pending."
+}

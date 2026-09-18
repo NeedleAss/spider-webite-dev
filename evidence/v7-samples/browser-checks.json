@@ -1,0 +1,143 @@
+[
+  {
+    "name": "robot loads without adult, room or V6 movie dependency",
+    "status": "PASS"
+  },
+  {
+    "name": "assembly relationship retained: lid-1 / display-3",
+    "status": "PASS"
+  },
+  {
+    "name": "assembly relationship retained: camera-1 / camera-mount-1",
+    "status": "PASS"
+  },
+  {
+    "name": "assembly relationship retained: controller-1 / board-mount-1",
+    "status": "PASS"
+  },
+  {
+    "name": "assembly relationship retained: controller-1 / board-frame-2",
+    "status": "PASS"
+  },
+  {
+    "name": "default structure fits at 0",
+    "status": "PASS"
+  },
+  {
+    "name": "default structure fits at 1.7",
+    "status": "PASS"
+  },
+  {
+    "name": "default structure fits at 2.6",
+    "status": "PASS"
+  },
+  {
+    "name": "default structure fits at 3.5",
+    "status": "PASS"
+  },
+  {
+    "name": "default structure fits at 5",
+    "status": "PASS"
+  },
+  {
+    "name": "default structure fits at 6.4",
+    "status": "PASS"
+  },
+  {
+    "name": "default structure fits at 8.1",
+    "status": "PASS"
+  },
+  {
+    "name": "default structure fits at 10",
+    "status": "PASS"
+  },
+  {
+    "name": "reverse seek restores exact pose at 10",
+    "status": "PASS"
+  },
+  {
+    "name": "reverse seek restores exact pose at 8.1",
+    "status": "PASS"
+  },
+  {
+    "name": "reverse seek restores exact pose at 6.4",
+    "status": "PASS"
+  },
+  {
+    "name": "reverse seek restores exact pose at 5",
+    "status": "PASS"
+  },
+  {
+    "name": "reverse seek restores exact pose at 3.5",
+    "status": "PASS"
+  },
+  {
+    "name": "reverse seek restores exact pose at 2.6",
+    "status": "PASS"
+  },
+  {
+    "name": "reverse seek restores exact pose at 1.7",
+    "status": "PASS"
+  },
+  {
+    "name": "reverse seek restores exact pose at 0",
+    "status": "PASS"
+  },
+  {
+    "name": "close returns to original assembly",
+    "status": "PASS"
+  },
+  {
+    "name": "play advances from frame zero",
+    "status": "PASS"
+  },
+  {
+    "name": "pause holds exact time",
+    "status": "PASS"
+  },
+  {
+    "name": "scan is attached to a lit target surface",
+    "status": "PASS"
+  },
+  {
+    "name": "detection follows scan",
+    "status": "PASS"
+  },
+  {
+    "name": "scan and detection clear",
+    "status": "PASS"
+  },
+  {
+    "name": "return begins only after geometric obstacle hit",
+    "status": "PASS"
+  },
+  {
+    "name": "obstacle intersection is in front of module",
+    "status": "PASS"
+  },
+  {
+    "name": "scan identical image after reverse seek",
+    "status": "PASS"
+  },
+  {
+    "name": "echo identical image after reverse seek",
+    "status": "PASS"
+  },
+  {
+    "name": "reverse playback advances from last frame",
+    "status": "PASS"
+  },
+  {
+    "name": "mobile page has no horizontal overflow",
+    "status": "PASS"
+  },
+  {
+    "name": "mobile primary controls at least 44px",
+    "status": "PASS"
+  },
+  {
+    "name": "no browser or shader exception",
+    "status": "PASS",
+    "detail": []
+  }
+]

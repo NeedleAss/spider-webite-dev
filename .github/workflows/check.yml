@@ -19,6 +19,7 @@ jobs:
 
       - run: c++ -std=c++17 -Wall -Wextra -Werror -Ifirmware/main_wireless tests/firmware/safety_test.cpp -o /tmp/carerover-safety-test
       - run: /tmp/carerover-safety-test
+      - run: python tools/appearance_manifest.py --check
       - run: python tools/check_firmware.py
       - run: python tools/verify_demo_handoff.py 'CareRover_Demo_Signal_Optimization_Handoff_2026-09-15_clean(1)'
       - run: python tools/replay_demo.py 'CareRover_Demo_Signal_Optimization_Handoff_2026-09-15_clean(1)/evidence' --output /tmp/carerover-demo-replay.json

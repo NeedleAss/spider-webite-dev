@@ -1,0 +1,115 @@
+{
+  "schema": "carerover-cables/v1",
+  "purpose": "visual reconstruction, never an electrical wiring authority",
+  "proxyRemoval": "Confirmed long rectangular wire proxies must be semantically separated first. Do not delete by Y position or largest connected component.",
+  "endpointUnknownPolicy": "Keep board-level symbolic association; do not render a precise pin connection or export a wiring claim.",
+  "appearance": "Retain visible real cable colors; route cleanly with documented artistic simplification. No rigid rectangular substitutes.",
+  "lengthPolicy": "Fixed illustrative rest length per cable. When explosion makes endpoints exceed available length, stop extension or deliberately detach/fade with caption; no rubber-band wires.",
+  "cables": [
+    {
+      "id": "oled-harness",
+      "visualGroups": [
+        "controller",
+        "display"
+      ],
+      "endpointA": null,
+      "endpointB": null,
+      "pinMap": null,
+      "geometry": "curve/tube",
+      "restLengthM": null,
+      "radiusM": null,
+      "measurementStatus": "routing silhouette from photo only",
+      "note": "Top-cover harness; allow slack while cover moves; unknown pin map."
+    },
+    {
+      "id": "camera-harness",
+      "visualGroups": [
+        "controller",
+        "camera"
+      ],
+      "endpointA": null,
+      "endpointB": null,
+      "pinMap": null,
+      "geometry": "curve/tube",
+      "restLengthM": null,
+      "radiusM": null,
+      "measurementStatus": "routing silhouette from photo only",
+      "note": "Board-to-board communication/power route; no pin map inferred from wire colors."
+    },
+    {
+      "id": "front-range-harness",
+      "visualGroups": [
+        "controller",
+        "ultrasonic"
+      ],
+      "endpointA": null,
+      "endpointB": null,
+      "pinMap": null,
+      "geometry": "curve/tube",
+      "restLengthM": null,
+      "radiusM": null,
+      "measurementStatus": "routing silhouette from photo only",
+      "note": "Planned HC-SR04 harness; exact installed endpoint unresolved."
+    },
+    {
+      "id": "imu-harness",
+      "visualGroups": [
+        "controller",
+        "imu"
+      ],
+      "endpointA": null,
+      "endpointB": null,
+      "pinMap": null,
+      "geometry": "curve/tube",
+      "restLengthM": null,
+      "radiusM": null,
+      "measurementStatus": "routing silhouette from photo only",
+      "note": "Side module bundle."
+    },
+    {
+      "id": "health-harness",
+      "visualGroups": [
+        "controller",
+        "health"
+      ],
+      "endpointA": null,
+      "endpointB": null,
+      "pinMap": null,
+      "geometry": "curve/tube",
+      "restLengthM": null,
+      "radiusM": null,
+      "measurementStatus": "routing silhouette from photo only",
+      "note": "Finger-contact module bundle."
+    },
+    {
+      "id": "power-harness",
+      "visualGroups": [
+        "battery",
+        "controller"
+      ],
+      "endpointA": null,
+      "endpointB": null,
+      "pinMap": null,
+      "geometry": "curve/tube",
+      "restLengthM": null,
+      "radiusM": null,
+      "measurementStatus": "routing silhouette from photo only",
+      "note": "Power group; supply topology unknown."
+    },
+    {
+      "id": "servo-harness-group",
+      "visualGroups": [
+        "battery",
+        "servo"
+      ],
+      "endpointA": null,
+      "endpointB": null,
+      "pinMap": null,
+      "geometry": "curve/tube",
+      "restLengthM": null,
+      "radiusM": null,
+      "measurementStatus": "routing silhouette from photo only",
+      "note": "Four actuator bundles; distribution board/headers remain to be matched."
+    }
+  ]
+}

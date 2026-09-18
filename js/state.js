@@ -54,6 +54,7 @@ const state = {
   },
   device: {},
   video: {},
+  gestureAction: null,
   lastImuTs: 0,
   imu: { yaw_deg: undefined, pitch_deg: undefined, roll_deg: undefined },
   vision: {
@@ -72,7 +73,8 @@ const state = {
   ppg: {
     ring: new PpgRing(CONFIG.PPG_RING_CAPACITY),
     sampleRateHz: CONFIG.PPG_EXPECTED_RATE_HZ,
-    lastTs: 0
+    lastTs: 0,
+    receivedTs: 0, sourceTs: null, timeBasis: 'arrival-estimate'
   },
   ui: {
     transportName: 'mock',
@@ -133,6 +135,11 @@ export function applyTelemetry(msg) {
     if (msg.robot.mode !== undefined && msg.robot.estop !== undefined) state.connection.lastRobotTs = t;
   }
   if (msg.device) mergeDefined(state.device, msg.device);
+  if(msg.gesture_action) {
+    const previous=state.gestureAction,action=msg.gesture_action;
+    const sourceAt=t-action.age_ms;
+    state.gestureAction={...action,sourceAt:previous?.seq===action.seq?Math.min(previous.sourceAt,sourceAt):sourceAt};
+  }
   if (msg.imu) { mergeDefined(state.imu, msg.imu); state.lastImuTs = t - Math.max(0, msg.imu.age_ms || 0); }
   if (msg.video) mergeDefined(state.video, msg.video);
 
@@ -148,7 +155,7 @@ export function applyTelemetry(msg) {
       state.vision.person = v.person;
       state.vision.lastPersonTs = same ? Math.min(state.vision.lastPersonTs, sourceTs) : sourceTs;
     }
-    if (v.gesture) { state.vision.gesture = v.gesture; state.vision.lastGestureTs = t; }
+    if (v.gesture) { state.vision.gesture = v.gesture; state.vision.lastGestureTs = t - Math.max(0,v.gesture.age_ms || 0); }
   }
 
   if (msg.health) {
@@ -157,7 +164,7 @@ export function applyTelemetry(msg) {
     mergeDefined(state.health, msg.health); state.connection.lastHealthTs = t; }
 
   // 机器人确认了模式 → 清除 pending
-  if (state.ui.requestedMode && state.robot.mode === state.ui.requestedMode) {
+  if (state.ui.requestedMode && msg.robot?.mode === state.ui.requestedMode && msg.robot.estop === false) {
     state.ui.requestedMode = null;
   }
 
@@ -215,7 +222,14 @@ export function markEstopLocal(active) {
 
 export function isTelemetryStale(nowMs = Date.now()) {
   return state.connection.link !== LINK.CONNECTED ||
+         !state.connection.lastTelemetryTs || nowMs < state.connection.lastTelemetryTs ||
          (nowMs - state.connection.lastTelemetryTs) > CONFIG.TELEMETRY_STALE_MS;
+}
+
+export function isRobotStale(nowMs = Date.now()) {
+  const at=state.connection.lastRobotTs;
+  return state.connection.link!==LINK.CONNECTED || !Number.isFinite(at) || at<=0 ||
+    nowMs<at || nowMs-at>CONFIG.TELEMETRY_STALE_MS;
 }
 
 export function isPersonStale(nowMs = Date.now()) {
@@ -223,8 +237,7 @@ export function isPersonStale(nowMs = Date.now()) {
 }
 
 export function isGestureStale(nowMs = Date.now()) {
-  // 手势更新频率低（2–4 Hz），过期阈值放宽到 bbox 的 4 倍
-  return (nowMs - state.vision.lastGestureTs) > 2200;
+  return (nowMs - state.vision.lastGestureTs) >= CONFIG.GESTURE_STALE_MS;
 }
 
 /**
@@ -238,7 +251,7 @@ export function isManualEnabled() {
          state.robot.control_allowed !== false &&
          !state.ui.requestedMode && state.robot.state !== 'FAULT' &&
          state.connection.camera === true && state.connection.main_mcu === true &&
-         Date.now() - state.connection.lastRobotTs <= CONFIG.TELEMETRY_STALE_MS &&
+         !isRobotStale() &&
          state.robot.mode === 'MANUAL' &&
          !isTelemetryStale();
 }
@@ -246,9 +259,11 @@ export function isManualEnabled() {
 export function resetForDisconnect() {
   state.device = {};
   state.video = {}; state.lastImuTs = 0;
+  state.gestureAction=null;
   state.imu = { valid: false };
   state.front=null;
   state.robot.control_allowed = undefined;
+  state.robot.control_owned=undefined;state.robot.control_occupied=undefined;
   state.robot.motion_output_installed = undefined;
   state.connection.lastHealthTs = 0;
   state.health.hr_valid=undefined;state.health.spo2_valid=undefined;state.health.hr_held=false;state.health.spo2_held=false;
@@ -258,6 +273,7 @@ export function resetForDisconnect() {
   state.vision.lastPersonTs = 0;
   state.vision.lastGestureTs = 0;
   state.ppg.ring.clear();
+  state.ppg.lastTs=0;state.ppg.receivedTs=0;state.ppg.sourceTs=null;state.ppg.timeBasis='arrival-estimate';
   state.robot.vx = 0; state.robot.vy = 0; state.robot.wz = 0;
   state.ui.joystick.vx = 0; state.ui.joystick.vy = 0;
   state.ui.rotate = 0;

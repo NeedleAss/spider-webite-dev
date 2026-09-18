@@ -1,3 +1,5 @@
+> 2026-09-17 候选更新：停止、失效与 WAIT_TARGET 语义已修复；当前约束与软件/实物证据见 [FINAL_ACCEPTANCE.md](FINAL_ACCEPTANCE.md)。下文保留先前开发背景。
+
 # CareRover 网页优化/重设计 交接文档
 
 > 交接对象：负责网页优化与重设计的 agent。
@@ -12,7 +14,7 @@ CareRover 是一台 ESP32-S3 全向轮机器人，主控托管网页 + WebSocket
 - 网页由**主控 ESP32-S3** 从 FFat 分区（`webroot`）通过 HTTP 提供，地址 `http://192.168.4.1`（主控开热点 `CareRover-EE68`，密码见本地 `firmware/main_wireless/wifi_secrets.h`，不入库）。
 - 源码在仓库根：`index.html` + `js/` + `css/`。**不是独立前端工程**，是随主控固件打包进 `ffat.bin` 的静态资源。
 - 本地浏览器调试（无硬件）：`python3 -m http.server 8080 --bind 127.0.0.1` 后打开 `http://127.0.0.1:8080/?transport=mock`；或用 `.venv/Scripts/python.exe mock/server.py` 后打开 `http://127.0.0.1:8080/?transport=ws&video=canvas`。
-- 视频：主控透传 CAM 的 MJPEG（`/stream`），`video.js` + `video-overlay.js` 负责显示与框/手势叠加。
+- 视频：浏览器直接读取 CAM 的 MJPEG（遥测 `video.stream_url`，默认 `http://192.168.4.2/stream`）；主控提供网页与 WS，不代理该视频流，`video.js` + `video-overlay.js` 负责显示与框/手势叠加。
 
 ## 3. 文件地图
 
@@ -36,7 +38,7 @@ CareRover 是一台 ESP32-S3 全向轮机器人，主控托管网页 + WebSocket
 
 ## 4. 协议（权威文档 `docs/protocol.md`）
 
-- 传输：WebSocket（`/ws`）+ MJPEG 视频（`/stream`）。
+- 传输：主控 WebSocket（`/ws`）+ CAM MJPEG（`http://192.168.4.2/stream`）。
 - 出站命令：`cmd_vel`、`set_mode`、`estop`、`clear_estop`、`ping`、`set_demo_bypass`。
 - 入站：`telemetry`（机器人状态/视觉/IMU/健康/手势/前方/视频 URL）、`ack`、`error`、`pong`、`ppg_batch`。
 - 错误码：`ESTOP_ACTIVE`、`NOT_IN_MANUAL`、`INVALID_COMMAND`、`INVALID_MODE`、`UNKNOWN_TYPE`、`INVALID_JSON`、`CONTROL_BUSY`、`FAULT_ACTIVE`、`FRONT_RELEASE_REQUIRED`、`CAMERA_OFFLINE`、`IMU_NOT_READY`、`TARGET_NOT_READY` 等。

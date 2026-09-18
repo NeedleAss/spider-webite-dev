@@ -9,11 +9,32 @@ namespace carerover {
 
 enum class GestureAction { None, StartFollow, Stop, TurnClockwise, TurnCounterClockwise };
 
+// A hand held through a manual session, cancellation or fault is not a new
+// intent. Only observed neutral frames re-arm start actions. Stop still passes.
+class GestureRearmGate {
+ public:
+  bool observe(uint32_t stopSequence,bool occupied,bool prohibited,bool neutral) {
+    if(seen_&&stopSequence!=sequence_) {blocked_=true;neutralFrames_=0;}
+    seen_=true;sequence_=stopSequence;
+    if(occupied||prohibited) {blocked_=true;neutralFrames_=0;}
+    else if(neutral) {
+      if(neutralFrames_<3)++neutralFrames_;
+      if(neutralFrames_>=3)blocked_=false;
+    } else neutralFrames_=0;
+    return !blocked_;
+  }
+  void acknowledge(uint32_t sequence) {seen_=true;sequence_=sequence;}
+ private:
+  uint32_t sequence_=0;
+  uint8_t neutralFrames_=0;
+  bool seen_=false,blocked_=false;
+};
+
 inline bool gestureActionBoxValid(const char* label, int x0, int y0, int x1, int y1) {
   constexpr int kMinActionBoxWidth = 80;
   constexpr int kMinActionBoxHeight = 120;
   // Starting follow is additionally guarded by a fresh person target, an
-  // online supervising station, a healthy IMU and the four-frame latch.  The
+  // running network service, a healthy IMU and the four-frame latch.  The
   // field trace shows a real shoulder-level LIKE at 114-119 px high, so only
   // LIKE gets a slightly lower height gate.  Unattended turn actions retain
   // the stricter dimensions established by the static-background evidence.

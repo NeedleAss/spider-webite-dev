@@ -1,0 +1,36 @@
+
+> test
+> node --test tests/*.test.js
+
+✔ contain mapping centers a 4:3 image in widescreen and portrait canvases (1.42975ms)
+✔ joystick eight directions, radius limiting, and deadzone use robot axes (0.182958ms)
+✔ protocol rejects malformed frames, unsafe commands, bad samples and ACKs (0.493667ms)
+✔ manual control requires fresh robot confirmation, healthy links, and no safety latch (0.314583ms)
+✔ PPG storage stays bounded through 5 minutes at 50 Hz (1.370666ms)
+✔ simulator enforces mode arbitration, hard ESTOP, explicit recovery and configured watchdog (0.527584ms)
+✔ MockTransport removes completed timeout handles and reconnects at zero (110.602125ms)
+✔ pointer capture loss, touch cancellation, blur and hidden all release targets (1.655167ms)
+✔ simulated lost target waits at zero, expires independently and reentry resets wait (1.554166ms)
+✔ gesture display alone cannot start simulated motion and stop exits gesture mode (0.305875ms)
+✔ held metrics remain independent, old telemetry replaces validity, disconnect clears state (0.616584ms)
+✔ prediction age comes from last measured seq and expires even with repeated telemetry (0.29425ms)
+✔ gesture holding is distinct from confidence and IMU rejected count survives decoding (0.148958ms)
+✔ front protocol does not retain malformed/no-echo/stale ranges and validates demo commands (0.583833ms)
+✔ manual stop latches until release and missing echo cancels movement (0.47475ms)
+✔ simulated demo visits every bypass phase then disables itself (2.43725ms)
+✔ bypass timeout, repeated obstruction and ESTOP cannot resume automatically (0.308041ms)
+✔ stream query and telemetry share URL validation and deterministic precedence (1.151833ms)
+✔ duplicate person sequence cannot refresh its deadline; fresh sequence can (0.482042ms)
+✔ tracking capabilities, IMU validity and explicit null survive decoding (0.424084ms)
+✔ held gesture and IMU age come from the source, not aggregate arrival (0.131791ms)
+✔ independently invalidated HR/SpO2 explicitly clear old values (2.390958ms)
+✔ wireless capabilities block non-owner input and reset on disconnect (0.609833ms)
+✔ errors retain request correlation and sensor block freshness is independent (0.080042ms)
+ℹ tests 24
+ℹ suites 0
+ℹ pass 24
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 169.898625

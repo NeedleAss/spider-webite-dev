@@ -1,0 +1,12 @@
+{
+  "source_commit": "78cc581b03c01dba9d66c4a789b61bc5f7788280",
+  "platform": "macOS-27.0-arm64-arm-64bit-Mach-O",
+  "python": "3.14.6",
+  "node": "v24.18.0",
+  "ctags_source": "https://github.com/arduino/ctags/archive/refs/tags/5.8-arduino11.tar.gz",
+  "ctags_archive_sha256": "86ca843c62aecb9bc531a73d9b6cef33179bd885b1bf8df9e0c7e9761aa9794d",
+  "ctags_local_change": "Reserved macro __unused__ renamed to CTAGS_UNUSED in C/H files to avoid macOS SDK macro collision. Built natively with system compiler. Arduino runtime.tools.ctags.path overridden only for builds via local wrapper.",
+  "cad_reexport": "PASS: original user CAD re-export produces byte-identical GLB",
+  "vendor_verification": "PASS: six included files byte-identical to three@0.180.0 official npm package",
+  "embedded_payload_presentation": "EXCLUDED: runtime_files includes root index, protocol, js, css, assets only"
+}

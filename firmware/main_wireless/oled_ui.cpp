@@ -167,6 +167,11 @@ bool OledUi::flush() {
 
 void OledUi::renderData(const OledUiSnapshot &snapshot) {
   clear();
+  if(snapshot.actionVisible) {
+    drawText(0,0,snapshot.actionTitle);drawHorizontalLine(10);
+    drawText(0,20,snapshot.actionDetail);drawText(0,36,snapshot.actionReason);
+    drawText(0,56,"CAREROVER");flush();return;
+  }
   drawText(0, 0, "CAM:");
   drawText(24, 0, snapshot.gestureValid ? snapshot.gestureLabel : "--");
   if (snapshot.gestureValid) {
@@ -234,7 +239,7 @@ void OledUi::service(uint32_t nowMs, const OledUiSnapshot &snapshot) {
     return;
   }
 
-  const bool hasResult = snapshot.frontEnabled || snapshot.gestureValid || snapshot.heartRateValid || snapshot.spo2Valid;
+  const bool hasResult = snapshot.actionVisible || snapshot.frontEnabled || snapshot.gestureValid || snapshot.heartRateValid || snapshot.spo2Valid;
   if (hasResult) {
     noResultSinceMs_ = 0;
     idleActive_ = false;

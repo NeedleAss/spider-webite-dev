@@ -1,0 +1,63 @@
+
+> test
+> node --test tests/*.test.js
+
+✔ contain mapping centers a 4:3 image in widescreen and portrait canvases (1.544917ms)
+✔ joystick eight directions, radius limiting, and deadzone use robot axes (0.43925ms)
+✔ protocol rejects malformed frames, unsafe commands, bad samples and ACKs (1.864167ms)
+✔ manual control requires fresh robot confirmation, healthy links, and no safety latch (5.256208ms)
+✔ PPG storage stays bounded through 5 minutes at 50 Hz (1.393292ms)
+✔ simulator enforces mode arbitration, hard ESTOP, explicit recovery and configured watchdog (0.653ms)
+✔ MockTransport removes completed timeout handles and reconnects at zero (106.143083ms)
+✔ pointer capture loss, touch cancellation, blur and hidden all release targets (1.217042ms)
+✔ simulated lost target waits at zero, expires independently and reentry resets wait (1.314291ms)
+✔ gesture display alone cannot start simulated motion and stop exits gesture mode (0.2245ms)
+✔ held metrics remain independent, old telemetry replaces validity, disconnect clears state (4.551875ms)
+✔ prediction age comes from last measured seq and expires even with repeated telemetry (0.170875ms)
+✔ gesture holding is distinct from confidence and IMU rejected count survives decoding (0.076875ms)
+✔ 150-second director is deterministic under random seeks and reverse scrubbing (14.821625ms)
+✔ independent movement returns each translation, rotates through 360 and holds (0.098375ms)
+✔ contact and OLED values are one event and clear on release (0.73325ms)
+✔ Deck stops at chapter hold; Film, Scroll and paused Inspect use independent authority (0.111125ms)
+✔ portrait framing preserves real-world size and pose (0.51175ms)
+✔ local latch and successful transmission do not claim device confirmation (2.573166ms)
+✔ recorded emergency telemetry is presented as replay even with a stale live transport (0.133542ms)
+✔ source batch time survives delayed network arrival and remains distinct from receipt time (0.106417ms)
+✔ missing, zero, unsynchronised and future clocks are labelled arrival estimates (0.199625ms)
+✔ replay remaps capture and source clocks by one fixed offset, preserving source gaps (0.059541ms)
+✔ front protocol does not retain malformed/no-echo/stale ranges and validates demo commands (0.80925ms)
+✔ manual stop latches until release and missing echo cancels movement (0.726125ms)
+✔ simulated demo visits every bypass phase then disables itself (1.660584ms)
+✔ bypass timeout, repeated obstruction and ESTOP cannot resume automatically (2.340583ms)
+✔ story seeks are deterministic and cannot accumulate displacement over 100 assembly cycles (18.500041ms)
+✔ lid and OLED share the same reversible displacement, and final shot returns to the original front (0.412959ms)
+✔ camera chapter widens to a complete response before transitioning to sonar (0.236291ms)
+✔ reduced motion has deterministic readable chapter poses (0.090291ms)
+✔ normalised orthogonal mixing preserves longitudinal/transverse pairs and bounded rotation (0.174166ms)
+✔ in-place turning really holds translation fixed; trajectory closes and sonar returns to the emitting plane (0.115917ms)
+✔ saved source CAD fixes both module forward axes at world -X; original manifest has not been rewritten (1.052792ms)
+✔ CAD wheel instances have the physical axes and geometric rotation signs required by the orthogonal layout (0.141959ms)
+✔ stream query and telemetry share URL validation and deterministic precedence (4.101166ms)
+✔ duplicate person sequence cannot refresh its deadline; fresh sequence can (0.784ms)
+✔ tracking capabilities, IMU validity and explicit null survive decoding (1.032459ms)
+✔ held gesture and IMU age come from the source, not aggregate arrival (0.1495ms)
+✔ CAM multipart parser survives every byte split and returns only the latest complete frame (10.020542ms)
+✔ malformed, duplicate and oversized JPEG framing is rejected within fixed buffer limits (0.260917ms)
+✔ decoded arrivals authorize LIVE; a retained frame expires independently of metadata (22.927792ms)
+✔ source switch discards late decode and closes its bitmap (1.247666ms)
+✔ one decoding frame and one latest pending frame bound backlog (0.703291ms)
+✔ busy HTTP response does not open reader or retry; first-frame timeout is bounded (0.351333ms)
+✔ continuous arrivals do not starve display when decoding is slower than the source (0.651583ms)
+✔ independently invalidated HR/SpO2 explicitly clear old values (2.263083ms)
+✔ wireless capabilities block non-owner input and reset on disconnect (0.698042ms)
+✔ errors retain request correlation and sensor block freshness is independent (0.0975ms)
+✔ robot freshness cannot be renewed by health, IMU, vision or PPG traffic (0.148417ms)
+✔ scoped release and recognized-versus-accepted gesture events retain their meaning (0.603625ms)
+ℹ tests 51
+ℹ suites 0
+ℹ pass 51
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 205.911667

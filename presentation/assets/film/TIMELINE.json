@@ -1,0 +1,106 @@
+{
+  "duration": 150,
+  "units": "metres",
+  "simulation": true,
+  "scenes": [
+    {
+      "id": "meet",
+      "start": 0,
+      "end": 7,
+      "kicker": "SENSE. MOVE. CARE.",
+      "title": "让感知，\n成为行动。",
+      "body": "认识 CareRover。\n一台把感知、运动与关怀连在一起的小机器人。",
+      "note": "CAD 装配与实物参考外观 · 产品原理动画"
+    },
+    {
+      "id": "inside",
+      "start": 7,
+      "end": 20,
+      "kicker": "01 / BEAUTIFULLY CONNECTED",
+      "title": "小小机身，\n各有分工。",
+      "body": "感知、判断、驱动。\n打开之后，每一层都有自己的任务。",
+      "note": "目标装配 · 示意线束在拆解时断开，不代表实际接线"
+    },
+    {
+      "id": "senses",
+      "start": 20,
+      "end": 29,
+      "kicker": "02 / TWO WAYS TO SENSE",
+      "title": "看见位置。\n听见距离。",
+      "body": "镜头捕捉线索。\n双探头，让前方的回声有了意义。",
+      "note": "视域与声波为原理示意，非标定波束"
+    },
+    {
+      "id": "scale",
+      "start": 29,
+      "end": 40,
+      "kicker": "03 / MADE FOR THE DESK",
+      "title": "刚刚好的小。",
+      "body": "从器件的细节，回到日常的尺度。\n它的世界，就在桌面上。",
+      "note": "机器人、桌面与成人采用一致米制尺度"
+    },
+    {
+      "id": "motion",
+      "start": 40,
+      "end": 60,
+      "kicker": "04 / MOVE YOUR WAY",
+      "title": "怎么转，\n都有范。",
+      "body": "前后、左右、原地旋转。\n横着走，也不必先转身。",
+      "note": "两组正交全向轮对 · 编排轨迹，无实测轮速"
+    },
+    {
+      "id": "gesture",
+      "start": 60,
+      "end": 82,
+      "kicker": "05 / A GESTURE IS ENOUGH",
+      "title": "一个手势，\n心领神会。",
+      "body": "看见，确认，再回应。\n不用先打开网页，直接比给它看。",
+      "note": "动作仍受标定、数据有效性和安全条件约束"
+    },
+    {
+      "id": "follow",
+      "start": 82,
+      "end": 98,
+      "kicker": "06 / FOLLOW WITH CARE",
+      "title": "跟得上。\n也停得住。",
+      "body": "位置有效，先朝向再移动。\n目标不可用，就停下来等待。",
+      "note": "人脸位置跟随 · 不识别身份，不自动搜人"
+    },
+    {
+      "id": "range",
+      "start": 98,
+      "end": 112,
+      "kicker": "07 / BEFORE THE NEXT MOVE",
+      "title": "先有判断，\n再向前。",
+      "body": "回声返回，距离有据。\n遇到前方障碍，先停下。",
+      "note": "单前向探头 · 没有侧后方或桌沿检测"
+    },
+    {
+      "id": "care",
+      "start": 112,
+      "end": 130,
+      "kicker": "08 / A LITTLE CARE",
+      "title": "轻轻一触，\n状态可见。",
+      "body": "手指接触，开始采集。\n转向顶部屏幕，看见这一次回应。",
+      "note": "72 BPM / 98% 为模拟值 · 测量时间压缩 · 非医疗设备"
+    },
+    {
+      "id": "console",
+      "start": 130,
+      "end": 143,
+      "kicker": "09 / YOUR CONTROL CENTER",
+      "title": "看得清。\n控得稳。",
+      "body": "实时视野、手动操作与设备状态。\n在一个清楚的界面里，各就其位。",
+      "note": "生产控制台的模拟会话 · 未连接或控制实物"
+    },
+    {
+      "id": "whole",
+      "start": 143,
+      "end": 150,
+      "kicker": "CAREROVER",
+      "title": "现在，\n交给现场。",
+      "body": "从一张设计，到一台机器人。\n从这里，开始我们的演示。",
+      "note": "实体动作以现场验收为准"
+    }
+  ]
+}

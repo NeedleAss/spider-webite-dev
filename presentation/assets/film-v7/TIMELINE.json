@@ -1,0 +1,86 @@
+{
+  "durationSeconds": 112,
+  "scenes": [
+    {
+      "id": "meet",
+      "start": 0,
+      "end": 6,
+      "kicker": "SENSE. MOVE. CARE.",
+      "title": "让感知，\n成为行动。",
+      "body": "认识 CareRover。\n把感知、运动与关怀连在一起。",
+      "note": "CAD 装配与实物参考外观 · 产品原理动画"
+    },
+    {
+      "id": "inside",
+      "start": 6,
+      "end": 18,
+      "kicker": "DESIGNED FROM WITHIN",
+      "title": "每一层，\n都有秩序。",
+      "body": "打开机身。\n看见细节之间的联系。",
+      "note": "装配关系示意 · 退出路径待实物安装核对"
+    },
+    {
+      "id": "vision",
+      "start": 18,
+      "end": 38,
+      "kicker": "A DIFFERENT WAY TO SEE",
+      "title": "看见你。\n跟得上。",
+      "body": "从看见目标，到持续跟随。\n你移动，它回应。",
+      "note": "人脸位置跟随示意 · 不识别身份 · 摄像头不发射可见激光"
+    },
+    {
+      "id": "range",
+      "start": 38,
+      "end": 48,
+      "kicker": "EVERY RETURN TELLS A STORY",
+      "title": "距离，\n有了回响。",
+      "body": "一次发出。一次回应。\n在向前之前，知道距离。",
+      "note": "声波原理示意 · 传播已放慢，非实测声束"
+    },
+    {
+      "id": "motion",
+      "start": 48,
+      "end": 66,
+      "kicker": "MOVE YOUR WAY",
+      "title": "怎么转，\n都有范。",
+      "body": "前后、左右、原地旋转。\n横着走，也不必先转身。",
+      "note": "两组正交全向轮对 · 编排轨迹，无实测轮速"
+    },
+    {
+      "id": "gesture",
+      "start": 66,
+      "end": 80,
+      "kicker": "A GESTURE IS ENOUGH",
+      "title": "一个手势，\n心领神会。",
+      "body": "看见，确认，再回应。\n不用先打开网页，直接比给它看。",
+      "note": "识别与执行流程模拟 · 动作受标定、数据和安全条件约束"
+    },
+    {
+      "id": "care",
+      "start": 80,
+      "end": 96,
+      "kicker": "A LITTLE CARE",
+      "title": "轻轻一触，\n状态可见。",
+      "body": "从接触，到采集。\n每一次回应，都清楚呈现。",
+      "note": "72 BPM / 98% 为模拟值 · 测量时间压缩 · 非医疗设备"
+    },
+    {
+      "id": "console",
+      "start": 96,
+      "end": 106,
+      "kicker": "YOUR CONTROL CENTER",
+      "title": "看得清。\n控得稳。",
+      "body": "实时视野、手动操作与设备状态。\n在一个清楚的界面里，各就其位。",
+      "note": "生产操作台的模拟会话 · 未连接或控制实物"
+    },
+    {
+      "id": "whole",
+      "start": 106,
+      "end": 112,
+      "kicker": "CAREROVER",
+      "title": "现在，\n交给现场。",
+      "body": "从一张设计，到一台机器人。\n从这里，开始我们的演示。",
+      "note": "实体动作以现场验收为准"
+    }
+  ]
+}

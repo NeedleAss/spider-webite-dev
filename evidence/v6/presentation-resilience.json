@@ -1,0 +1,30 @@
+[
+  {
+    "name": "context loss gives usable offline film link",
+    "status": "PASS"
+  },
+  {
+    "name": "context restored with same semantic time",
+    "status": "PASS"
+  },
+  {
+    "name": "repeated focus/reset does not accumulate CAD transforms",
+    "status": "PASS"
+  },
+  {
+    "name": "repeated focus/reset keeps geometry count bounded",
+    "status": "PASS"
+  },
+  {
+    "name": "unselected exit collapses after delay",
+    "status": "PASS"
+  },
+  {
+    "name": "reduced motion starts without autoplay",
+    "status": "PASS"
+  },
+  {
+    "name": "explicit static fallback has poster and film",
+    "status": "PASS"
+  }
+]

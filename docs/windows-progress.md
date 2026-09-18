@@ -1,3 +1,5 @@
+> **2026-09-17 最终候选更新**：下方 Windows/烧录记录是历史现场证据。本轮 Mac 软件验证、代码与真实 CAD 展示已完成；没有连接/烧录/运动实物。当前入口：[FINAL_ACCEPTANCE.md](FINAL_ACCEPTANCE.md)，机器可读结果：[FINAL_RESULTS.json](FINAL_RESULTS.json)。历史软件版本不得替代当前候选验收。
+
 # Windows 现场进度（接手后维护）
 
 初始状态：已于 2026-09-15 在本机开始接手。历史 Mac/CI 和旧包现场结果仍不算本轮实物验收；以下只记录本机实际执行结果。
@@ -6,11 +8,11 @@
 
 - 当前阶段：W0 Windows 环境与构建复现（PASS）；W1 设备核对与完整备份（PASS）；W2 CAM 烧录/串口验收（PASS）；W3 observe（IN PROGRESS）；主控与 CAM 的 DEMO_BALANCED 设备包均已烧录并通过串口验收
 - 最近完成：主控 `7a160cd4dc396869-s5-follow`（stage5-follow DEMO_BALANCED）与 CAM `demo_balanced` stream 均已写入并通过 Hash 校验；两板完整备份与硬复位完成；CAM/主控 115200 串口日志已保存并核对新固件版本
-- 下一步：保持舵机 5 V 断开、车轮架空，先加入 CareRover-EE68（密码 88888888）并访问 192.168.4.1 做网页/无线 observe；随后再由现场授权进行传感器、人物框和运动验收
+- 下一步：保持舵机 5 V 断开、车轮架空，先加入 CareRover-EE68（密码由现场本地配置提供）并访问 192.168.4.1 做网页/无线 observe；随后再由现场授权进行传感器、人物框和运动验收
 - 阻塞/待用户提供：尚未进行真人入镜、手指稳定放置、舵机落地或十分钟无线实物验收；这些需要现场输入和明确的运动授权
 - 版本同步：本地提交 `922ed6d` 已生成；推送到 GitHub 因本机 Git Credential Manager 无可用凭据而被拒绝，待用户在本机完成 GitHub 登录后重试，未使用强制推送
 - 最近修改及原因：仅补充本轮 Windows 可复现证据；尚未修改产品源码
-- 下一条命令或人工操作：保持舵机 5 V 断开、车轮架空；电脑连接 `CareRover-EE68`（密码 `88888888`），打开 `http://192.168.4.1/?transport=ws&video=mjpeg`，执行网页 observe。需要运动时必须先由用户明确授权并保留急停可达。
+- 下一条命令或人工操作：保持舵机 5 V 断开、车轮架空；电脑连接 `CareRover-EE68`（密码由现场本地配置提供），打开 `http://192.168.4.1/?transport=ws&video=mjpeg`，执行网页 observe。需要运动时必须先由用户明确授权并保留急停可达。
 
 - 软件部署：已完成一轮”手动模式/姿态/视觉显示/手势响应”改进并通过主机回归；主控 `7a160cd4dc396869-s5-follow` 与 CAM `demo_balanced` 设备包已在本机（COM6/COM3）烧录并通过串口验收（见下方 2026-09-16 记录）。
 
@@ -164,3 +166,23 @@
 - 回归：`tools/check_firmware.py` 8 套全 PASS；IMU 用例改 X 竖直输入；新增 THREE 手势用例。
 - 构建/烧录：`build/stage5-follow-6a29b278dd82b6f6-device`（`6a29b278dd82b6f6-s5-follow`）；刷 COM6，整片备份 `build/backups/main-before-20260917-000518.bin`（SHA-256 `327e30b9064bc99d4494bf2552e0532bd08b8410d86e0e219db4db2fd437b4b1`）。
 - 超声：`front_config.h` 定义 `FrontInstallation{trig,echo,FrontConfig}`；允许引脚 1/2/14/15/16/21/38–42；功能=前方障碍保护（stopCm/slowCm/warnCm/releaseCm）+ 自动绕障 demo bypass（lateralSpeed/forwardSpeed/settleMs/marginMs/passMs/lateralTimeoutMs）。接入需按 `front_config.example.h` 建 `front_config.local.h` 填 trig/echo 与阈值并置 `enabled`，`verified` 待实测后再置真。
+
+## 2026-09-17 最终优化候选（Mac 软件证据）
+
+- 基线：`058ce89bd1aa5b5da0dbf89101f4625df70ca6df`；工作分支 `codex/final-polish`。远端新提交与两轮 review 正文已经对照；独立附件未取得，未冒称重跑原脚本。
+- 修复：键盘/指针轴残留、手动超时、所有者断开、人物静默、WAIT_TARGET 周期退出、动作普通停止、手势期限、倾倒拒绝帧计时/缺失锁存、运动准入；保留 +X 安装与已有调优。
+- PASS：JS 24 用例；Python 37 用例；C++ 10 套；独立 SAFE22/22、DEMO23/23；ASan/UBSan 8 组。基线 FAIL 与最终日志分别保留。
+- PASS：SAFE follow、DEMO follow、SAFE observe 完整 compile_only 构建，版本/清单见 FINAL_RESULTS.json。首次本机 ctags 架构错误 FAIL 保留，使用同版原生工具局部覆盖后构建成功。没有烧录。
+- PASS：真实 CAD 15 类网格/20 可见实例、GLB Validator 零错误零警告；本地浏览器桌面/手机、拆解/选择/收拢、原理说明、静态降级、急停与普通停止核验。原生 SolidWorks 引用/配合 NOT RUN。
+- 控制台提高字号/对比度、触控尺寸与手机安全区；Mock 明确为模拟。视频路径文档纠正为浏览器直连 CAM 的 `.2/stream`。
+- 发布包包含当前代码、展示页、来源/证据 SHA-256 清单；不含原始 CAD、构建目录、设备凭据或可直接烧录的设备包。导出清单与代码/证据核对通过后才交接。
+- NOT RUN：当前候选 Windows/真实串口/接线/校准/PWM/实体停止/无线十分钟。安全任务停摆时撤销输出仍是发布阻断，不能用页面零速度代替。
+- 当前文档已去除 AP 明文密码，历史未重写；现场配置由持有人维护。
+
+## 2026-09-18 — V6 first software checkpoint (Mac, not field acceptance)
+
+User approved V6 implementation with direct device gestures; mandatory webpage gesture authorization is superseded. Read `docs/V6_DECISIONS.md`, `docs/V6_CONSOLE_AND_FIRMWARE.md` and the current protocol extension. Production console, scoped owner release, raw-neutral rearming, action-result OLED/telemetry and robot-only freshness are implemented. Bounded direct MJPEG parsing/decode rejects stale frames; CAM error CORS remains restricted to the existing main-controller origin. Loopback browser acceptance: 16 PASS; host/compile logs remain separately identified. No serial writes or hardware movement occurred. Windows, actual mobile devices, G01 and physical measurements are NOT RUN. Film/director/Inspect work is still in progress; do not treat this checkpoint as final V6 release.
+
+## V6 软件与影片交付（2026-09-18，Mac）
+
+实现冻结 `40fe1516abfc3b43f6f734bf489d69f04b59b152`。默认直接手势、生产控制台、视频/robot 时效、150 秒 MP4 和统一展示已完成；51 Node、38 Python、12 C++ 套件和 42 浏览器检查通过。主控 follow 与 CAM stream 的 SAFE / DEMO 四次干净源码编译通过。交接版本和包内校验见 `V6_DELIVERY.md`，完整证据见 `../evidence/v6/`。未烧录、未实际运动；Windows、真实手机、PWM/实体和 G01 仍 NOT RUN。下一个现场记录必须逐项填写 `V6_FIELD_RUNBOOK.md`，不能把本段改称真机通过。

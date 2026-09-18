@@ -1,0 +1,143 @@
+{
+  "results": [
+    {
+      "name": "reload restores exact chapter progress",
+      "status": "PASS",
+      "detail": {
+        "before": 0.8114197530864198,
+        "after": 0.8114197530864198
+      }
+    },
+    {
+      "name": "resize preserves chapter progress",
+      "status": "PASS",
+      "detail": 0.8114982578397213
+    },
+    {
+      "name": "multi-pointer cancellation does not select a different instance",
+      "status": "PASS"
+    },
+    {
+      "name": "emulated 1440 viewport renders above 30 FPS on this Mac",
+      "status": "PASS",
+      "detail": {
+        "fps": 120.22913474952543,
+        "p95FrameMs": 9.599999999999909,
+        "render": {
+          "calls": 137,
+          "triangles": 37206,
+          "geometries": 137,
+          "textures": 15
+        }
+      }
+    },
+    {
+      "name": "emulated 390 viewport renders above 30 FPS on this Mac",
+      "status": "PASS",
+      "detail": {
+        "fps": 120.12511646467523,
+        "p95FrameMs": 9.599999999999454,
+        "render": {
+          "calls": 137,
+          "triangles": 37206,
+          "geometries": 137,
+          "textures": 15
+        }
+      }
+    },
+    {
+      "name": "vision late shot chapter",
+      "status": "PASS"
+    },
+    {
+      "name": "care late shot chapter",
+      "status": "PASS"
+    },
+    {
+      "name": "renderer resources stabilize after warm-up",
+      "status": "PASS",
+      "detail": {
+        "warm": {
+          "calls": 133,
+          "triangles": 36046,
+          "geometries": 153,
+          "textures": 15
+        },
+        "end": {
+          "calls": 133,
+          "triangles": 36046,
+          "geometries": 153,
+          "textures": 15
+        }
+      }
+    },
+    {
+      "name": "static failure retains real chapter poster and readable DOM",
+      "status": "PASS",
+      "detail": {
+        "chapter": "range",
+        "loaded": true,
+        "copy": "visible",
+        "canvasPointer": "none"
+      }
+    },
+    {
+      "name": "glb failure retains real chapter poster and readable DOM",
+      "status": "PASS",
+      "detail": {
+        "chapter": "range",
+        "loaded": true,
+        "copy": "visible",
+        "canvasPointer": "none"
+      }
+    },
+    {
+      "name": "three failure retains real chapter poster and readable DOM",
+      "status": "PASS",
+      "detail": {
+        "chapter": "range",
+        "loaded": true,
+        "copy": "visible",
+        "canvasPointer": "none"
+      }
+    },
+    {
+      "name": "webgl failure retains real chapter poster and readable DOM",
+      "status": "PASS",
+      "detail": {
+        "chapter": "range",
+        "loaded": true,
+        "copy": "visible",
+        "canvasPointer": "none"
+      }
+    },
+    {
+      "name": "JavaScript disabled leaves all seven headings readable",
+      "status": "PASS"
+    }
+  ],
+  "perf": [
+    {
+      "width": 1440,
+      "fps": 120.22913474952543,
+      "p95FrameMs": 9.599999999999909,
+      "render": {
+        "calls": 137,
+        "triangles": 37206,
+        "geometries": 137,
+        "textures": 15
+      }
+    },
+    {
+      "width": 390,
+      "fps": 120.12511646467523,
+      "p95FrameMs": 9.599999999999454,
+      "render": {
+        "calls": 137,
+        "triangles": 37206,
+        "geometries": 137,
+        "textures": 15
+      }
+    }
+  ]
+}

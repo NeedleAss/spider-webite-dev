@@ -67,8 +67,8 @@
   </header>
 
   <section class="session" aria-label="会话状态">
-    <div><p class="eyebrow">CAREROVER / CONTROL CENTER</p><h2 id="sessionTitle">等待机器人连接</h2><p id="sessionDescription">正在准备控制台。</p></div>
-    <span class="session__edition">PROTOTYPE <b>01</b></span>
+    <div><p class="eyebrow">CAREROVER · CONTROL</p><h2 class="console-title">看得清。控得稳。</h2><p class="session-state" id="sessionTitle">等待机器人连接</p><p id="sessionDescription">正在准备控制台。</p></div>
+    <div class="session-context"><span class="source-pill" id="sourceBadge">等待数据</span><span id="ownerBadge">仅观看 · 不占控制权</span></div>
   </section>
 
   <!-- ── 摄像头 ───────────────────────────────────────────────────────── -->
@@ -80,11 +80,13 @@
         <label class="srcpick">
           <span class="srcpick__label" data-i18n="cam.source">画面源</span>
           <select id="videoSourceSel" class="select">
-            <option value="canvas" data-i18n="cam.src.canvas">合成画面</option>
-            <option value="mjpeg" data-i18n="cam.src.mjpeg">MJPEG /stream</option>
+            <option value="none">暂不观看</option>
+            <option value="canvas" data-i18n="cam.src.canvas">模拟视野</option>
+            <option value="mjpeg" data-i18n="cam.src.mjpeg">实时摄像头</option>
             <option value="file" data-i18n="cam.src.file">本地视频…</option>
           </select>
         </label>
+        <button class="ghostbtn" id="videoRetry" type="button" hidden>重试视频</button>
         <input type="file" id="videoFileInput" accept="video/*" hidden>
         <button class="ghostbtn" id="videoFileOpen" type="button" hidden data-i18n="cam.file.open">打开文件</button>
       </div>
@@ -99,7 +101,7 @@
       <div class="video-hud">
         <div class="video-hud__row">
           <span class="hudchip hudchip--scene" id="sceneLabel">模拟视野</span><span class="hudchip" id="hudRes">— × —</span>
-          <span class="hudchip" id="hudFps">AI — FPS</span>
+          <span class="hudchip" id="hudFps">AI — FPS</span><span class="hudchip" id="frameState">尚未打开</span>
         </div>
         <div class="video-hud__spacer"></div>
         <div class="video-hud__row video-hud__row--bottom">
@@ -107,17 +109,18 @@
         </div>
       </div>
 
-      <div class="video-error" id="videoError" hidden data-i18n="cam.unavailable">正在等待视频信号</div>
+      <div class="video-error" id="videoError" hidden>正在等待视频信号</div>
       <div class="video-corners" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
     </div>
+    <div class="video-caption"><span id="videoTiming">识别标记来自独立遥测，可能与画面存在时间差。</span><span id="frameAge">—</span></div>
   </section>
 
   <!-- ── 机器人状态 ────────────────────────────────────────────────────── -->
-  <section class="panel panel--status" aria-labelledby="hRobot">
-    <div class="panel__head">
+  <details class="panel panel--status" aria-labelledby="hRobot">
+    <summary class="panel__head">
       <h2 class="panel__title" id="hRobot" data-i18n="robot.title">机器人状态</h2>
       <span class="tag tag--warn" id="telemStale" hidden data-i18n="robot.stale">遥测中断</span>
-    </div>
+    </summary>
 
     <div class="statlist">
       <div class="statrow statrow--hero">
@@ -150,7 +153,7 @@
       <div class="statrow"><span class="statrow__k" data-i18n="robot.linkcam">摄像头链路</span><span class="statrow__v"><span class="dotstat" id="sLinkCam"></span></span></div>
       <div class="statrow"><span class="statrow__k" data-i18n="robot.linkmcu">主控链路</span><span class="statrow__v"><span class="dotstat" id="sLinkMcu"></span></span></div>
     </div>
-  </section>
+  </details>
 
   <!-- ── 健康 ────────────────────────────────────────────────────────── -->
   <section class="panel panel--health" aria-labelledby="hHealth">
@@ -180,6 +183,7 @@
     <div class="ppg">
       <canvas id="ppgChart"></canvas>
       <div class="ppg__meta">
+        <span class="ppg__scale" id="mPpgTime">接收时间估计 · 非精确采样时间</span>
         <span class="ppg__finger" id="mFinger" data-i18n="health.nofinger">未检测到手指</span>
         <span class="ppg__scale" id="mPpgRate">— Hz</span>
       </div>
@@ -195,6 +199,7 @@
       <span class="tag tag--muted" id="ctlLock" data-i18n="ctl.locked">需切换至手动模式</span>
     </div>
 
+    <div class="control-intro"><span id="controlMode">待机</span><p id="controlHint">手势直接回应。手动操作时由你接管。</p></div>
     <div class="control-body" id="controlBody" data-enabled="false">
       <div class="joystick" id="joystick" role="application"
            aria-label="全向平移摇杆" data-i18n-attr="aria-label:ctl.pad" tabindex="0">
@@ -239,6 +244,7 @@
         <p class="hintkeys" data-i18n="ctl.keys">键盘：W A S D 平移 · Q E 旋转 · 空格停止 · Esc 急停</p>
       </div>
     </div>
+    <div class="gesture-action" aria-live="polite"><span class="eyebrow" id="actionHeading">手势 · 设备回应</span><strong id="actionTitle">等待新手势</strong><p id="actionReason">无需先打开网页或选择手势模式。</p></div>
   </section>
 
   <!-- ── 模式 + 急停 ──────────────────────────────────────────────────── -->
@@ -248,7 +254,7 @@
       <button class="modebtn" type="button" data-mode="IDLE"><span data-i18n="mode.IDLE">待机</span></button>
       <button class="modebtn" type="button" data-mode="MANUAL"><span data-i18n="mode.MANUAL">手动</span></button>
       <button class="modebtn" type="button" data-mode="PERSON_FOLLOW"><span data-i18n="mode.PERSON_FOLLOW">跟随</span></button>
-      <button class="modebtn" type="button" data-mode="GESTURE_CONTROL"><span data-i18n="mode.GESTURE_CONTROL">手势</span></button>
+
       <button class="modebtn" type="button" data-mode="HEALTH_CHECK"><span data-i18n="mode.HEALTH_CHECK">健康</span></button>
     </div>
 
@@ -284,7 +290,7 @@
   </details>
 
   <footer class="foot">
-    <span id="footNote">Mock 模式：无需任何硬件。切换真实硬件仅需替换 /stream 与 /ws 后端。</span>
+    <span id="footNote">正在确认数据来源。</span>
     <a class="foot__link" href="docs/protocol.md" data-i18n="foot.proto">通信协议</a>
   </footer>
 </main>
