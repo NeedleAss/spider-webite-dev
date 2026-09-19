@@ -29,3 +29,6 @@ firmware/main_wireless/front_config.local.h
 
 # Original local reference bundle (includes restore images); current sources are in firmware/.
 /CareRover_Tracking_Motion_Handoff_2026-09-11/
+
+# User-provided soundtrack for local review.
+/presentation/assets/music-local/

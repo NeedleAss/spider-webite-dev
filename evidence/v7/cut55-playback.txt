@@ -1,0 +1,6 @@
+### Result
+{"chapters":["meet","inside","vision","range","motion","gesture","care","console","whole"],"errors":[],"timer":1,"time":55,"playing":false}
+### Ran Playwright code
+```js
+await (async page=>{await page.setViewportSize({width:1440,height:900});await page.waitForFunction(()=>window.__careRover);await page.evaluate(()=>{window.reviewPlayback={chapters:[],errors:[]};window.addEventListener("error",e=>reviewPlayback.errors.push(e.message));window.reviewPlayback.timer=setInterval(()=>{const s=__careRover.snapshot();if(reviewPlayback.chapters.at(-1)!==s.state)reviewPlayback.chapters.push(s.state)},100);__careRover.setMode("film");});await page.waitForFunction(()=>__careRover.snapshot().time===55,{},{timeout:60000});return await page.evaluate(()=>{clearInterval(reviewPlayback.timer);return {...reviewPlayback,time:__careRover.snapshot().time,playing:__careRover.snapshot().playing};});})(page);
+```

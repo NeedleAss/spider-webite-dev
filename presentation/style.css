@@ -23,3 +23,6 @@ body[data-chapter=console] .stage{opacity:.12}body[data-mode=inspect] .stage{opa
 
 /* The approved structure study keeps its camera and canvas composition in all modes. */
 @media(min-width:901px){body[data-chapter="inside"] .stage,body[data-mode="inspect"] .stage{inset:8% -4% 6% 29%;}}
+
+/* Candidate review controls stay outside the product film. */
+.review-audio{position:fixed;right:24px;top:76px;z-index:40;width:270px;padding:12px 16px;border:1px solid #ffffff20;border-radius:14px;background:#11151cee;backdrop-filter:blur(16px);font-size:12px;color:#bac1c9}.review-audio summary{cursor:pointer;color:#dce2e8}.review-audio p{line-height:1.6;margin:12px 0 0}.review-audio label{display:block;margin-top:12px}.review-audio input{display:block;width:100%;margin:6px 0;color:inherit;font:inherit}.review-audio input[type=number]{background:#ffffff0a;border:1px solid #ffffff25;padding:7px;border-radius:6px}.review-audio button{margin-top:8px;border:1px solid #ffffff30;border-radius:8px;padding:8px 12px;color:#eee;background:#ffffff10}.review-audio button:disabled{opacity:.4}body[data-mode=inspect] .review-audio{display:none}@media(max-width:700px){.review-audio{top:110px;right:12px;width:230px}}body[data-export=true] .review-audio{display:none}

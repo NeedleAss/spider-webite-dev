@@ -1,3 +1,9 @@
+# 当前在线入口
+
+[55 秒展示与自由探索](https://needleass.github.io/spider-webite-dev/presentation/?review=55) · [含配乐成片](https://needleass.github.io/spider-webite-dev/presentation/assets/film-final/CareRover_Final_55s_1080p.mp4)
+
+最新 55 秒画面、配乐和 MP4 已由用户批准。在线交互页可静音浏览；本地完整配乐不上传，带配乐展示可直接播放成片。以下为开发历史。
+
 # CareRover V7 产品展示
 
 根目录 `/` 是真实操作台，`/presentation/` 是独立产品展示。展示代码不导入机器人通信模块、不发送实体指令。
@@ -27,3 +33,7 @@
 最新三维交互候选：`/presentation/?revision=interaction1`。摄像头/超声特写由整机连续透视进入，目标为素色人头与陶瓷杯；手势使用完整手部网格。推荐本地服务：`python3 tools/serve_presentation.py`。
 
 2026-09-19：`?revision=follow1` 将人脸扫描与整机跟随合为第三章，九章、112秒；后置独立跟随页已移除，超声/运动/手势顺延，字幕与影片同步。
+
+2026-09-19 短版审核：`?review=55&revision=cut55-2`，55 秒完整九章，跟随改为原地转向；默认浏览仍保留长版时序。详见 `../docs/CUT55_REVIEW.md`。本轮未导出 MP4，既有 112 秒文件仍是历史版本；待用户审核节奏、收到并确认配乐后再输出短版。
+
+短版第二次修订：超声特写接整机横移绕障，压缩独立运动段的重复横移，总长仍 55 秒；用户 M4A 自动用于本地预览，起点暂为 7.372 秒。音乐不在 Git 中，其他环境可通过审核页选择本地音频。

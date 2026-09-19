@@ -28,8 +28,8 @@
   "files": [
     {
       "path": "app.js",
-      "bytes": 23764,
-      "sha256": "6c289a4b2e1272ee7306c9f143a2ba561bb15361274e2bfaace584f662877043"
+      "bytes": 26481,
+      "sha256": "a96666debdd22ded5fda454200e41713c0dcfdd1ee346caa24033a14e5c2ee0c"
     },
     {
       "path": "assets/actors/BUILD_INPUTS.json",
@@ -283,8 +283,8 @@
     },
     {
       "path": "index.html",
-      "bytes": 5921,
-      "sha256": "12c543aac1336a85a261d28d90873e1eb92d681bed9f78616a250a23bc6b4855"
+      "bytes": 5913,
+      "sha256": "b7ef7346a1d2190ac35c823bd41db0864bc4d34e4cca82a4feb2330ae75b0354"
     },
     {
       "path": "parts.js",
@@ -328,8 +328,8 @@
     },
     {
       "path": "style.css",
-      "bytes": 14451,
-      "sha256": "98383fea1a3af512422b738ca5f55d5e79bdae16182362023191dbee25fe834b"
+      "bytes": 15418,
+      "sha256": "4e110bfe84502d14cf1676383afc5038acf6f964bef796aa0749ba70a6bd4521"
     },
     {
       "path": "v7/app.js",
@@ -342,14 +342,19 @@
       "sha256": "c9b3a8c03e521233d0860b6bb82ef3c8baac640514c2e7e32145007fe3a07737"
     },
     {
+      "path": "v7/cut55.js",
+      "bytes": 1795,
+      "sha256": "2f06958389e12b864000874fffdb0f9271843b2fa231263b50ee3fe4046b5feb"
+    },
+    {
       "path": "v7/director.js",
-      "bytes": 7217,
-      "sha256": "7673de8c50a59f6f251c7661668b4cdd1043505a5414411a5b01be3604a06798"
+      "bytes": 8697,
+      "sha256": "c05d9053d558878957c8cb4f386dae1318a97ed2b60072a2e5cf233c88e890b5"
     },
     {
       "path": "v7/effects.js",
-      "bytes": 10834,
-      "sha256": "3c2acd94e00f263a5bed680a17fb6f03c4e8d05ad9b2bc4e54da56e3b854864a"
+      "bytes": 12325,
+      "sha256": "2ae4315becdcbb7da0a0fbe3c174c9e498fc183856d671e12a7f85babb6175ae"
     },
     {
       "path": "v7/hand.js",
@@ -365,6 +370,11 @@
       "path": "v7/lighting.js",
       "bytes": 1102,
       "sha256": "4844ed47f58a1cde06882a1443a2dc97aea2b2cfdbe914c123118f8efe4d8080"
+    },
+    {
+      "path": "v7/review-audio.js",
+      "bytes": 3384,
+      "sha256": "2274d3e27506ce0edb285ae3f65abcf2a0b13f7e20c5da3fc60b236ab81fa829"
     },
     {
       "path": "v7/structure.js",
@@ -450,7 +460,7 @@
     }
   },
   "deliverable": "Procedurally authored geometry in scene/appearance.js plus original structural GLB. No standalone new photoreal/scanned GLB is claimed.",
-  "assetHash": "dc5c57290cbd4e60e96cc52fe8f4b695b444ce9239f7cdb1087b09dc138f4b1b",
+  "assetHash": "c661e09e5d723a5896a77925735382447f0e29153b0ffdee1be8c1a83d49af13",
   "film": "assets/film-v7/FILM_MANIFEST.json",
   "historicalAssets": [
     "assets/actors",

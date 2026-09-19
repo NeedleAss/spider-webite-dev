@@ -55,7 +55,7 @@ function waveRibbon(inner,start,length){
 export function makeEcho(anchor,sculpted=false){
  const root=new T.Group();anchor.add(root);
  let wall,obstacle;
- if(sculpted){const mug=makeObstacle();obstacle=mug.group;wall=mug.body;obstacle.position.set(.004,0,.15);root.add(obstacle);}
+ if(sculpted){const mug=makeObstacle();obstacle=mug.group;wall=mug.body;obstacle.position.set(.004,-.034,.15);obstacle.scale.setScalar(1.5);root.add(obstacle);}
  else{wall=panel(.080,.071,.006,.006,new T.MeshStandardMaterial({color:'#838788',roughness:.30,metalness:.72}));wall.position.set(.008,0,.128);wall.rotation.y=Math.PI*.75;root.add(wall);}
  root.updateMatrixWorld(true);
  const ray=new T.Raycaster(anchor.getWorldPosition(new T.Vector3()),new T.Vector3(0,0,1).transformDirection(anchor.matrixWorld));
@@ -71,10 +71,20 @@ export function makeEcho(anchor,sculpted=false){
   const g2=waveRibbon(.84,Math.PI*.18,Math.PI*1.28),m2=m.clone();m2.color.set('#e8f0ff');clipWave(m2);const back=new T.Mesh(g2,m2);root.add(back);returns.push(back);
  }
  const path=line([[0,0,.001],point.toArray()],'#91bac8',.12);root.add(path);
- function update(t){root.visible=true;root.updateMatrixWorld(true);planePoint.copy(anchor.localToWorld(point.clone()));planeNormal.copy(localNormal).transformDirection(anchor.matrixWorld);const s=echoState(t,point.z);
+ const restPosition=obstacle?.position.clone(),restQuaternion=obstacle?.quaternion.clone();let pinned=null;
+ function pinObstacle(enabled){if(!obstacle)return;if(enabled&&!pinned){root.updateMatrixWorld(true);pinned={position:obstacle.getWorldPosition(new T.Vector3()),rotation:obstacle.getWorldQuaternion(new T.Quaternion())};}else if(!enabled&&pinned){pinned=null;obstacle.position.copy(restPosition);obstacle.quaternion.copy(restQuaternion);}}
+ function update(t){root.visible=true;root.updateMatrixWorld(true);
+  if(pinned){obstacle.position.copy(root.worldToLocal(pinned.position.clone()));obstacle.quaternion.copy(root.getWorldQuaternion(new T.Quaternion()).invert().multiply(pinned.rotation));root.updateMatrixWorld(true);}
+  ray.set(root.getWorldPosition(new T.Vector3()),new T.Vector3(0,0,1).transformDirection(root.matrixWorld));
+  const impact=ray.intersectObject(wall,false)[0],hasHit=!!impact;
+  if(impact){point.copy(root.worldToLocal(impact.point.clone()));localNormal.copy(impact.face.normal).transformDirection(wall.matrixWorld).transformDirection(root.matrixWorld.clone().invert());glow.position.copy(point).addScaledVector(localNormal,.0006);glow.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),localNormal);}
+  else point.set(0,0,.16);
+  planePoint.copy(root.localToWorld(point.clone()));planeNormal.copy(localNormal).transformDirection(root.matrixWorld);if(!hasHit)planeNormal.set(0,0,0);
+  const s=echoState(t,point.z);s.received=s.received&&hasHit;s.hasHit=hasHit;path.visible=hasHit;path.geometry.attributes.position.setXYZ(1,...point.toArray());path.geometry.attributes.position.needsUpdate=true;
+
   outgoing.forEach((m,i)=>{const u=(t-1-i*.19)/2.6;m.visible=u>=0&&u<=1;m.position.set(0,0,Math.min(1,u)*point.z);m.scale.setScalar(.012+clamp(u)*.019);m.material.opacity=.62*Math.sin(Math.PI*clamp(u))**.4;});
-  returns.forEach((m,i)=>{const u=(t-4.1-i*.15)/2.6;m.visible=u>=0&&u<=1;m.position.copy(point).multiplyScalar(1-clamp(u));m.scale.setScalar(.005+clamp(u)*.014);m.rotation.z=.22*i;m.material.opacity=.78*Math.sin(Math.PI*clamp(u))**.6;});
-  glow.material.uniforms.strength.value=ease((t-3.6)/.25)*(1-ease((t-4.8)/1.6));return s;
+  returns.forEach((m,i)=>{const u=(t-4.1-i*.15)/2.6;m.visible=hasHit&&u>=0&&u<=1;m.position.copy(point).multiplyScalar(1-clamp(u));m.scale.setScalar(.005+clamp(u)*.014);m.rotation.z=.22*i;m.material.opacity=.78*Math.sin(Math.PI*clamp(u))**.6;});
+  glow.visible=hasHit;glow.material.uniforms.strength.value=ease((t-3.6)/.25)*(1-ease((t-4.8)/1.6));return s;
  }
- return {root,update,hit:point,wall};
+ return {root,update,hit:point,wall,obstacle,pinObstacle};
 }

@@ -1,0 +1,42 @@
+async page=>{
+ const checks=[],errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const ok=(name,value)=>{checks.push({name,pass:!!value});if(!value)throw Error(name);};
+ await page.setViewportSize({width:1440,height:900});await page.goto('http://127.0.0.1:8765/presentation/?review=55&revision=cut55-2');await page.waitForFunction(()=>window.__careRover?.snapshot().ready);
+ const seek=t=>page.evaluate(t=>__careRover.seek(t),t),snap=()=>page.evaluate(()=>__careRover.snapshot());
+ ok('Review starts paused with 55 second runtime',(await snap()).duration===55&&!(await snap()).playing);
+ const opening=await seek(2);ok('Opening already underway at 2 seconds',opening.open>0);
+ await page.waitForFunction(()=>document.querySelector('.review-audio audio').readyState>=1);
+ ok('Supplied M4A loads automatically',await page.locator('.review-audio audio').evaluate(a=>a.duration>230&&a.dataset.source==='provided-m4a'));
+ let cup=null,minGap=Infinity;
+ for(let t=22;t<=25.9;t+=.1){await seek(t);const s=await snap(),a=s.interaction,wall=a.obstacleBounds;if(!cup)cup=a.obstacleWorld;
+  if(a.obstacleWorld.some((n,i)=>Math.abs(n-cup[i])>1e-8))throw Error('Cup moves with robot');
+  if(a.robotYaw!==0)throw Error('Avoidance rotates instead of translating');
+  const lo=[0,1,2].map(i=>Math.min(...s.partBounds.map(b=>b.min[i]))),hi=[0,1,2].map(i=>Math.max(...s.partBounds.map(b=>b.max[i])));
+  const gap=Math.max(...[0,2].map(i=>Math.max(wall.min[i]-hi[i],lo[i]-wall.max[i])));minGap=Math.min(minGap,gap);
+  if(gap<.002)throw Error('Robot intersects cup envelope at '+t+' gap '+gap);
+  if(s.partBounds.some(b=>b.projected.some(p=>!p.every(Number.isFinite)||Math.abs(p[0])>1.02||Math.abs(p[1])>1.02)))throw Error('Robot clipped during avoidance '+t);
+ }
+ ok('Fixed cup and zero-yaw bypass preserve clearance throughout',minGap>=.002);
+ await seek(25.9);ok('Robot passes the obstacle',(await snap()).interaction.robotWorld[0]<cup[0]-.08);
+ await seek(26);const atBoundary=(await snap()).interaction.robotWorld;await seek(25.999);ok('No chassis jump at next chapter',(await snap()).interaction.robotWorld.every((n,i)=>Math.abs(n-atBoundary[i])<1e-6));
+ await page.evaluate(()=>__careRover.enterInspect());await page.evaluate(()=>__careRover.selectPart('ultrasonic'));await seek(24);ok('Inspect does not move pinned obstacle', (await snap()).interaction.obstacleWorld.every((n,i)=>Math.abs(n-cup[i])<1e-8));
+ await seek(12.5);const baseline=(await snap()).interaction;
+ for(const t of [12.5,13,14,15,16,17,17.8]){
+  await seek(t);const s=await snap(),v=s.interaction;
+  ok('Fixed chassis pivot at '+t,v.robotWorld.every(n=>Math.abs(n)<1e-9));
+  ok('Face world orientation unchanged at '+t,v.faceQuaternion.every((n,i)=>Math.abs(n-baseline.faceQuaternion[i])<1e-8));
+  if(t===14||t===16){const a=s.sensors.camera,d=v.faceWorld.map((n,i)=>n-a.position[i]),len=Math.hypot(...d),dot=d.reduce((v,n,i)=>v+n*a.forward[i]/len,0);ok('Settled optical axis aims at face '+t,dot>.999);ok('Turns toward correct side '+t,t===14?v.robotYaw>0:v.robotYaw<0);}
+ }
+ for(const [t,id] of [[.5,'meet'],[4,'inside'],[10,'vision'],[21,'range'],[26,'motion'],[34,'gesture'],[43,'care'],[50,'console'],[54,'whole']]){await seek(t);ok('Retained chapter '+id,(await snap()).state===id);await page.screenshot({path:`output/playwright/cut55-${id}.png`});}
+ await seek(50);ok('Console recording advances through original 10 second sequence',await page.locator('#consoleRecording').evaluate(v=>Math.abs(v.currentTime-6)<.1&&!v.hidden));
+ await seek(14);const before=await page.locator('#stage canvas').screenshot();await seek(43);await seek(14);ok('Reverse seek restores same tracking image',before.equals(await page.locator('#stage canvas').screenshot()));
+ // Silent WAV fixture tests transport only, never substitutes for selected music.
+ await page.locator('.review-audio summary').click();
+ await page.evaluate(()=>{const data=new Uint8Array(44+8000*2*65),v=new DataView(data.buffer),str=(s,i)=>[...s].forEach((c,j)=>data[i+j]=c.charCodeAt(0));str('RIFF',0);v.setUint32(4,data.length-8,true);str('WAVEfmt ',8);v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,8000,true);v.setUint32(28,16000,true);v.setUint16(32,2,true);v.setUint16(34,16,true);str('data',36);v.setUint32(40,data.length-44,true);const transfer=new DataTransfer();transfer.items.add(new File([data],'silence-transport-test.wav',{type:'audio/wav'}));const input=document.querySelector('#reviewMusic');input.files=transfer.files;input.dispatchEvent(new Event('change'));});
+ await page.waitForFunction(()=>!document.querySelector('#audition').disabled);await page.locator('#musicOffset').fill('3');await page.locator('#audition').click();await page.waitForTimeout(900);
+ ok('Music follows film with selected offset',await page.locator('.review-audio audio').evaluate(a=>!a.paused&&Math.abs(a.currentTime-__careRover.snapshot().time-3)<.25));
+ await page.locator('#pause').click();await page.waitForTimeout(150);ok('Pause stops both music and film',await page.locator('.review-audio audio').evaluate(a=>a.paused&&!__careRover.snapshot().playing));
+ await seek(54.8);await page.locator('#pause').click();await page.waitForTimeout(450);ok('Stops at exactly 55 seconds',(await snap()).time===55&&!(await snap()).playing);ok('Music stops at film end',await page.locator('.review-audio audio').evaluate(a=>a.paused));
+ await page.setViewportSize({width:390,height:844});await seek(0);ok('Mobile page has no horizontal overflow',await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ ok('No uncaught browser errors',errors.length===0);return {total:checks.length,checks,errors};
+}

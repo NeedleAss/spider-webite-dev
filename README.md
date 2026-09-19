@@ -1,3 +1,11 @@
+## 在线展示
+
+- [打开 CareRover 展示网站（55 秒版与自由探索）](https://needleass.github.io/spider-webite-dev/presentation/?review=55)
+- [播放已批准的 55 秒成片（含配乐）](https://needleass.github.io/spider-webite-dev/presentation/assets/film-final/CareRover_Final_55s_1080p.mp4)
+- [操作台模拟展示](https://needleass.github.io/spider-webite-dev/?transport=mock&video=canvas)
+
+GitHub Pages 可供评委直接访问，不需要你的电脑运行。真实机器人操作仍使用机器人局域网网页。
+
 > **V7 展示候选**：按用户接受的三段样片统一剧情与自由探索的拆合路径，摄影棚式 112 秒影片、表面扫描/独立回波、烘焙右手与动态 OLED。查看 [V7 决策](docs/V7_DECISIONS.md)、[验收与审核](docs/V7_ACCEPTANCE.md)、[复审提示词](docs/V7_REVIEW_PROMPT.md)、[展示启动](presentation/README.md) 与 [新影片](presentation/assets/film-v7/CareRover-film.mp4)。新手部及成片待用户视觉审核；固件/操作台维持 V6，G01 与实体动力仍未放行。以下旧版说明保留为历史。
 
 > **V6 当前候选**：默认直接手势、生产操作台与实时视频失效语义、统一 Scroll/Deck/Film、完整进入的自由探索、真实尺度人物/手部与 150 秒离线发布片。先读 [V6 验收](docs/V6_ACCEPTANCE.md)、[移交/版本](docs/V6_DELIVERY.md)、[实物端 AI 提示词](docs/V6_WINDOWS_AI_PROMPT.md)、[复审提示词](docs/V6_REVIEW_PROMPT.md)。影片在 [MP4](presentation/assets/film/CareRover-film.mp4)。**软件/视觉候选，G01 与实体动力未放行。** 以下 V4/旧最终候选段落保留为历史。

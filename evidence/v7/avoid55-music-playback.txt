@@ -1,0 +1,22 @@
+### Result
+{"chapters":["meet","inside","vision","range","motion","gesture","care","console","whole"],"samples":[{"time":0.04993399999999998,"audio":7.392253,"paused":false,"volume":0.06990759999999996},{"time":1.0499340000000001,"audio":8.362964,"paused":false,"volume":0.7},{"time":7.066334,"audio":14.390938,"paused":false,"volume":0.7},{"time":18.049134000000002,"audio":25.357487,"paused":false,"volume":0.7},{"time":26.048934000000003,"audio":33.357476,"paused":false,"volume":0.7},{"time":30.048734,"audio":37.363199,"paused":false,"volume":0.7},{"time":38.048434,"audio":45.36169,"paused":false,"volume":0.7},{"time":47.048134000000005,"audio":54.357797,"paused":false,"volume":0.7},{"time":52.047834,"audio":59.357597,"paused":false,"volume":0.7}],"errors":[],"timer":1,"time":55,"audio":62.360096,"audioPaused":true}
+### Ran Playwright code
+```js
+await (async page=>{
+ await page.setViewportSize({width:1440,height:900});
+ await page.goto('http://127.0.0.1:8765/presentation/?review=55&revision=cut55-2');
+ await page.waitForFunction(()=>window.__careRover&&document.querySelector('.review-audio audio')?.readyState>=1);
+ await page.evaluate(()=>{
+  window.musicPlayback={chapters:[],samples:[],errors:[]};
+  window.addEventListener('error',e=>musicPlayback.errors.push(e.message));
+  musicPlayback.timer=setInterval(()=>{const s=__careRover.snapshot(),a=document.querySelector('.review-audio audio');if(musicPlayback.chapters.at(-1)!==s.state){musicPlayback.chapters.push(s.state);musicPlayback.samples.push({time:s.time,audio:a.currentTime,paused:a.paused,volume:a.volume});}},100);
+ });
+ await page.locator('#pause').click();
+ await page.waitForFunction(()=>__careRover.snapshot().time===55,{},{timeout:60000});
+ const result=await page.evaluate(()=>{clearInterval(musicPlayback.timer);const a=document.querySelector('.review-audio audio');return {...musicPlayback,time:__careRover.snapshot().time,audio:a.currentTime,audioPaused:a.paused};});
+ if(result.errors.length||result.chapters.length!==9||!result.audioPaused||result.time!==55)throw Error(JSON.stringify(result));
+ for(const s of result.samples.slice(1))if(s.paused||Math.abs(s.audio-s.time-7.372)>.3)throw Error('Music drift: '+JSON.stringify(s));
+ return result;
+}
+)(page);
+```
